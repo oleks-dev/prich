@@ -1,8 +1,8 @@
 import click
-from prich.core.loaders import load_global_config, load_merged_config, load_template_models
+from prich.core.loaders import load_global_config, load_local_config, load_merged_config, load_template_models
 from prich.core.engine import create_dynamic_command
 from prich.core.state import _loaded_templates
-from prich.core.utils import should_use_global_only
+from prich.core.utils import should_use_global_only, should_use_local_only
 
 
 class DynamicCommandGroup(click.Group):
@@ -21,9 +21,10 @@ class DynamicCommandGroup(click.Group):
             return
 
         global_only = ctx.params.get("global_only", False) or should_use_global_only()
+        local_only = ctx.params.get("local_only", False) or should_use_local_only()
         try:
-            config, _ = load_global_config() if global_only else load_merged_config()
-            templates = load_template_models(global_only=global_only)
+            config, _ = load_global_config() if global_only else load_local_config() if local_only else load_merged_config()
+            templates = load_template_models()
             for template in templates:
                 self.add_command(create_dynamic_command(config, template))
                 _loaded_templates[template.name] = template

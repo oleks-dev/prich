@@ -1,11 +1,12 @@
 import click
 from pathlib import Path
-from typing import Dict, List, Literal
+from typing import Dict, List
 
 from prich.models.config import ConfigModel
-from prich.models.template import TemplateModel, PreprocessStep, TemplateFields
+from prich.models.template import TemplateModel, PromptFields, PipelineStep, LLMStep, PythonStep, RenderStep, CommandStep
 from prich.core.utils import console_print, is_quiet, replace_env_vars, shorten_home_path
 
+jinja_env = {}
 
 def expand_vars(args: List[str], internal_vars: Dict[str, str] = None):
     """
@@ -42,69 +43,8 @@ def expand_vars(args: List[str], internal_vars: Dict[str, str] = None):
     return expanded_args
 
 
-def run_preprocess_step(template: TemplateModel, step: PreprocessStep, variables: Dict[str, str], config: ConfigModel, template_name: str, template_source: str, venv_mode: str = "isolated") -> str:
-    import subprocess
-    from rich.console import Console
-    console = Console()
-
-    method = step.call
-    prich_dir = (Path.cwd() if template_source == "local" else Path.home()) / ".prich"
-    try:
-        template_dir = Path(template.folder)
-    except Exception as e:
-        click.ClickException(f"Template folder was not detected properly: {e.message}")
-
-    if step.type == "python":
-        method_path = template_dir / "preprocess" / method
-        if not method_path.exists():
-            raise click.ClickException(f"Preprocess script not found: {method_path}")
-
-        use_venv = config.security.require_venv_for_python if config.security and config.security.require_venv_for_python is not None else True
-        cmd = [str(method_path)]
-
-        if template.preprocess.venv == "shared" or venv_mode == "shared":
-            shared_venv = prich_dir / "venv"
-            python_path = shared_venv / "bin/python"
-            if use_venv and method.endswith(".py") and python_path.exists():
-                cmd = [str(python_path), str(method_path)]
-        elif template.preprocess.venv == "isolated" and use_venv and method.endswith(".py"):
-            isolated_venv = template_dir / "preprocess" / "venv"
-            if not isolated_venv.exists():
-                raise click.ClickException(f"Isolated venv not found: {isolated_venv}")
-            cmd = [str(isolated_venv / "bin/python"), str(method_path)]
-        else:
-            raise click.ClickException(f"Preprocess with venv {template.preprocess.venv} is not defined.")
-    elif step.type == "command":
-        cmd = [method]
-    else:
-        raise click.ClickException(f"Template Preprocess step type {List, step.type} is not supported.")
-
-
-    # Inputs / Variables List
-    expanded_args = expand_vars(step.args, variables)
-    [cmd.append(arg) for arg in expanded_args]
-
-    try:
-        console_print(f"Running preprocess [green]{' '.join(cmd)}[/green]")
-        if not is_quiet():
-            with console.status(f"Waiting"):
-                result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        else:
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        return result.stdout.strip()
-    except subprocess.CalledProcessError as e:
-        raise click.ClickException(f"Preprocess error in {method}: {e.stderr}")
-    except Exception as e:
-        raise click.ClickException(f"Unexpected error in {method}: {str(e)}")
-
-def render_template(fields: TemplateFields, variables: Dict[str, str], template_dir: str, mode: Literal["openai_chat", "flat", "mistral_inst"] = "openai_chat") -> str:
-    import re
-    import jinja2
-
-    jinja_env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(template_dir),
-        undefined=jinja2.StrictUndefined
-    )
+def get_jinja_env(name: str, conditional_expression_only: bool = False):
+    from jinja2 import Environment, StrictUndefined, FileSystemLoader
 
     def _read_file_contents(filename):
         try:
@@ -128,12 +68,111 @@ def render_template(fields: TemplateFields, variables: Dict[str, str], template_
         lines = _read_file_contents(filename).split('\n')
         return '\n'.join([f"{i+1} {line}" for i, line in enumerate(lines)])
 
-    jinja_env.filters['include_file'] = include_file
-    jinja_env.filters['include_file_with_line_numbers'] = include_file_with_line_numbers
-    system = jinja_env.from_string(fields.system).render(**variables).strip() if fields.system else ""
-    user = jinja_env.from_string(fields.user).render(**variables).strip() if fields.user else ""
-    prompt_string = jinja_env.from_string(fields.prompt).render(**variables).strip() if fields.prompt else ""
-    prompt = None
+    env_name = f"{name}{'_cond' if conditional_expression_only else ''}"
+    if not jinja_env.get(env_name):
+        if conditional_expression_only:
+            env = Environment(undefined=StrictUndefined)
+            env.filters.clear()
+            # Add a safe whitelist
+            env.filters.update({
+                "lower": str.lower,
+                "upper": str.upper,
+                "strip": str.strip,
+                "length": len,
+                "int": int,
+                "float": float,
+                "bool": lambda x: bool(x),
+            })
+            jinja_env[env_name] = env
+        else:
+            env = Environment(
+                loader=FileSystemLoader(Path.cwd()),
+                undefined=StrictUndefined
+            )
+            env.filters['include_file'] = include_file
+            env.filters['include_file_with_line_numbers'] = include_file_with_line_numbers
+            jinja_env[env_name] = env
+    return jinja_env[env_name]
+
+def should_run_step(when_expr: str, variables: dict) -> bool:
+    try:
+        if when_expr in [None, ""]:
+            return True
+        if when_expr.startswith("{{") and when_expr.endswith("}}"):
+            when_expr = when_expr[2:-2].strip()
+        template = get_jinja_env("when", conditional_expression_only=True).from_string(f"{{{{ {when_expr} }}}}")
+        rendered = template.render(variables).strip().lower()
+        return rendered in ("true", "1", "yes")
+    except Exception as e:
+        raise ValueError(f"Invalid `when` expression: {when_expr} - {str(e)}")
+
+def run_preprocess_step(template: TemplateModel, step: PythonStep | CommandStep, variables: Dict[str, str], config: ConfigModel, template_name: str, template_source: str) -> str:
+    import subprocess
+    from rich.console import Console
+    console = Console()
+
+    method = step.call
+    prich_dir = (Path.cwd() if template_source == "local" else Path.home()) / ".prich"
+    try:
+        template_dir = Path(template.folder)
+    except Exception as e:
+        raise click.ClickException(f"Template folder was not detected properly: {e}")
+
+    if type(step) == PythonStep and step.type == "python":
+        method_path = template_dir / "preprocess" / method
+        if not method_path.exists():
+            raise click.ClickException(f"Preprocess script not found: {method_path}")
+
+        use_venv = True
+        cmd = [str(method_path)]
+
+        if template.venv == "shared":
+            shared_venv = prich_dir / "venv"
+            python_path = shared_venv / "bin/python"
+            if use_venv and method.endswith(".py") and python_path.exists():
+                cmd = [str(python_path), str(method_path)]
+        elif template.venv == "isolated" and use_venv and method.endswith(".py"):
+            isolated_venv = template_dir / "preprocess" / "venv"
+            if not isolated_venv.exists():
+                raise click.ClickException(f"Isolated venv not found: {isolated_venv}")
+            cmd = [str(isolated_venv / "bin/python"), str(method_path)]
+        else:
+            raise click.ClickException(f"Preprocess with venv {template.venv} is not defined.")
+    elif type(step) == CommandStep and step.type == "command":
+        cmd = [method]
+    else:
+        raise click.ClickException(f"Template Preprocess step type {step.type} is not supported.")
+
+    # Inputs / Variables List
+    expanded_args = expand_vars(step.args, variables)
+    [cmd.append(arg) for arg in expanded_args]
+
+    try:
+        console_print(f"Execute {step.type} [green]{' '.join(cmd)}[/green]")
+        if not is_quiet():
+            with console.status(f"Waiting"):
+                result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            console_print(result.stdout)
+        else:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        raise click.ClickException(f"Preprocess error in {method}: {e.stderr}")
+    except Exception as e:
+        raise click.ClickException(f"Unexpected error in {method}: {str(e)}")
+
+def render_template(template_dir: str, template_text: str, variables: dict = Dict[str, str]) -> str:
+    if not template_text:
+        return ""
+
+    rendered_text = get_jinja_env("template").from_string(template_text).render(**variables).strip()
+    return rendered_text
+
+def render_prompt(fields: PromptFields, variables: Dict[str, str], template_dir: str, mode: str) -> str:
+    import re
+    system = render_template(template_dir, fields.system, variables)
+    user = render_template(template_dir, fields.user, variables)
+    prompt_string = render_template(template_dir, fields.prompt, variables)
 
     if system and not re.search(r"[.:?!…]$|```$", system.strip()):
         system += "."
@@ -164,6 +203,8 @@ def render_template(fields: TemplateFields, variables: Dict[str, str], template_
             raise click.ClickException(f"Empty prompt: {mode} requires at least 'prompt_string' prompt.")
         prompt = prompt_string
     elif mode in ["mistral-instruct", "llama2-chat"]:
+        if not user:
+            raise click.ClickException(f"Empty prompt: {mode} requires at least 'user' prompt.")
         prompt = f"<s>[INST]\n{system}\n\n{user}\n[/INST]" if system else f"<s>[INST]\n{user}\n[/INST]"
     elif mode == "anthropic":
         if not user:
@@ -216,10 +257,67 @@ def create_dynamic_command(config, template: TemplateModel):
 
     return click.Command(name=template.name, callback=dynamic_command, params=options, help=template.description, epilog=f"Template file: {shorten_home_path(template.file)}")
 
-def run_template(template_name, **kwargs):
+def send_to_llm(template, step, provider, config, variables, skip_llm, output):
     import json
     import sys
     from prich.llm_providers.get_llm_provider import get_llm_provider
+
+    if not step.prompt or (not step.prompt.system and not step.prompt.user):
+        raise click.ClickException("Prompt template must define 'system' and/or 'user' fields")
+    # Use Provider from arg overload
+    if provider:
+        selected_provider_name = provider
+    # Use LLM Step Provider assignment from template
+    elif step.provider:
+        selected_provider_name = step.provider
+    # Use Provider to template assignment from config settings
+    elif config.settings.provider_assignments and template.name in config.settings.provider_assignments.keys():
+        selected_provider_name = config.settings.provider_assignments[template.name]
+    # Use default provider from config
+    else:
+        selected_provider_name = config.settings.default_provider
+    selected_provider = config.providers[selected_provider_name]
+
+    prompt = render_prompt(step.prompt, variables, template.source, selected_provider.mode)
+    if not prompt:
+        raise click.ClickException("Prompt is empty.")
+
+    if skip_llm:
+        if type(prompt) is not str:
+            prompt = json.dumps(prompt)
+        if not is_quiet():
+            console_print(prompt, markup=False)
+        else:
+            sys.stdout.write(prompt)
+        return ""
+
+    llm_provider = get_llm_provider(selected_provider_name, selected_provider)
+    if is_quiet() and llm_provider.show_response:
+        # Override show response when quiet mode
+        llm_provider.show_response = False
+
+    console_print(f"[bold]Sending prompt to LLM [/bold][blue]({llm_provider.name})[/blue][bold]:[/bold]")
+    console_print(prompt, markup=False)
+
+    if llm_provider.show_response:
+        console_print("[bold]LLM Response:[/bold]")
+    try:
+        response = llm_provider.send_prompt(prompt)
+        step_output = response.strip()
+        if not llm_provider.show_response and not is_quiet():
+            console_print("\n[bold]LLM Response:[/bold]")
+            console_print(step_output, markup=False)
+        elif is_quiet():
+            sys.stdout.write(step_output)
+        if output:
+            with open(output, "w") as f:
+                f.write(str(step_output))
+            console_print(f"Response saved to [green]{output}[/green]")
+    except Exception as e:
+        raise click.ClickException(f"Failed to get LLM response: {str(e)}")
+    return step_output
+
+def run_template(template_name, **kwargs):
     from prich.core.loaders import get_loaded_config, get_loaded_template
 
     config, _ = get_loaded_config()
@@ -240,58 +338,41 @@ def run_template(template_name, **kwargs):
         if var.required and variables.get(var.name) is None:
             raise click.ClickException(f"Missing required variable {var.name}")
 
-    if template.preprocess and template.preprocess.steps:
-        for step in template.preprocess.steps:
+    if template.steps:
+        step_idx = 0
+        for step in template.steps:
+            step_idx += 1
+            # Set output variable to None
+            if step.output_variable:
+                variables[step.output_variable] = None
+            step_brief = f"Step #{step_idx}: {step.name}"
+            should_run = should_run_step(step.when, variables)
+            console_print(f"{step_brief}{' - Skipped' if not should_run else ''} (\"when\" expression \"{step.when}\" is {should_run})")
+            if not should_run:
+                continue
             output_var = step.output_variable
-            preprocess_output = run_preprocess_step(template, step, variables, config, template_name, template.source)
+            if type(step) in [PythonStep, CommandStep]:
+                step_output = run_preprocess_step(template, step, variables, config, template_name, template.source)
+            elif type(step) == RenderStep:
+                step_output = render_template(template.folder, step.template, variables)
+            elif type(step) == LLMStep:
+                step_output = send_to_llm(template, step, provider, config, variables, skip_llm, output)
+            else:
+                raise click.ClickException(f"Step {step.type} type is not supported.")
+
             if output_var:
-                variables[output_var] = preprocess_output
-
-    template_content = template.template
-    if not template_content or (not template_content.system and not template_content.user):
-        raise click.ClickException("Template must define 'system' and/or 'user' fields")
-
-    if provider:
-        selected_provider_name = provider
-    elif config.defaults.provider_assignments and template_name in config.defaults.provider_assignments.keys():
-        selected_provider_name = config.defaults.provider_assignments[template_name]
-    else:
-        selected_provider_name = config.defaults.provider
-    selected_provider = config.providers[selected_provider_name]
-
-    prompt = render_template(template_content, variables, template.source, selected_provider.mode)
-
-    if not prompt:
-        raise click.ClickException("Prompt is empty.")
-
-    if skip_llm:
-        if type(prompt) is not str:
-            prompt = json.dumps(prompt)
-        if not is_quiet():
-            console_print(prompt, markup=False)
-        else:
-            sys.stdout.write(prompt)
-        return
-
-    llm_provider = get_llm_provider(selected_provider_name, selected_provider)
-    if is_quiet() and llm_provider.show_response:
-        # Override show response when quiet mode
-        llm_provider.show_response = False
-
-    console_print(f"[bold]Sending prompt to LLM [/bold][blue]({llm_provider.name})[/blue][bold]:[/bold]")
-    console_print(prompt, markup=False)
-    if llm_provider.show_response:
-        console_print("[bold]LLM Response:[/bold]")
-    try:
-        response = llm_provider.send_prompt(prompt)
-        if not llm_provider.show_response and not is_quiet():
-            console_print("\n[bold]LLM Response:[/bold]")
-            console_print(response.strip(), markup=False)
-        elif is_quiet():
-            sys.stdout.write(response.strip())
-        if output:
-            with open(output, "w") as f:
-                f.write(str(response))
-            console_print(f"Response saved to [green]{output}[/green]")
-    except Exception as e:
-        raise click.ClickException(f"Failed to get LLM response: {str(e)}")
+                variables[output_var] = step_output
+            if step.output_file:
+                if step.output_file.startswith('.'):
+                    save_to_file = step.output_file.replace('.', str(Path.cwd()), 1)
+                elif step.output_file.startswith('~'):
+                    save_to_file = step.output_file.replace('~', str(Path.home()), 1)
+                else:
+                    save_to_file = step.output_file
+                write_mode = step.output_file_mode[:1] if step.output_file_mode else 'w'
+                try:
+                    with open(save_to_file, write_mode) as output_file:
+                        console_print(f"{'Save' if write_mode == 'w' else 'Append'} output to file: {save_to_file}")
+                        output_file.write(step_output)
+                except Exception as e:
+                    raise click.ClickException(f"Failed to save output to file {save_to_file}: {e}")

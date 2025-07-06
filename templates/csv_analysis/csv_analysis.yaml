@@ -1,0 +1,29 @@
+name: csv_analysis
+schema_version: "1.0"
+version: "1.0"
+description: Analyze CSV data and generate business insights
+tags: ["csv", "analysis"]
+venv: "isolated"
+steps:
+  - name: "Preprocess"
+    type: python
+    call: parse_csv.py
+    args: [ "{{csv_file}}" ]
+    output_variable: csv_summary
+  - name: "Analyze Request"
+    type: llm
+    prompt:
+      system: |
+        You are a data analyst. When given data and summary statistics, return actionable business insights and recommendations to improve sales performance. Be concise.
+      user: |
+        CSV File: {{ csv_file }}
+    
+        Summary Statistics:
+        {{ csv_summary }}
+    
+        Provide actionable business insights based on the summary statistics, including recommendations for improving sales performance.
+variables:
+  - name: csv_file
+    description: Path to CSV file
+    type: str
+    default: "sales.csv"

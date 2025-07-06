@@ -10,6 +10,6 @@ def ensure_optional_dep(module_name: str, extra_name: str = None):
         __import__(module_name)
     except ImportError as e:
         raise RuntimeError(
-            f"❌ Missing optional dependency '{module_name}'.\n"
+            f"Missing optional dependency '{module_name}'.\n"
             f"Install it with: pip install prich[{extra_name or module_name}]"
         ) from e

@@ -5,8 +5,8 @@ import pytest
 from click.testing import CliRunner
 from prich.cli.templates import template_install
 from prich.core.loaders import load_config_model, _load_template_model
-from prich.core.engine import render_template
-from prich.models.template import TemplateModel, TemplateFields
+from prich.core.engine import render_prompt
+from prich.models.template import TemplateModel, PromptFields, LLMStep
 
 TEMPLATE_YAML = """
 schema_version: "1.0"
@@ -14,17 +14,23 @@ name: test_template
 version: "1.0"
 description: A test template
 variables: []
-template:
-  system: "System prompt"
-  user: "User prompt"
+steps:
+  - name: "LLM step"
+    type: llm
+    prompt:
+      system: "System prompt"
+      user: "User prompt"
 """
 
 INVALID_TEMPLATE_YAML = """
 schema_version: "1.0"
 version: "1.0"
 variables: []
-template:
-  system: "Missing name"
+steps:
+  - name: "LLM_step"
+    type: llm
+    prompt: 
+      system: "Missing name"
 """
 
 CONFIG_YAML = """
@@ -33,12 +39,9 @@ providers:
   show_prompt:
     provider_type: "echo"
     mode: "flat"
-defaults:
+settings:
   editor: "vim"
-  provider: "show_prompt"
-security:
-  allow_python_injection: false
-  require_venv_for_python: true
+  default_provider: "show_prompt"
 """
 
 @pytest.fixture
@@ -77,24 +80,30 @@ def test_config_model_load():
         config_path.write_text(CONFIG_YAML)
         config_model, loaded_path = load_config_model(config_path)
         assert config_model is not None
-        assert config_model.defaults.provider == "show_prompt"
+        assert config_model.settings.default_provider == "show_prompt"
         assert "show_prompt" in config_model.providers
 
-def test_render_template_basic():
-    model = TemplateModel(
-        schema_version="1.0",
-        name="simple",
-        description="A simple prompt",
-        version="1.0",
-        variables=[],
-        template=TemplateFields(
-            system="Hello {{ name }}",
-            user="Your input is {{ value }}"
-        )
-    )
-    fields = TemplateFields(system=model.template.system, user=model.template.user)
-    vars = {"name": "Test", "value": "XYZ"}
-    rendered = render_template(fields, vars, template_dir=".", mode="flat")
+def test_render_template_prompt_basic():
+    # model = TemplateModel(
+    #     schema_version="1.0",
+    #     name="simple",
+    #     description="A simple prompt",
+    #     version="1.0",
+    #     variables=[],
+    #     steps=[
+    #         LLMStep(
+    #             name="llm",
+    #             type="llm",
+    #             prompt=PromptFields(
+    #                 system="Hello {{ name }}",
+    #                 user="Your input is {{ value }}"
+    #             )
+    #         )
+    #     ]
+    # )
+    fields = PromptFields(system="Hello {{ name }}", user="Your input is {{ value }}")
+    variables = {"name": "Test", "value": "XYZ"}
+    rendered = render_prompt(fields, variables, template_dir=".", mode="flat")
     assert "Hello Test" in rendered
     assert "Your input is XYZ" in rendered
 

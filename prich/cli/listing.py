@@ -8,7 +8,8 @@ from prich.core.utils import console_print
 
 @click.command(name="tags")
 @click.option("-g", "--global", "global_only", is_flag=True, help="List only global templates")
-def list_tags(global_only: bool):
+@click.option("-l", "--local", "local_only", is_flag=True, help="List only local templates")
+def list_tags(global_only: bool, local_only: bool):
     """List available tags from templates."""
     from collections import Counter
     templates = get_loaded_templates()
@@ -16,7 +17,7 @@ def list_tags(global_only: bool):
         console_print("[yellow]No templates installed. Use 'prich template install' to add templates.[/yellow]")
         return
 
-    console_print(f"[bold]Available tags:[/bold]")
+    console_print(f"[bold]Available tags{f' ([green]global[/green])' if global_only else f' ([green]local[/green])' if local_only else ''}:[/bold]")
     tags = []
     for t in templates:
         tags.extend(t.tags)
@@ -26,12 +27,13 @@ def list_tags(global_only: bool):
 
 @click.command(name="list")
 @click.option("-g", "--global", "global_only", is_flag=True, help="List only global templates")
+@click.option("-l", "--local", "local_only", is_flag=True, help="List only local templates")
 @click.option("-t", "--tag", "tags", multiple=True, help="Tag to include")
-def list_templates(global_only: bool, tags: List[str]):
+def list_templates(global_only: bool, local_only: bool, tags: List[str]):
     """List available templates."""
-    templates = get_loaded_templates(tags)
+    templates = get_loaded_templates(tags)  #, global_only=global_only, local_only=local_only)
     if not templates and not tags:
-        console_print("[yellow]No templates installed. Use 'prich install' to add templates.[/yellow]")
+        console_print("[yellow]No templates found. Use 'prich install' or 'prich create' to add templates.[/yellow]")
         return
     if not templates and tags:
         console_print(f"[yellow]No templates found with specified tags: {', '.join(tags)}.[/yellow]")

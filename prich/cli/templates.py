@@ -7,14 +7,13 @@ import click
 import venv
 
 from prich.core.loaders import get_loaded_templates, get_loaded_config, get_loaded_template
-from prich.models.template import TemplateModel
-from prich.core.utils import console_print, is_valid_template_name, get_prich_dir
+from prich.models.template import TemplateModel, VariableDefinition, LLMStep, PromptFields
+from prich.core.utils import console_print, is_valid_template_name, get_prich_dir, get_prich_templates_dir
 
 
 @click.command("install")
 @click.argument("path")
 @click.option("--force", is_flag=True, help="Overwrite existing templates")
-# @click.option("--no-yaml", is_flag=True, help="Skip YAML template copy/replace")
 @click.option("--no-venv", is_flag=True, help="Skip venv setup")
 @click.option("-g", "--global", "global_install", is_flag=True, help="Install to ~/.prich/templates")
 def template_install(path: str, force: bool, no_venv: bool, global_install: bool):
@@ -23,8 +22,7 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
     if not src_dir.is_dir():
         raise click.ClickException(f"Path is not a directory: {path}")
 
-    prich_dir = Path.home() / ".prich" if global_install else Path.cwd() / ".prich"
-    templates_dir = prich_dir / "templates"
+    templates_dir = get_prich_templates_dir()
     yaml_files = list(src_dir.glob("*.yaml"))
     if not yaml_files:
         raise click.ClickException("No template YAML found")
@@ -49,18 +47,20 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
         console_print("Setup Preprocess:")
         dest_preprocess = template_base / "preprocess"
         os.makedirs(dest_preprocess, exist_ok=True)
-        console_print("Copying...", end="")
+        console_print("Copying...")
         for script in src_preprocess.glob("*"):
             dest_script = dest_preprocess / script.name
-            console_print(f" {script.name}", end="")
+            console_print(f"  - {script.name}")
             shutil.copy(script, dest_script)
             # Set 755 to shell scripts
             if str(script).endswith(".sh"):
-                console_print(f" 755", end="")
-                dest_script.chmod(0o755)
-        console_print(" [green]done![/green]")
+                response = input(f"Set {script} as executable [y/n]? ")
+                if response.lower() in ['y', 'yes']:
+                    console_print(f"Running chmod {script} 755")
+                    dest_script.chmod(0o755)
+        console_print("[green]Done![/green]")
 
-    if not no_venv and template.preprocess and template.preprocess.venv:
+    if not no_venv and template.venv:
         install_template_venv(template, template_base, force)
 
     console_print(f"Template [green]{template_name}[/green] installed successfully")
@@ -115,11 +115,11 @@ def install_template_venv(template: TemplateModel, template_base: Path, force: b
             console_print("[green]Done![/green]")
 
 
-@click.command("install-venv")
+@click.command("venv-install")
 @click.argument("template_name")
 @click.option("-g", "--global", "global_only", is_flag=True, help="Only global config")
 @click.option("-f", "--force", "force", is_flag=True, help="Remove venv and re-install")
-def install_venv(template_name, global_only, force):
+def venv_install(template_name, global_only, force):
     """Install venv for Template with python preprocess steps"""
     template = get_loaded_template(template_name)
     install_template_venv(template, force)
@@ -129,55 +129,51 @@ def install_venv(template_name, global_only, force):
 @click.option("-g", "--global", "global_only", is_flag=True, help="Only global config")
 def show_template(template_name, global_only):
     """Show available options for a template."""
+    import yaml
     template = get_loaded_template(template_name)
-    details = [f"[bold]Template[/bold]: [green]{template.name}[/green] - [cyan]{template.description}[/cyan]",
-               f"[bold]Version[/bold]: [cyan]{template.version}[/cyan]",
-               f"[bold]Tags[/bold]: [cyan]{', '.join(template.tags)}[/cyan]", "\n[bold]Variables[/bold]:"]
-    for var in template.variables:
-        details.append(f"-  [green]{var.name or var.cli_option}[/green] (default [blue]{var.default}[/blue]): {var.description}")
-    details.append("\n[bold]Prompt[/bold]:")
-    if template.template.system:
-        details.append(f"- System:\n[blue]{template.template.system}[/blue]")
-    if template.template.user:
-        details.append(f"- User:\n[blue]{template.template.user}[/blue]")
-    if template.template.prompt:
-        details.append(f"- Text:\n[blue]{template.template.prompt}[/blue]")
-    if template.preprocess:
-        details.append(f"\n[bold]Preprocess[/bold]:")
-        if template.preprocess.venv:
-            details.append(f"Python venv: {template.preprocess.venv}")
-        for step in template.preprocess.steps:
-            details.append(f"- [green]{step.call} {' '.join(step.args)}[/green] type: {step.type}, output: {step.output_variable}")
-    console_print('  \n'.join(details))
+    console_print(f"[bold]Template[/bold]:")
+    tpl = yaml.dump(template.model_dump(exclude_none=True), sort_keys=False, indent=2)
+    console_print(tpl)
 
 @click.command("create")
 @click.argument("template_name")
-@click.option("-g", "--global", "global_only", is_flag=True, help="Only global config")
-def create_template(template_name, global_only):
-    """Create new template"""
-    template_tpl = f"""name: {template_name}
-schema_version: "1.0"
-version: "1.0"
-description: "Example description"
-tags: ["personal"]
-template:
-  system: |
-    You are {{{{ purpose }}}}
-  user: |
-    Based on {{{{ topic }}}}
-variables:
-  - name: purpose
-    description: "Assistant purpose"
-    required: true
-    type: str
-  - name: topic
-    description: "Topic to describe"
-    required: true
-    type: str
-"""
+@click.option("-g", "--global", "global_only", is_flag=True, default=False, help="Only global template")
+@click.option("-l", "--local", "local_only", is_flag=True, default=False, help="Only local template")
+def create_template(template_name, global_only, local_only):
+
+    example_template = TemplateModel(
+        name=template_name,
+        description="Example description",
+        version="1.0",
+        tags=["example"],
+        steps=[
+            LLMStep(
+                name="LLM Request",
+                type="llm",
+                prompt=PromptFields(
+                    system="You are {{ actor }}",
+                    user="Based on {{ topic }}"
+                )
+            )
+        ],
+        variables=[
+            VariableDefinition(
+                name="actor",
+                description="Role of the Assistant",
+                required=True,
+                type="str"
+            ),
+            VariableDefinition(
+                name="topic",
+                description="Topic to describe",
+                required=True,
+                type="str"
+            )
+        ]
+    )
 
     config, _ = get_loaded_config()
-    installed_templates = get_loaded_templates()
+    installed_templates = get_loaded_templates(global_only=global_only, local_only=local_only)
     if template_name in [tpl.name for tpl in installed_templates]:
         raise click.ClickException(f"Template {template_name} is already exists.")
     if not is_valid_template_name(template_name):
@@ -187,11 +183,11 @@ variables:
     if template_dir.exists():
         raise click.ClickException(f"Template {template_name} folder {template_dir} already exists.")
     template_dir.mkdir(parents=True, exist_ok=False)
-    editor_cmd = config.defaults.editor
+    editor_cmd = config.settings.editor
     if not editor_cmd:
-        raise click.ClickException(f"Default editor is not set, add defaults.editor into config.")
+        raise click.ClickException(f"Default editor is not set, add settings.editor into config.")
     template_file = template_dir / f"{template_name}.yaml"
-    template_file.write_text(template_tpl)
+    template_file.write_text(yaml.safe_dump(example_template.model_dump()))
     result = subprocess.run([editor_cmd, template_file], check=True)
     if result.returncode == 0:
         console_print(f"Template {template_name} created in {template_file}")

@@ -1,6 +1,17 @@
 # prich: Craft Rich LLM Prompts for Any Workflow
 
-**prich** is a lightweight CLI tool for creating, managing, executing, and sharing reusable LLM prompts for *any* use case-development, data analysis, content generation, and more. With Jinja2 templating, flexible preprocessing (in any language), and shareable template packages, **prich** shines for teams collaborating on standardized LLM workflows. Share templates via files, git, or cloud storage, and streamline tasks like code review, git diff analysis, or CSV data insights.
+```
+  ██████╗ ██████╗ ██╗ ██████╗██╗  ██╗  Rich Templating CLI Engine
+  ██╔══██╗██╔══██╗██║██╔════╝██║  ██║  For LLM Prompts and Shell Commands
+  ██████╔╝██████╔╝██║██║     ███████║  with Multi-Step processing Pipelines
+  ██╔═══╝ ██╔══██╗██║██║     ██╔══██║
+  ██║     ██║  ██║██║╚██████╗██║  ██║
+  ╚═╝     ╚═╝  ╚═╝╚═╝ ╚═════╝╚═╝  ╚═╝
+```
+
+**prich** is a lightweight CLI tool for creating, managing, executing, and sharing reusable LLM prompt pipelines for *any* use case-development, data analysis, content generation, and more. With Jinja2 templating, flexible scripting (in any language), and shareable template packages, **prich** shines for teams collaborating on standardized LLM workflows. Share templates via files, git, or cloud storage, and streamline tasks like code review, git diff analysis, or CSV data insights.
+
+### **NOTE**: Tool is still under development so there could be potential issues.
 
 ## Why prich?
 - **Any Prompt, Any Domain**: Build prompts for coding (e.g., code review), data analysis (e.g., CSV summaries), content creation, or customer support, with preprocessing to prepare data (e.g., parse CSVs, clean text).
@@ -10,9 +21,9 @@
 
 ## Key Features
 - **Modular Prompts**: Define prompts with Jinja2 templates and per-template YAML configs.
-- **Flexible Preprocessing**: Chain preprocessing steps (e.g., parse CSVs, list files) using any language or shell command.
+- **Flexible Pipelines**: Chain preprocessing, postprocessing, and llm steps (e.g., parse CSVs, list files) using any language or shell command.
 - **Team-Friendly Sharing**: Package templates with dependencies for easy sharing via files, git, or cloud storage.
-- **Secure venv Management**: Default (`~/.prich/venv/`) and custom Python venvs (e.g., `~/.prich/templates/code_review/preprocess/venv`) isolate dependencies.
+- **Secure venv Management**: Default (`.prich/venv/`) and custom Python venvs (e.g., `.prich/templates/code_review/preprocess/venv`) isolate dependencies.
 - **Simple CLI**: Commands like `prich run` and `prich install` streamline workflows.
 
 ## Installation
@@ -51,6 +62,8 @@ prich --help
 ```
 
 ### **Initialize prich**:
+**prich** uses nodejs-like home/local folder configurtions for flexible usage of the configs and templates per project.  
+
    - Local folder based
        ```bash
        prich init
@@ -87,7 +100,13 @@ prich --help
     - csv_analysis: Analyze CSV data and generate business insights
     ```
 
-- **Run a Template**:
+- **Run a Template**:  
+    See template help description and args
+    ```bash
+    prich run csv_analysis --help
+    ```
+
+    Run template
     ```bash
     prich run csv_analysis --file sales.csv
     ```
@@ -99,7 +118,7 @@ prich --help
 
 ## Example Templates
 
-### csv_analysis (non-developemnt)
+### csv_analysis (non-development)
 Analyzes CSV data (e.g., sales) and generates business insights.
 
 - **Install**:
@@ -208,13 +227,13 @@ Analyzes git changes with a raw diff and formatted summary.
     For templates with python preprocess scripts you can add `venv` folders to `.gitignore` and ask team to install venvs personally:
 
     ```bash
-    prich install-venv <template_name>
+    prich venv-install <template_name>
     ```
 
     or to re-install:
 
     ```bash
-    prich install-venv <template_name> --force
+    prich venv-install <template_name> --force
     ```
 
 
@@ -239,17 +258,19 @@ Developers, data analysts, marketers, or support teams can use prich for their p
 
 ## Advanced Features
 
-- **Any Preprocessing**: Use Python, shell, R, or any language for preprocessing (e.g., parse CSVs with pandas, clean text with awk).
+- **Pipelines**: Use Python, shell, LLM, or any language for pipeline steps (e.g., parse CSVs with pandas, clean text with awk).
 
-- **Python Injection**: Enable in ~/.prich/config.yaml for in-process Python preprocessing:
+- **Conditional Expressions**: Use Jinja2 style conditional expressions to execute or skip pipeline steps
+
+(((- **Python Injection**: Enable in ~/.prich/config.yaml for in-process Python preprocessing:
     ```yaml
     security:
       allow_python_injection: true
-    ```
+    ```)))
 
-- **Custom Venvs**: Templates like code_review use dedicated venvs for dependency isolation.
+- **Custom Python Venvs**: Templates like code_review use dedicated venvs for dependency isolation.
 
-- **Reusable Blocks**: Jinja2 blocks (e.g., prompt_header.j2) ensure consistent prompt structures.
+(((- **Reusable Blocks**: Jinja2 blocks (e.g., prompt_header.j2) ensure consistent prompt structures.)))
 
 
 ## Contributing
@@ -264,4 +285,4 @@ MIT License. See LICENSE for details.
 
 
 ---
-**prich**: Simplify any LLM prompt and collaborate effortlessly!
+**prich**: Simplify any LLM prompt pipeline and collaborate effortlessly!
