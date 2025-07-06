@@ -11,8 +11,8 @@ from prich.version import VERSION
 @click.group()
 @click.version_option(VERSION, package_name="prich")
 def cli():
-    """prich: CLI for reusable LLM prompts with preprocessing."""
-    console_print(f"[bold][cyan]prich v{VERSION}[/cyan][/bold] - CLI for reusable rich LLM prompts with preprocessing")
+    """prich: CLI for reusable rich LLM prompts with script pipelines."""
+    console_print(f"[bold][cyan]prich v{VERSION}[/cyan][/bold] - CLI for reusable rich LLM prompts with script pipelines")
 
 cli.add_command(run_group)
 cli.add_command(template_install)

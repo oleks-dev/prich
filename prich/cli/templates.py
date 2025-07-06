@@ -42,14 +42,14 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
     # if not no_yaml:
     shutil.copy(template_yaml, dest_yaml)
 
-    src_preprocess = src_dir / "preprocess"
-    if src_preprocess.exists():
-        console_print("Setup Preprocess:")
-        dest_preprocess = template_base / "preprocess"
-        os.makedirs(dest_preprocess, exist_ok=True)
+    src_scripts = src_dir / "scripts"
+    if src_scripts.exists():
+        console_print("Setup Scripts:")
+        dest_scripts = template_base / "scripts"
+        os.makedirs(dest_scripts, exist_ok=True)
         console_print("Copying...")
-        for script in src_preprocess.glob("*"):
-            dest_script = dest_preprocess / script.name
+        for script in src_scripts.glob("*"):
+            dest_script = dest_scripts / script.name
             console_print(f"  - {script.name}")
             shutil.copy(script, dest_script)
             # Set 755 to shell scripts
@@ -68,13 +68,13 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
 
 def install_template_venv(template: TemplateModel, template_base: Path, force: bool = False):
     console_print("Setup venv:")
-    preprocess_folder = template_base / "preprocess"
-    src_requirements = preprocess_folder / "requirements.txt"
-    src_setup_venv = preprocess_folder / "setup_venv.sh"
+    scripts_folder = template_base / "scripts"
+    src_requirements = scripts_folder / "requirements.txt"
+    src_setup_venv = scripts_folder / "setup_venv.sh"
     if src_requirements.exists() or src_setup_venv.exists():
-        isolated = template.preprocess.venv == "isolated"
+        isolated = template.venv == "isolated"
         if isolated:
-            template_venv = preprocess_folder / "venv"
+            template_venv = scripts_folder / "venv"
             if template_venv.exists() and force:
                 console_print(f"Removing existing venv {str(template_venv)}...", end="")
                 shutil.rmtree(template_venv)
@@ -120,7 +120,7 @@ def install_template_venv(template: TemplateModel, template_base: Path, force: b
 @click.option("-g", "--global", "global_only", is_flag=True, help="Only global config")
 @click.option("-f", "--force", "force", is_flag=True, help="Remove venv and re-install")
 def venv_install(template_name, global_only, force):
-    """Install venv for Template with python preprocess steps"""
+    """Install venv for Template with python script steps"""
     template = get_loaded_template(template_name)
     install_template_venv(template, force)
 
@@ -173,7 +173,7 @@ def create_template(template_name, global_only, local_only):
     )
 
     config, _ = get_loaded_config()
-    installed_templates = get_loaded_templates(global_only=global_only, local_only=local_only)
+    installed_templates = get_loaded_templates()
     if template_name in [tpl.name for tpl in installed_templates]:
         raise click.ClickException(f"Template {template_name} is already exists.")
     if not is_valid_template_name(template_name):

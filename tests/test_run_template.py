@@ -114,7 +114,7 @@ def test_run_template_shared_venv(monkeypatch, template, basic_config, tmp_path)
     # Place dummy preprocess script inside the template
     venv_dir = Path(template.folder).parent / "venv"
     venv.create(venv_dir, with_pip=True)
-    tpl_script_path = Path(template.folder) / "preprocess" / "test.py"
+    tpl_script_path = Path(template.folder) / "scripts" / "test.py"
     print(tpl_script_path)
     tpl_script_path.parent.mkdir(parents=True, exist_ok=True)
     tpl_script_path.write_text("""#!/usr/bin/env python
@@ -138,9 +138,9 @@ def test_run_template_isolated_venv(monkeypatch, template, basic_config, tmp_pat
     monkeypatch.setattr("prich.core.loaders.load_merged_config", lambda: (basic_config, _loaded_config_paths))
 
     # Place dummy preprocess script inside the template
-    venv_dir = Path(template.folder) / "preprocess" / "venv"
+    venv_dir = Path(template.folder) / "scripts" / "venv"
     venv.create(venv_dir, with_pip=True)
-    tpl_script_path = Path(template.folder) / "preprocess" / "test.py"
+    tpl_script_path = Path(template.folder) / "scripts" / "test.py"
     print(tpl_script_path)
     tpl_script_path.parent.mkdir(parents=True, exist_ok=True)
     tpl_script_path.write_text("""#!/usr/bin/env python

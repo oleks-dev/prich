@@ -106,7 +106,7 @@ def should_run_step(when_expr: str, variables: dict) -> bool:
     except Exception as e:
         raise ValueError(f"Invalid `when` expression: {when_expr} - {str(e)}")
 
-def run_preprocess_step(template: TemplateModel, step: PythonStep | CommandStep, variables: Dict[str, str], config: ConfigModel, template_name: str, template_source: str) -> str:
+def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, variables: Dict[str, str], config: ConfigModel, template_name: str, template_source: str) -> str:
     import subprocess
     from rich.console import Console
     console = Console()
@@ -119,9 +119,9 @@ def run_preprocess_step(template: TemplateModel, step: PythonStep | CommandStep,
         raise click.ClickException(f"Template folder was not detected properly: {e}")
 
     if type(step) == PythonStep and step.type == "python":
-        method_path = template_dir / "preprocess" / method
+        method_path = template_dir / "scripts" / method
         if not method_path.exists():
-            raise click.ClickException(f"Preprocess script not found: {method_path}")
+            raise click.ClickException(f"Script not found: {method_path}")
 
         use_venv = True
         cmd = [str(method_path)]
@@ -132,16 +132,16 @@ def run_preprocess_step(template: TemplateModel, step: PythonStep | CommandStep,
             if use_venv and method.endswith(".py") and python_path.exists():
                 cmd = [str(python_path), str(method_path)]
         elif template.venv == "isolated" and use_venv and method.endswith(".py"):
-            isolated_venv = template_dir / "preprocess" / "venv"
+            isolated_venv = template_dir / "scripts" / "venv"
             if not isolated_venv.exists():
                 raise click.ClickException(f"Isolated venv not found: {isolated_venv}")
             cmd = [str(isolated_venv / "bin/python"), str(method_path)]
         else:
-            raise click.ClickException(f"Preprocess with venv {template.venv} is not defined.")
+            raise click.ClickException(f"Script with venv {template.venv} is not defined.")
     elif type(step) == CommandStep and step.type == "command":
         cmd = [method]
     else:
-        raise click.ClickException(f"Template Preprocess step type {step.type} is not supported.")
+        raise click.ClickException(f"Template command step type {step.type} is not supported.")
 
     # Inputs / Variables List
     expanded_args = expand_vars(step.args, variables)
@@ -157,7 +157,7 @@ def run_preprocess_step(template: TemplateModel, step: PythonStep | CommandStep,
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
-        raise click.ClickException(f"Preprocess error in {method}: {e.stderr}")
+        raise click.ClickException(f"Script error in {method}: {e.stderr}")
     except Exception as e:
         raise click.ClickException(f"Unexpected error in {method}: {str(e)}")
 
@@ -352,7 +352,7 @@ def run_template(template_name, **kwargs):
                 continue
             output_var = step.output_variable
             if type(step) in [PythonStep, CommandStep]:
-                step_output = run_preprocess_step(template, step, variables, config, template_name, template.source)
+                step_output = run_command_step(template, step, variables, config, template_name, template.source)
             elif type(step) == RenderStep:
                 step_output = render_template(template.folder, step.template, variables)
             elif type(step) == LLMStep:
