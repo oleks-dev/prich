@@ -123,7 +123,7 @@ Analyzes CSV data (e.g., sales) and generates business insights.
 
 - **Install**:
     ```bash
-    prich template install ./csv_analysis
+    prich install ./csv_analysis
     ```
 - **Run**:
     ```bash
@@ -151,7 +151,7 @@ Reviews Python files in a directory for code quality.
 
 - **Install**:
     ```bash
-    prich template install ./code_review
+    prich install ./code_review
     ```
 
 - **Run**:
@@ -187,7 +187,7 @@ Analyzes git changes with a raw diff and formatted summary.
 
 - **Install**:
     ```bash
-    prich template install ./git_diff_template
+    prich install ./git_diff_template
     ```
 
 - **Run**:
@@ -244,10 +244,10 @@ Analyzes git changes with a raw diff and formatted summary.
 
     ```bash
     git clone https://github.com/your-team/team-prich-templates.git
-    prich template install team-prich-templates/csv_analysis
+    prich install team-prich-templates/csv_analysis
     ```
 
-    Or download from cloud storage and run `prich template install`.
+    Or download from cloud storage and install via `prich install`.
 
 - **Standardize Workflows**:
 Use shared templates to ensure consistent LLM outputs, whether for code reviews (“Add docstrings”) or business insights (“Focus marketing on Laptops”).
