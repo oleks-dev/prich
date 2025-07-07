@@ -140,7 +140,7 @@ def show_template(template_name, global_only):
 @click.option("-g", "--global", "global_only", is_flag=True, default=False, help="Only global template")
 @click.option("-l", "--local", "local_only", is_flag=True, default=False, help="Only local template")
 def create_template(template_name, global_only, local_only):
-
+    """Create new Template based on basic example template."""
     example_template = TemplateModel(
         name=template_name,
         description="Example description",
