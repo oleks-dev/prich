@@ -24,7 +24,7 @@ class SecurityConfig(BaseModel):
 
 class SettingsConfig(BaseModel):
     default_provider: str
-    provider_assignments: Optional[Dict[str, str]] = Field(default_factory=dict)
+    provider_assignments: Optional[Dict[str, str]] = None
     editor: Optional[str] = None
 
 

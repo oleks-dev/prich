@@ -28,7 +28,7 @@ def init(global_init: bool, force: bool):
     config = ConfigModel(
         settings=SettingsConfig(
             default_provider="show_prompt",
-            provider_assignments={},
+            provider_assignments=None,
             editor="vi"
         ),
         security=None,
