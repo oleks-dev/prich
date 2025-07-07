@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import click
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List, Optional, Literal, Dict
 
 
@@ -36,7 +36,7 @@ class ConfigModel(BaseModel):
 
     def as_yaml(self) -> str:
         import yaml
-        return yaml.safe_dump(self.model_dump(), sort_keys=False)
+        return yaml.safe_dump(self.model_dump(exclude_none=True), sort_keys=False)
 
     def save(self, location: Literal["local", "global"]):
         import yaml

@@ -2,6 +2,7 @@ import click
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
+from prich.models.utils import recursive_update
 from prich.models.config import ConfigModel
 from prich.models.template import TemplateModel
 from prich.core.state import _loaded_templates, _loaded_config
@@ -41,7 +42,7 @@ def load_merged_config() -> Tuple[ConfigModel, list[Path]]:
         local_config, local_path = None, None
     result = None
     if local_config and global_config:
-        result = ConfigModel(**global_config.model_dump().update(local_config.model_dump())), [global_path, local_path]
+        result = ConfigModel(**recursive_update(global_config, local_config).model_dump(exclude_none=True)), [global_path, local_path]
     elif local_config and local_config.providers:
         result = local_config, [local_path]
     elif global_config and global_config.providers:
