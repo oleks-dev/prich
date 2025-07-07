@@ -41,9 +41,9 @@ class ConfigModel(BaseModel):
     def save(self, location: Literal["local", "global"]):
         import yaml
         if location == "local":
-            prich_dir = Path.home()
-        elif location == "global":
             prich_dir = Path.cwd()
+        elif location == "global":
+            prich_dir = Path.home()
         else:
             raise click.ClickException("Save config location param value is not supported")
         prich_dir = prich_dir / ".prich"
@@ -52,5 +52,5 @@ class ConfigModel(BaseModel):
             import shutil
             prich_config_backup_file = prich_dir / "config.bak"
             shutil.copy(prich_config_file, prich_config_backup_file)
-        with open(prich_dir, "w") as f:
-            return yaml.safe_dump(self.model_dump(), f, sort_keys=False)
+        with open(prich_config_file, "w") as f:
+            f.write(yaml.safe_dump(self.model_dump(exclude_none=True), sort_keys=False))

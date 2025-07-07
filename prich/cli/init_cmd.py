@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 import subprocess
 from pathlib import Path
@@ -21,6 +22,7 @@ def init(global_init: bool, force: bool):
 
     default_venv = prich_dir / "venv"
     if not default_venv.exists():
+        shutil.rmtree(default_venv)
         subprocess.run([sys.executable, "-m", "venv", str(default_venv)], check=True)
 
     config = ConfigModel(
@@ -29,6 +31,7 @@ def init(global_init: bool, force: bool):
             provider_assignments={},
             editor="vi"
         ),
+        security=None,
         providers={
             "show_prompt": ProviderConfig(
                 provider_type="echo",
