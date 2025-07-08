@@ -6,7 +6,6 @@ from pathlib import Path
 
 from click.testing import CliRunner
 from prich.cli.config import list_providers, show_config, edit_config
-
 from prich.core.engine import run_template
 from prich.core.state import _loaded_templates
 from prich.models.template import TemplateModel, PromptFields, VariableDefinition, PipelineStep, PythonStep, RenderStep, CommandStep, LLMStep
@@ -14,14 +13,20 @@ from prich.models.config import ConfigModel, SettingsConfig, ProviderConfig
 
 @pytest.fixture
 def basic_config():
-    return ConfigModel(
-        schema_version="1.0",
-        providers={
-            "show_prompt": ProviderConfig(provider_type="echo", mode="flat")
-        },
-        # security=SecurityConfig(),
-        settings=SettingsConfig(default_provider="show_prompt")
-    )
+    from pydantic import TypeAdapter
+    import yaml
+    adapter = TypeAdapter(ConfigModel)
+    config = """
+schema_version: "1.0"
+providers:
+  show_prompt:
+    mode: flat
+    provider_type: echo
+settings: 
+    default_provider: "show_prompt"
+"""
+    config = adapter.validate_python(yaml.safe_load(config))
+    return config
 
 @pytest.fixture
 def shared_venv_template(tmp_path):
@@ -274,11 +279,6 @@ def test_edit_config(param, monkeypatch, template, basic_config, tmp_path):
 
     monkeypatch.setattr("prich.cli.config.load_local_config", lambda: (basic_config, _loaded_config_paths[0]))
     monkeypatch.setattr("prich.cli.config.load_global_config", lambda: (global_config, _loaded_config_paths[0]))
-    # monkeypatch.setattr("prich.core.loaders.load_local_config", lambda: (basic_config, _loaded_config_paths[0]))
-    # monkeypatch.setattr("prich.core.loaders.load_global_config", lambda: (global_config, _loaded_config_paths[0]))
-    # monkeypatch.setattr("prich.core.loaders._loaded_config", _loaded_config)
-    # monkeypatch.setattr("prich.core.utils.should_use_local_only", lambda: True if param == "-l" else False)
-    # monkeypatch.setattr("prich.core.utils.should_use_global_only", lambda: True if param == "-g" else False)
 
     runner = CliRunner()
     with runner.isolated_filesystem():

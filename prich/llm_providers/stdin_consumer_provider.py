@@ -1,10 +1,10 @@
 import subprocess
 import click
 from prich.llm_providers.llm_provider_interface import LLMProvider
-from prich.models.config import ProviderConfig
+from prich.models.config_providers import STDINConsumerProviderModel
 
 class STDINConsumerProvider(LLMProvider):
-    def __init__(self, name: str, provider: ProviderConfig):
+    def __init__(self, name: str, provider: STDINConsumerProviderModel):
         self.provider = provider
         self.name = name
         self.show_response: bool = False
@@ -12,7 +12,7 @@ class STDINConsumerProvider(LLMProvider):
     def send_prompt(self, prompt: str) -> str:
         cmd = [self.provider.cmd]
         if self.provider.options:
-            cmd.extend(self.provider.options)
+            cmd.extend(self.provider.args)
         try:
             response = subprocess.run(
                 cmd,

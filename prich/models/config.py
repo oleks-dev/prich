@@ -1,26 +1,23 @@
-from pathlib import Path
-
 import click
-from pydantic import BaseModel
-from typing import List, Optional, Literal, Dict
+from pathlib import Path
+from typing import List, Optional, Literal, Dict, Annotated, Union
+from pydantic import BaseModel, Field, field_validator, TypeAdapter
+from prich.models.config_providers import EchoProviderModel, OpenAIProviderModel, MLXLocalProviderModel, MLXLocalProviderModel, STDINConsumerProviderModel
 
 
-class ProviderConfig(BaseModel):
-    provider_type: str
-    cmd: Optional[str] = None
-    mode: Optional[str] = None
-    api_endpoint: Optional[str] = None
-    api_key: Optional[str] = None
-    model: Optional[str] = None
-    model_path: Optional[str] = None
-    options: Optional[List[str]] = None
-    max_tokens: Optional[int] = None
-    temperature: Optional[float] = None
-    top_p: Optional[float] = None
+ProviderConfig = Annotated[
+    Union[
+        EchoProviderModel,
+        OpenAIProviderModel,
+        MLXLocalProviderModel,
+        STDINConsumerProviderModel
+    ],
+    Field(discriminator='provider_type')
+]
 
 
 class SecurityConfig(BaseModel):
-    allowed_environment_variables: list[str] = None
+    allowed_environment_variables: Optional[List[str]] = None
 
 
 class SettingsConfig(BaseModel):
@@ -34,6 +31,15 @@ class ConfigModel(BaseModel):
     providers: Dict[str, ProviderConfig]
     settings: SettingsConfig
     security: Optional[SecurityConfig] = None
+
+    @field_validator("providers", mode="before")
+    @classmethod
+    def inject_provider_names(cls, raw_providers: dict) -> dict:
+        # Inject __name into each provider's context
+        return {
+            name: TypeAdapter(ProviderConfig).validate_python(entry, context={"__name": name})
+            for name, entry in raw_providers.items()
+        }
 
     def as_yaml(self) -> str:
         import yaml

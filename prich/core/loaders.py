@@ -16,12 +16,17 @@ def _load_yaml(path: Path) -> Dict:
         return yaml.safe_load(f) or {}
 
 def load_config_model(path: Path) -> Tuple[Optional[ConfigModel], Path]:
-    raw = _load_yaml(path)
-    if not raw:
+    raw_yaml = _load_yaml(path)
+    if not raw_yaml:
         return None, path
-    if raw.get("schema_version") != "1.0":
-        raise click.ClickException(f"Unsupported config schema version: {raw.get('schema_version')}")
-    return ConfigModel(**raw), path
+    if raw_yaml.get("schema_version") != "1.0":
+        raise click.ClickException(f"Unsupported config schema version: {raw_yaml.get('schema_version')}")
+    from pydantic import TypeAdapter
+
+    # Parse full config
+    adapter = TypeAdapter(ConfigModel)
+    config = adapter.validate_python(raw_yaml)
+    return config, path
 
 def load_local_config() -> Tuple[ConfigModel, Path]:
     return load_config_model(Path.cwd() / ".prich/config.yaml")

@@ -5,7 +5,8 @@ import subprocess
 from pathlib import Path
 import click
 from prich.core.utils import console_print
-from prich.models.config import ProviderConfig, SettingsConfig, ConfigModel
+from prich.models.config_providers import EchoProviderModel, OpenAIProviderModel, STDINConsumerProviderModel, MLXLocalProviderModel
+from prich.models.config import SettingsConfig, ConfigModel
 
 
 @click.command()
@@ -33,35 +34,36 @@ def init(global_init: bool, force: bool):
         ),
         security=None,
         providers={
-            "show_prompt": ProviderConfig(
+            "show_prompt": EchoProviderModel(
                 provider_type="echo",
                 mode="flat"
             ),
-            "openai-gpt4o": ProviderConfig(
+            "openai-gpt4o": OpenAIProviderModel(
+                provider_type="openai",
                 api_endpoint="https://openai.com/api",
                 api_key="${OPENAI_API_KEY}",
                 mode="mlchat",
-                model="gpt-4o",
-                provider_type="openai"
+                model="gpt-4o"
             ),
-            "mlx-mistral-7b": ProviderConfig(
+            "mlx-mistral-7b": MLXLocalProviderModel(
+                provider_type="MLXLocal",
                 mode="mistral-instruct",
                 model_path="~/.cache/huggingface/hub/models--mlx-community--Mistral-7B-Instruct-v0.3-4bit/snapshots/a4b8f870474b0eb527f466a03fbc187830d271f5",
-                max_tokens=3000,
-                provider_type="MLXLocal"
+                max_tokens=3000
             ),
-            "qchatcli": ProviderConfig(
+            "qchatcli": STDINConsumerProviderModel(
+                provider_type="stdin_consumer",
                 mode="flat",
-                options=["-v"],
-                provider_type="qchatcli"
+                cmd="q",
+                args=["chat", "--no-interactive"]
             ),
-            "grok": ProviderConfig(
+            "grok": OpenAIProviderModel(
+                provider_type="openai",
                 api_endpoint="https://api.x.ai/v1",
                 api_key="${GROK_API_KEY}",
                 max_tokens=3000,
                 mode="mlchat",
                 model="grok-3",
-                provider_type="openai",
                 temperature=0.7
             )
         }

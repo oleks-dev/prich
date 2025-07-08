@@ -75,9 +75,9 @@ class TemplateModel(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
 
     # These fields are injected at runtime
-    source: Optional[Literal["local", "global"]] = None
-    folder: Optional[str] = None
-    file: Optional[str] = None
+    source: Optional[Literal["local", "global"]] = Field(default=None, exclude=True)
+    folder: Optional[str] = Field(default=None, exclude=True)
+    file: Optional[str] = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
     def validate_unique_step_names(self) -> "TemplateModel":

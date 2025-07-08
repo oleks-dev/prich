@@ -2,14 +2,14 @@ import json
 import click
 
 from prich.core.utils import replace_env_vars
-from prich.models.config import ProviderConfig
+from prich.models.config_providers import OpenAIProviderModel
 from prich.llm_providers.llm_provider_interface import LLMProvider
 from prich.llm_providers.base_optional_provider import LazyOptionalProvider
 
 class OpenAIProvider(LLMProvider, LazyOptionalProvider):
     def __init__(self, 
                  name: str,
-                 provider: ProviderConfig
+                 provider: OpenAIProviderModel
                  ):
         super().__init__()
         self.name = name
