@@ -7,6 +7,7 @@ from typing import List, Optional, Literal, Dict
 
 class ProviderConfig(BaseModel):
     provider_type: str
+    cmd: Optional[str] = None
     mode: Optional[str] = None
     api_endpoint: Optional[str] = None
     api_key: Optional[str] = None

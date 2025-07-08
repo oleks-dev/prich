@@ -200,7 +200,7 @@ def render_prompt(fields: PromptFields, variables: Dict[str, str], template_dir:
             raise click.ClickException(f"Empty prompt: {mode} requires at least 'user' prompt.")
     elif mode == "plain":
         if not prompt_string:
-            raise click.ClickException(f"Empty prompt: {mode} requires at least 'prompt_string' prompt.")
+            raise click.ClickException(f"Empty prompt: {mode} requires at least 'prompt' prompt.")
         prompt = prompt_string
     elif mode in ["mistral-instruct", "llama2-chat"]:
         if not user:
@@ -262,7 +262,7 @@ def send_to_llm(template, step, provider, config, variables, skip_llm, output):
     import sys
     from prich.llm_providers.get_llm_provider import get_llm_provider
 
-    if not step.prompt or (not step.prompt.system and not step.prompt.user):
+    if not step.prompt and (not step.prompt.system and not step.prompt.user):
         raise click.ClickException("Prompt template must define 'system' and/or 'user' fields")
     # Use Provider from arg overload
     if provider:

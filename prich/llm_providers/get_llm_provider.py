@@ -14,6 +14,8 @@ def get_llm_provider(provider_name: str, provider: ProviderConfig) -> LLMProvide
         return OpenAIProvider(provider_name, provider)
     elif provider.provider_type == "qchatcli":
         return QChatCLIProvider(provider_name, provider)
+    elif provider.provider_type == "stdin_consumer":
+        return QChatCLIProvider(provider_name, provider)
     elif provider.provider_type == "MLXLocal":
         return MLXLocalProvider(provider_name, provider)
     elif provider.provider_type == "echo":
