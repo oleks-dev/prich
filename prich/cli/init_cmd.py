@@ -46,9 +46,9 @@ def init(global_init: bool, force: bool):
                 model="gpt-4o"
             ),
             "mlx-mistral-7b": MLXLocalProviderModel(
-                provider_type="MLXLocal",
+                provider_type="mlx_local",
                 mode="mistral-instruct",
-                model_path="~/.cache/huggingface/hub/models--mlx-community--Mistral-7B-Instruct-v0.3-4bit/snapshots/a4b8f870474b0eb527f466a03fbc187830d271f5",
+                model="~/.cache/huggingface/hub/models--mlx-community--Mistral-7B-Instruct-v0.3-4bit/snapshots/a4b8f870474b0eb527f466a03fbc187830d271f5",
                 max_tokens=3000
             ),
             "qchatcli": STDINConsumerProviderModel(

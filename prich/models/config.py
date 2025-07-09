@@ -32,8 +32,8 @@ class ConfigModel(BaseModel):
     settings: SettingsConfig
     security: Optional[SecurityConfig] = None
 
-    @field_validator("providers", mode="before")
     @classmethod
+    @field_validator("providers", mode="before")
     def inject_provider_names(cls, raw_providers: dict) -> dict:
         # Inject __name into each provider's context
         return {

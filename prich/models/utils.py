@@ -1,4 +1,3 @@
-from prich.models.config import ConfigModel
 from pydantic import BaseModel
 
 

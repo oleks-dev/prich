@@ -1,7 +1,7 @@
 import click
 from pathlib import Path
 from typing import Dict, Optional, Tuple
-
+from prich.core.utils import console_print, shorten_home_path
 from prich.models.utils import recursive_update
 from prich.models.config import ConfigModel
 from prich.models.template import TemplateModel
@@ -15,7 +15,7 @@ def _load_yaml(path: Path) -> Dict:
     with path.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
-def load_config_model(path: Path) -> Tuple[Optional[ConfigModel], Path]:
+def load_config_model(path: Path) -> Tuple[Optional[ConfigModel], Optional[Path]]:
     raw_yaml = _load_yaml(path)
     if not raw_yaml:
         return None, path
@@ -24,9 +24,13 @@ def load_config_model(path: Path) -> Tuple[Optional[ConfigModel], Path]:
     from pydantic import TypeAdapter
 
     # Parse full config
-    adapter = TypeAdapter(ConfigModel)
-    config = adapter.validate_python(raw_yaml)
-    return config, path
+    try:
+        adapter = TypeAdapter(ConfigModel)
+        config = adapter.validate_python(raw_yaml)
+        return config, path
+    except Exception as e:
+        console_print(f"Failed to load config {shorten_home_path(path)}: {e}")
+        return None, None
 
 def load_local_config() -> Tuple[ConfigModel, Path]:
     return load_config_model(Path.cwd() / ".prich/config.yaml")

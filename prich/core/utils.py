@@ -3,7 +3,6 @@ import sys
 import re
 import click
 from pathlib import Path
-from prich.core.loaders import get_loaded_config
 from rich.console import Console
 
 console = Console()
@@ -47,6 +46,7 @@ def replace_env_vars(text):
     Returns:
         str: String with environment variables expanded, or original text if no variables found.
     """
+    from prich.core.loaders import get_loaded_config
 
     def replace_match(match):
         """Replace $VAR or ${VAR} with the value from os.environ or empty string if not found."""

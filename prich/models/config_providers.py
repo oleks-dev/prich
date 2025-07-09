@@ -3,11 +3,11 @@ from typing import Literal, Optional, List
 
 
 class BaseProviderModel(BaseModel):
-    name: str = Field(default=None, exclude=True)  # will be injected
+    name: str | None = Field(default=None, exclude=True)  # will be injected
     mode: Optional[str] = None
 
     def model_post_init(self, __context):
-        if self.name is None and "__name" in __context:
+        if self.name is None and __context and "__name" in __context:
             self.name = __context["__name"]
 
 
