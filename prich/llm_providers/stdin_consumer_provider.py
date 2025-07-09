@@ -9,38 +9,18 @@ class STDINConsumerProvider(LLMProvider):
         self.name = name
         self.show_response: bool = False
 
-    def run_and_capture(self, cmd, input_text):
-        proc = subprocess.Popen(
-            cmd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1  # line-buffered
-        )
-
-        # Send input and close stdin to signal EOF
-        proc.stdin.write(input_text)
-        proc.stdin.close()
-
-        # Read + display + capture output
-        output_lines = []
-        for line in proc.stdout:
-            if self.show_response:
-                print(line, end='')  # live output to terminal
-            output_lines.append(line)  # also capture
-
-        proc.wait()
-        full_output = ''.join(output_lines)
-        return full_output, proc.returncode
-
     def send_prompt(self, prompt: str) -> str:
         cmd = [self.provider.cmd]
         if self.provider.args:
             cmd.extend(self.provider.args)
         try:
-            response, _ = self.run_and_capture(cmd, prompt)
-            print()
+            response = subprocess.run(
+                cmd,
+                input=prompt,
+                capture_output=True,
+                text=True,
+                check=True
+            )
         except Exception as e:
             raise click.ClickException(f"STDIN consumer provider error: {str(e)}")
         return response if response else ""
