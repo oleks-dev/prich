@@ -23,4 +23,4 @@ class STDINConsumerProvider(LLMProvider):
             )
         except Exception as e:
             raise click.ClickException(f"STDIN consumer provider error: {str(e)}")
-        return response if response else ""
+        return response.stdout if response and response.stdout else ""
