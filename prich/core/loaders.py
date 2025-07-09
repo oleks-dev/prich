@@ -29,7 +29,12 @@ def load_config_model(path: Path) -> Tuple[Optional[ConfigModel], Optional[Path]
         config = adapter.validate_python(raw_yaml)
         return config, path
     except Exception as e:
-        console_print(f"Failed to load config {shorten_home_path(path)}: {e}")
+        msg_lines = [f"[yellow]Failed to load config: {shorten_home_path(str(path))}"]
+        if 'errors' in e.__dir__():
+            for error in e.errors():
+                msg_lines.append(f"  * {error.get('msg')}. {error.get('type')}: {'.'.join(error.get('loc'))}")
+        msg_lines.append("[/yellow]")
+        console_print("\n".join(msg_lines))
         return None, None
 
 def load_local_config() -> Tuple[ConfigModel, Path]:

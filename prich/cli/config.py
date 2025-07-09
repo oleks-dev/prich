@@ -22,12 +22,19 @@ def list_providers(global_only: bool, local_only: bool, details: bool):
     config, paths = get_loaded_config()
     console_print(f"[bold]Configs[/bold]: {', '.join(_readable_paths(paths))}")
     console_print(f"[bold]Providers{f' ([green]global[/green])' if global_only else f' ([green]local[/green])' if local_only else ''}[/bold]:")
-    for provider, providerConfig in config.providers.items():
-        console_print(f"- [green]{provider}[/green] ([blue]{providerConfig.provider_type}[/blue]{f', [blue]{providerConfig.model}[/blue]' if providerConfig.model else ''})")
+    for provider, provider_config in config.providers.items():
+        provider_model = ""
+        if provider_config.provider_type == 'mlx_local':
+            if 'model_path' in provider_config.model_dump().keys():
+                provider_model = provider_config.model_path
+        else:
+            if 'model_path' in provider_config.model_dump().keys():
+                provider_model = provider_config.model
+        console_print(f"- [green]{provider}[/green] [dim]([green]{provider_config.provider_type}[/green]{f', [green]{provider_model}[/green]' if provider_model else ''})[/dim]")
         if details:
-            for k, v in providerConfig.model_dump().items():
+            for k, v in provider_config.model_dump().items():
                 if v:
-                    console_print(f"    {k}: [blue]{v}[/blue]")
+                    console_print(f"    [dim]{k}: [green]{v}[/green][/dim]")
 
 @config_group.command(name="show")
 @click.option("-g", "--global", "global_only", is_flag=True, help="Only global config")

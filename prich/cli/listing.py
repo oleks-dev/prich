@@ -31,7 +31,7 @@ def list_tags(global_only: bool, local_only: bool):
 @click.option("-t", "--tag", "tags", multiple=True, help="Tag to include")
 def list_templates(global_only: bool, local_only: bool, tags: List[str]):
     """List available templates."""
-    templates = get_loaded_templates(tags)  #, global_only=global_only, local_only=local_only)
+    templates = get_loaded_templates(tags)
     if not templates and not tags:
         console_print("[yellow]No templates found. Use 'prich install' or 'prich create' to add templates.[/yellow]")
         return
@@ -43,7 +43,7 @@ def list_templates(global_only: bool, local_only: bool, tags: List[str]):
     console_print(f"[bold]Available templates{selected_tags}:[/bold]")
     for t in templates:
         source = t.source
-        marker = " ([blue]g[/blue])" if source == "global" else ""
+        marker = " ([green]g[/green])" if source == "global" else ""
         template_tags = f" [dim](tags: [green]{', '.join(t.tags)}[/green])[/dim]" if t.tags else ""
-        console_print(f"- [green]{t.name}[/green]{marker}: [blue]{t.description}[/blue]{template_tags}")
+        console_print(f"- [green]{t.name}[/green]{marker}: [dim][green]{t.description}[/green][/dim]{template_tags}")
 
