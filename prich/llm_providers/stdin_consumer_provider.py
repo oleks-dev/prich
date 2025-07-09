@@ -11,7 +11,7 @@ class STDINConsumerProvider(LLMProvider):
 
     def send_prompt(self, prompt: str) -> str:
         cmd = [self.provider.cmd]
-        if self.provider.options:
+        if self.provider.args:
             cmd.extend(self.provider.args)
         try:
             response = subprocess.run(
