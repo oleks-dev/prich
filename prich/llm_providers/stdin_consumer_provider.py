@@ -10,6 +10,8 @@ class STDINConsumerProvider(LLMProvider):
         self.show_response: bool = False
 
     def send_prompt(self, prompt: str) -> str:
+        import re
+
         cmd = [self.provider.cmd]
         if self.provider.args:
             cmd.extend(self.provider.args)
@@ -23,4 +25,5 @@ class STDINConsumerProvider(LLMProvider):
             )
         except Exception as e:
             raise click.ClickException(f"STDIN consumer provider error: {str(e)}")
-        return response.stdout if response and response.stdout else ""
+        clean_output = re.sub(r'\x1b\[[0-9;]*m', '', response.stdout)
+        return clean_output
