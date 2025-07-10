@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Literal, Optional, List
+from typing import Literal, Optional, List, Tuple
 
 
 class BaseProviderModel(BaseModel):
@@ -87,3 +87,5 @@ class STDINConsumerProviderModel(BaseProviderModel):
     mode: Optional[str] = None
     cmd: Optional[str] = None
     args: Optional[List[str]] = None
+    stdout_strip_prefix: Optional[str] = None
+    stdout_slice: Optional[Tuple[Optional[int], Optional[int]]] = None
