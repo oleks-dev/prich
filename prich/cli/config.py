@@ -28,7 +28,7 @@ def list_providers(global_only: bool, local_only: bool, details: bool):
             if 'model_path' in provider_config.model_dump().keys():
                 provider_model = provider_config.model_path
         else:
-            if 'model_path' in provider_config.model_dump().keys():
+            if 'model' in provider_config.model_dump().keys():
                 provider_model = provider_config.model
         console_print(f"- [green]{provider}[/green] [dim]([green]{provider_config.provider_type}[/green]{f', [green]{provider_model}[/green]' if provider_model else ''})[/dim]")
         if details:

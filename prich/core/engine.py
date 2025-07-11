@@ -4,7 +4,7 @@ from typing import Dict, List
 
 from prich.models.config import ConfigModel
 from prich.models.template import TemplateModel, PromptFields, PipelineStep, LLMStep, PythonStep, RenderStep, CommandStep
-from prich.core.utils import console_print, is_quiet, replace_env_vars, shorten_home_path
+from prich.core.utils import console_print, replace_env_vars, shorten_home_path, is_quiet, is_only_final_output
 
 jinja_env = {}
 
@@ -149,8 +149,8 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
 
     try:
         console_print(f"Execute {step.type} [green]{' '.join(cmd)}[/green]")
-        if not is_quiet():
-            with console.status(f"Waiting"):
+        if not is_quiet() and not is_only_final_output():
+            with console.status("Processing..."):
                 result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             console_print(result.stdout)
         else:
@@ -226,7 +226,7 @@ def create_dynamic_command(config, template: TemplateModel):
         arg_type = get_variable_type(arg.type)
         help_text = arg.description or f"{arg_name} option"
         cli_option = arg.cli_option or f"--{arg_name}"
-        reserved_options = ['-g', '--global', "-q", "--quiet", "-o", "--output", "-p", "--provider"]
+        reserved_options = ['-g', '--global', "-q", "--quiet", "-o", "--output", "-p", "--provider", "-f", "--only-final-output", "-s", "--skip-llm"]
         if cli_option in reserved_options:
             raise click.ClickException(f"{arg_name} cli option uses a reserved option name: {cli_option}")
 
@@ -243,11 +243,13 @@ def create_dynamic_command(config, template: TemplateModel):
             raise click.ClickException(f"Unsupported variable type: {arg.type}")
 
     options.extend([
-        click.Option(["-g", "--global"], is_flag=True, default=False, help="Use global template"),
-        click.Option(["-q", "--quiet"], is_flag=True, default=False, help="Suppress output except final prompt or LLM response"),
-        click.Option(["--skip-llm"], is_flag=True, default=False, help="Skip sending prompt to LLM"),
+        click.Option(["-g", "--global"], is_flag=True, default=False, help="Use global config and template"),
+        click.Option(["-l", "--local"], is_flag=True, default=False, help="Use local config and template"),
         click.Option(["-o", "--output"], type=click.Path(), default=None, show_default=True, help="Save LLM output to file"),
-        click.Option(["-p", "--provider"], type=click.Choice(config.providers.keys()), show_default=True, help="Select LLM provider")
+        click.Option(["-p", "--provider"], type=click.Choice(config.providers.keys()), show_default=True, help="Select LLM provider"),
+        click.Option(["-s", "--skip-llm"], is_flag=True, default=False, help="Skip sending prompt to LLM"),
+        click.Option(["-q", "--quiet"], is_flag=True, default=False, help="Suppress all output"),
+        click.Option(["-f", "--only-final-output"], is_flag=True, default=False, help="Suppress output and show only the last step output")
     ])
 
     @click.pass_context
@@ -287,8 +289,6 @@ def send_to_llm(template, step, provider, config, variables, skip_llm, output):
             prompt = json.dumps(prompt)
         if not is_quiet():
             console_print(prompt, markup=False)
-        else:
-            sys.stdout.write(prompt)
         return ""
 
     llm_provider = get_llm_provider(selected_provider_name, selected_provider)
@@ -299,16 +299,19 @@ def send_to_llm(template, step, provider, config, variables, skip_llm, output):
     console_print(f"[bold]Sending prompt to LLM [/bold][blue]({llm_provider.name})[/blue][bold]:[/bold]")
     console_print(prompt, markup=False)
 
-    if llm_provider.show_response:
-        console_print("[bold]LLM Response:[/bold]")
+    if not is_quiet():
+        console_print("\n[bold]LLM Response:[/bold]")
     try:
-        response = llm_provider.send_prompt(prompt)
+        if not is_quiet() and not is_only_final_output() and not llm_provider.show_response:
+            from rich.console import Console
+            console = Console()
+            with console.status("Thinking..."):
+                response = llm_provider.send_prompt(prompt)
+        else:
+            response = llm_provider.send_prompt(prompt)
         step_output = response.strip()
         if not llm_provider.show_response and not is_quiet():
-            console_print("\n[bold]LLM Response:[/bold]")
             console_print(step_output, markup=False)
-        elif is_quiet():
-            sys.stdout.write(step_output)
         if output:
             with open(output, "w") as f:
                 f.write(str(step_output))
@@ -340,6 +343,7 @@ def run_template(template_name, **kwargs):
 
     if template.steps:
         step_idx = 0
+        last_output = ""
         for step in template.steps:
             step_idx += 1
             # Set output variable to None
@@ -347,9 +351,11 @@ def run_template(template_name, **kwargs):
                 variables[step.output_variable] = None
             step_brief = f"Step #{step_idx}: {step.name}"
             should_run = should_run_step(step.when, variables)
-            console_print(f"{step_brief}{' - Skipped' if not should_run else ''} (\"when\" expression \"{step.when}\" is {should_run})")
+            when_expression = f" (\"when\" expression \"{step.when}\" is {should_run})" if step.when else ""
+            console_print(f"{step_brief}{' - Skipped' if not should_run else ''}{when_expression}")
             if not should_run:
                 continue
+
             output_var = step.output_variable
             if type(step) in [PythonStep, CommandStep]:
                 step_output = run_command_step(template, step, variables, config, template_name, template.source)
@@ -360,6 +366,8 @@ def run_template(template_name, **kwargs):
             else:
                 raise click.ClickException(f"Step {step.type} type is not supported.")
 
+            if step_idx == len(template.steps):
+                last_output = step_output
             if output_var:
                 variables[output_var] = step_output
             if step.output_file:
@@ -376,3 +384,6 @@ def run_template(template_name, **kwargs):
                         output_file.write(step_output)
                 except Exception as e:
                     raise click.ClickException(f"Failed to save output to file {save_to_file}: {e}")
+        # Print last step output if last option enabled
+        if is_only_final_output() and not is_quiet():
+            print(last_output, flush=True)

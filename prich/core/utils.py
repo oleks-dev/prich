@@ -19,9 +19,18 @@ def is_quiet() -> bool:
     """ Is Quiet mode enabled? """
     return any(flag in sys.argv for flag in ("-q", "--quiet"))
 
-def console_print(message: str = "", end = "\n", markup = None):
+def is_only_final_output() -> bool:
+    """ Show only output of the last step? """
+    if is_piped():
+        return True
+    return any(flag in sys.argv for flag in ("-f", "--only-final-output"))
+
+def is_piped() -> bool:
+    return not console.is_terminal and not os.getenv("PYTEST_CURRENT_TEST")
+
+def console_print(message: str = "", end: str = "\n", markup = None, flush: bool = None):
     """ Print to console wrapper """
-    if not is_quiet():
+    if not is_quiet() and not is_only_final_output():
         console.print(message, end=end, markup=markup)
 
 def is_valid_template_name(name):

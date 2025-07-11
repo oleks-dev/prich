@@ -69,6 +69,7 @@ def test_template_install_force_overwrite(temp_template_dir):
         # Second install without --force should fail
         result = runner.invoke(template_install, [str(temp_template_dir)])
         assert result.exit_code != 0
+        assert "already exists" in result.output
         # Now with --force
         result = runner.invoke(template_install, [str(temp_template_dir), "--force"])
         assert result.exit_code == 0
