@@ -23,12 +23,19 @@ class PromptFields(BaseModel):
     prompt: Optional[str] = None
 
 
+class StepValidation(BaseModel):
+    match: Optional[str] = None
+    not_match: Optional[str] = None
+    on_fail: Literal["error", "warn", "skip", "continue"] = "error"
+
+
 class BaseStepModel(BaseModel):
     name: str
     output_variable: str | None = None
     output_file: str | None = None
     output_file_mode: Literal["write", "append"] = None
     when: str | None = None
+    validation: Optional[StepValidation] = None
 
 
 class LLMStep(BaseStepModel):

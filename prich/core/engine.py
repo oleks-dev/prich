@@ -3,7 +3,8 @@ from pathlib import Path
 from typing import Dict, List
 
 from prich.models.config import ConfigModel
-from prich.models.template import TemplateModel, PromptFields, PipelineStep, LLMStep, PythonStep, RenderStep, CommandStep
+from prich.models.template import TemplateModel, PromptFields, PipelineStep, LLMStep, PythonStep, RenderStep, \
+    CommandStep, StepValidation
 from prich.core.utils import console_print, replace_env_vars, shorten_home_path, is_quiet, is_only_final_output
 
 jinja_env = {}
@@ -105,6 +106,15 @@ def should_run_step(when_expr: str, variables: dict) -> bool:
         return rendered in ("true", "1", "yes")
     except Exception as e:
         raise ValueError(f"Invalid `when` expression: {when_expr} - {str(e)}")
+
+def validate_step_output(step_validation: StepValidation, value: str)-> bool:
+    import re
+    matched = re.search(step_validation.match, value) if step_validation and step_validation.match else True
+    not_matched = not re.search(step_validation.not_match, value) if step_validation and step_validation.not_match else True
+
+    if matched and not_matched:
+        return True  # validation passed
+    return False
 
 def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, variables: Dict[str, str], config: ConfigModel, template_name: str, template_source: str) -> str:
     import subprocess
@@ -366,8 +376,9 @@ def run_template(template_name, **kwargs):
             else:
                 raise click.ClickException(f"Step {step.type} type is not supported.")
 
-            if step_idx == len(template.steps):
-                last_output = step_output
+            # Store last output
+            last_output = step_output
+
             if output_var:
                 variables[output_var] = step_output
             if step.output_file:
@@ -384,6 +395,24 @@ def run_template(template_name, **kwargs):
                         output_file.write(step_output)
                 except Exception as e:
                     raise click.ClickException(f"Failed to save output to file {save_to_file}: {e}")
+            # Validation
+            validated = validate_step_output(step.validation, step_output)
+            if not validated:
+                action = step.validation.on_fail
+                failure_msg = "Validation failed for step output"
+                if action == "warn":
+                    console_print(f"[yellow]Warning: {failure_msg}![/yellow]")
+                elif action == "error":
+                    raise click.ClickException(failure_msg)
+                elif action == "skip":
+                    console_print(f"{failure_msg} – skipping next steps.")
+                    break
+                elif action == "continue":
+                    pass
+                else:
+                    raise click.ClickException(f"Validation type {action} is not supported.")
+            else:
+                console_print(f"[green]Validation passed.[/green]")
         # Print last step output if last option enabled
         if is_only_final_output() and not is_quiet():
             print(last_output, flush=True)
