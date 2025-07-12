@@ -10,7 +10,7 @@ class VariableDefinition(BaseModel):
     name: str
     type: Literal["str", "list[str]", "int", "list[int]", "bool"] = "str"
     description: Optional[str] = None
-    default: Optional[str] = None
+    default: Optional[str | bool | int | list] = None
     required: bool = False
     cli_option: Optional[str] = None
 
