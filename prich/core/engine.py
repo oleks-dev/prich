@@ -36,6 +36,8 @@ def expand_vars(args: List[str], internal_vars: Dict[str, str] = None):
     expanded_args = []
     for arg in args:
         # First expand internal variables
+        if type(arg) != str:
+            continue
         arg = re.sub(internal_pattern, replace_internal_var, arg)
         # Then expand environment variables ($VAR or ${VAR})
         arg = replace_env_vars(arg)
@@ -172,8 +174,23 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
         raise click.ClickException(f"Unexpected error in {method}: {str(e)}")
 
 def render_template(template_dir: str, template_text: str, variables: dict = Dict[str, str]) -> str:
+    from datetime import datetime
+    import os
+    import getpass
+    import platform
+
     if not template_text:
         return ""
+
+    builtin = {
+        "now": datetime.now(),
+        "now_utc": datetime.utcnow(),
+        "today": datetime.today().date(),
+        "cwd": os.getcwd(),
+        "user": getpass.getuser(),
+        "hostname": platform.node(),
+    }
+    variables["builtin"] = builtin
 
     rendered_text = get_jinja_env("template").from_string(template_text).render(**variables).strip()
     return rendered_text
@@ -347,7 +364,7 @@ def run_template(template_name, **kwargs):
             option_name = cli_option.lstrip("-").replace("-", "_")
             variables[var.name] = replace_env_vars(kwargs.get(option_name, var.default))
         else:
-            variables[var.name] = replace_env_vars(var.default)
+            variables[var.name] = replace_env_vars(kwargs.get(var.name, var.default))
         if var.required and variables.get(var.name) is None:
             raise click.ClickException(f"Missing required variable {var.name}")
 
@@ -396,23 +413,24 @@ def run_template(template_name, **kwargs):
                 except Exception as e:
                     raise click.ClickException(f"Failed to save output to file {save_to_file}: {e}")
             # Validation
-            validated = validate_step_output(step.validation, step_output)
-            if not validated:
-                action = step.validation.on_fail
-                failure_msg = "Validation failed for step output"
-                if action == "warn":
-                    console_print(f"[yellow]Warning: {failure_msg}![/yellow]")
-                elif action == "error":
-                    raise click.ClickException(failure_msg)
-                elif action == "skip":
-                    console_print(f"{failure_msg} – skipping next steps.")
-                    break
-                elif action == "continue":
-                    pass
+            if step.validation:
+                validated = validate_step_output(step.validation, step_output)
+                if not validated:
+                    action = step.validation.on_fail
+                    failure_msg = "Validation failed for step output"
+                    if action == "warn":
+                        console_print(f"[yellow]Warning: {failure_msg}![/yellow]")
+                    elif action == "error":
+                        raise click.ClickException(failure_msg)
+                    elif action == "skip":
+                        console_print(f"{failure_msg} – skipping next steps.")
+                        break
+                    elif action == "continue":
+                        pass
+                    else:
+                        raise click.ClickException(f"Validation type {action} is not supported.")
                 else:
-                    raise click.ClickException(f"Validation type {action} is not supported.")
-            else:
-                console_print(f"[green]Validation passed.[/green]")
+                    console_print(f"[green]Validation passed.[/green]")
         # Print last step output if last option enabled
         if is_only_final_output() and not is_quiet():
             print(last_output, flush=True)

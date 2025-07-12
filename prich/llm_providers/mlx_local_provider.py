@@ -6,6 +6,8 @@ from prich.models.config_providers import MLXLocalProviderModel
 from prich.llm_providers.llm_provider_interface import LLMProvider
 from prich.llm_providers.base_optional_provider import LazyOptionalProvider
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 class MLXLocalProvider(LLMProvider, LazyOptionalProvider):
     def __init__(self, 
                  name: str,

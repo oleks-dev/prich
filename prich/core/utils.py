@@ -66,7 +66,7 @@ def replace_env_vars(text):
                 return os.getenv(var_name, "")
         raise click.ClickException(f"Environment variable {var_name} is not listed in allowed environment variables. Add it to config.security.allowed_environment_variables for usage.")
 
-    if text is None:
+    if text is None or type(text) != str:
         return text
 
     # Pattern for environment variables: $VAR or ${VAR}
