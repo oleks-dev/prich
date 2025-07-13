@@ -5,7 +5,8 @@ from typing import Dict, List
 from prich.models.config import ConfigModel
 from prich.models.template import TemplateModel, PromptFields, PipelineStep, LLMStep, PythonStep, RenderStep, \
     CommandStep, StepValidation
-from prich.core.utils import console_print, replace_env_vars, shorten_home_path, is_quiet, is_only_final_output
+from prich.core.utils import console_print, replace_env_vars, shorten_home_path, is_quiet, is_only_final_output, \
+    is_verbose
 
 jinja_env = {}
 
@@ -118,7 +119,7 @@ def validate_step_output(step_validation: StepValidation, value: str)-> bool:
         return True  # validation passed
     return False
 
-def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, variables: Dict[str, str], config: ConfigModel, template_name: str, template_source: str) -> str:
+def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, variables: Dict[str, str], config: ConfigModel, template_id: str, template_source: str) -> str:
     import subprocess
     from rich.console import Console
     console = Console()
@@ -164,7 +165,8 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
         if not is_quiet() and not is_only_final_output():
             with console.status("Processing..."):
                 result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            console_print(result.stdout)
+            if is_verbose():
+                console_print(result.stdout)
         else:
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         return result.stdout.strip()
@@ -253,7 +255,7 @@ def create_dynamic_command(config, template: TemplateModel):
         arg_type = get_variable_type(arg.type)
         help_text = arg.description or f"{arg_name} option"
         cli_option = arg.cli_option or f"--{arg_name}"
-        reserved_options = ['-g', '--global', "-q", "--quiet", "-o", "--output", "-p", "--provider", "-f", "--only-final-output", "-s", "--skip-llm"]
+        reserved_options = ["-g", "--global", "-q", "--quiet", "-o", "--output", "-p", "--provider", "-f", "--only-final-output", "-s", "--skip-llm", "-v", "--verbose"]
         if cli_option in reserved_options:
             raise click.ClickException(f"{arg_name} cli option uses a reserved option name: {cli_option}")
 
@@ -281,10 +283,10 @@ def create_dynamic_command(config, template: TemplateModel):
 
     @click.pass_context
     def dynamic_command(ctx, **kwargs):
-        console_print(f"Template: [green]{template.name}[/green], Args: {', '.join([f'[blue]{k}[/blue]=[blue]{v}[/blue]' for k,v in kwargs.items() if v])}")
-        run_template(template.name, **kwargs)
+        console_print(f"Template: [green]{template.id}[/green], Args: {', '.join([f'[blue]{k}[/blue]=[blue]{v}[/blue]' for k,v in kwargs.items() if v])}")
+        run_template(template.id, **kwargs)
 
-    return click.Command(name=template.name, callback=dynamic_command, params=options, help=template.description, epilog=f"Template file: {shorten_home_path(template.file)}")
+    return click.Command(name=template.id, callback=dynamic_command, params=options, help=template.description, epilog=f"Template file: {shorten_home_path(template.file)}")
 
 def send_to_llm(template, step, provider, config, variables, skip_llm, output):
     import json
@@ -300,8 +302,8 @@ def send_to_llm(template, step, provider, config, variables, skip_llm, output):
     elif step.provider:
         selected_provider_name = step.provider
     # Use Provider to template assignment from config settings
-    elif config.settings.provider_assignments and template.name in config.settings.provider_assignments.keys():
-        selected_provider_name = config.settings.provider_assignments[template.name]
+    elif config.settings.provider_assignments and template.id in config.settings.provider_assignments.keys():
+        selected_provider_name = config.settings.provider_assignments[template.id]
     # Use default provider from config
     else:
         selected_provider_name = config.settings.default_provider
@@ -323,11 +325,12 @@ def send_to_llm(template, step, provider, config, variables, skip_llm, output):
         # Override show response when quiet mode
         llm_provider.show_response = False
 
-    console_print(f"[bold]Sending prompt to LLM [/bold][blue]({llm_provider.name})[/blue][bold]:[/bold]")
-    console_print(prompt, markup=False)
+    if is_verbose():
+        console_print(f"[bold]Sending prompt to LLM [/bold][blue]({llm_provider.name})[/blue]")
+        console_print(prompt, markup=False)
 
     if not is_quiet():
-        console_print("\n[bold]LLM Response:[/bold]")
+        console_print("[bold]LLM Response:[/bold]")
     try:
         if not is_quiet() and not is_only_final_output() and not llm_provider.show_response:
             from rich.console import Console
@@ -347,7 +350,7 @@ def send_to_llm(template, step, provider, config, variables, skip_llm, output):
         raise click.ClickException(f"Failed to get LLM response: {str(e)}")
     return step_output
 
-def run_template(template_name, **kwargs):
+def run_template(template_id, **kwargs):
     from prich.core.loaders import get_loaded_config, get_loaded_template
 
     config, _ = get_loaded_config()
@@ -355,7 +358,7 @@ def run_template(template_name, **kwargs):
     provider = kwargs.get('provider')
     output = kwargs.get('output')
 
-    template = get_loaded_template(template_name)
+    template = get_loaded_template(template_id)
 
     variables = {}
     for var in template.variables:
@@ -376,7 +379,7 @@ def run_template(template_name, **kwargs):
             # Set output variable to None
             if step.output_variable:
                 variables[step.output_variable] = None
-            step_brief = f"Step #{step_idx}: {step.name}"
+            step_brief = f"\n[bold]Step #{step_idx}: {step.name}[/bold]"
             should_run = should_run_step(step.when, variables)
             when_expression = f" (\"when\" expression \"{step.when}\" is {should_run})" if step.when else ""
             console_print(f"{step_brief}{' - Skipped' if not should_run else ''}{when_expression}")
@@ -385,7 +388,7 @@ def run_template(template_name, **kwargs):
 
             output_var = step.output_variable
             if type(step) in [PythonStep, CommandStep]:
-                step_output = run_command_step(template, step, variables, config, template_name, template.source)
+                step_output = run_command_step(template, step, variables, config, template_id, template.source)
             elif type(step) == RenderStep:
                 step_output = render_template(template.folder, step.template, variables)
             elif type(step) == LLMStep:

@@ -15,6 +15,10 @@ def should_use_local_only() -> bool:
     """ Should only local config/templates used? """
     return any(flag in sys.argv for flag in ("-l", "--local"))
 
+def is_verbose() -> bool:
+    """ Is Verbose mode enabled? """
+    return any(flag in sys.argv for flag in ("-v", "--verbose"))
+
 def is_quiet() -> bool:
     """ Is Quiet mode enabled? """
     return any(flag in sys.argv for flag in ("-q", "--quiet"))
@@ -33,10 +37,10 @@ def console_print(message: str = "", end: str = "\n", markup = None, flush: bool
     if not is_quiet() and not is_only_final_output():
         console.print(message, end=end, markup=markup)
 
-def is_valid_template_name(name):
+def is_valid_template_id(template_id):
     """ Validate Name Pattern: lowercase letters, numbers, hyphen, optional underscores, and no other characters"""
     pattern = r'^[a-z0-9-]+(_[a-z0-9-]+)*$'
-    return bool(re.match(pattern, name))
+    return bool(re.match(pattern, template_id))
 
 def get_prich_dir() -> Path:
     parent_path = Path.home() if should_use_global_only() else Path.cwd()

@@ -27,7 +27,7 @@ class DynamicCommandGroup(click.Group):
             templates = load_template_models()
             for template in templates:
                 self.add_command(create_dynamic_command(config, template))
-                _loaded_templates[template.name] = template
+                _loaded_templates[template.id] = template
         except Exception as e:
             raise click.ClickException(f"Failed to load dynamic parameters: {e}")
 

@@ -11,7 +11,7 @@ class VariableDefinition(BaseModel):
     type: Literal["str", "list[str]", "int", "list[int]", "bool"] = "str"
     description: Optional[str] = None
     default: Optional[str | bool | int | list] = None
-    required: bool = False
+    required: Optional[bool] = False
     cli_option: Optional[str] = None
 
 
@@ -70,6 +70,7 @@ PipelineStep = Annotated[
 # Main Template
 
 class TemplateModel(BaseModel):
+    id: str
     name: str
     version: str = "1.0"
     description: Optional[str] = None
@@ -93,7 +94,7 @@ class TemplateModel(BaseModel):
         for step in self.steps:
             idx += 1
             if step.name in seen:
-                raise ValueError(f"Duplicate {self.name} template step name (#{idx}): '{step.name}'")
+                raise ValueError(f"Duplicate {self.id} template step name (#{idx}): '{step.name}'")
             seen.add(step.name)
         return self
 
@@ -117,14 +118,32 @@ class TemplateModel(BaseModel):
             elif location == "global":
                 prich_dir = Path.cwd()
             prich_dir = prich_dir / ".prich"
-            template_file = prich_dir / "templates" / self.name
+            template_file = prich_dir / "templates" / self.id
         elif not filename and self.folder and self.file:
             template_file = Path(self.folder) / self.file
         else:
-            raise click.ClickException(f"Failed to prepare file path for template {self.name}")
+            raise click.ClickException(f"Failed to prepare file path for template {self.id}")
         if template_file.exists():
             import shutil
             template_backup_file = str(template_file).replace(".yaml", ".bak", -1)
             shutil.copy(template_file, template_backup_file)
         with open(template_file, "w") as f:
             return yaml.safe_dump(self.model_dump(), f)
+
+    def describe(self):
+        return f"""
+        Template: {self.id}
+        Name: {self.name}
+        Description: {self.description}
+        Version: {self.version}
+        Tags: {", ".join(self.tags or [])}
+        Steps: {len(self.steps)} total
+        Variables:
+        {self._describe_vars()}
+        """
+
+    def _describe_vars(self):
+        return "\n".join(
+            f"  - {v.name}: {v.description or 'No description'} (type: {v.type})"
+            for v in self.variables
+        )

@@ -1,12 +1,19 @@
 import os
 import click
 from pathlib import Path
+
+from prich.core.utils import is_quiet, is_only_final_output
 from prich.core.utils import console_print
 from prich.models.config_providers import MLXLocalProviderModel
 from prich.llm_providers.llm_provider_interface import LLMProvider
 from prich.llm_providers.base_optional_provider import LazyOptionalProvider
+from rich.console import Console
+from contextlib import nullcontext
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+console = Console()
+
 
 class MLXLocalProvider(LLMProvider, LazyOptionalProvider):
     def __init__(self, 
@@ -54,24 +61,28 @@ class MLXLocalProvider(LLMProvider, LazyOptionalProvider):
                 xtc_threshold=self.provider.xtc_threshold if self.provider.xtc_threshold is not None else 0.0,
                 xtc_special_tokens=self.provider.xtc_special_tokens if self.provider.xtc_special_tokens is not None else []
             )
-            for response in self.stream_generate(
-                model=self.model,
-                tokenizer=self.tokenizer,
-                prompt=prompt,
-                max_tokens=self.provider.max_tokens if self.provider.max_tokens is not None else 512,
-                sampler=sampler,
-                max_kv_size=self.provider.max_kv_size,
-                prefill_step_size=self.provider.prefill_step_size if self.provider.prefill_step_size is not None else 2048,
-                kv_bits=self.provider.kv_bits,
-                kv_group_size=self.provider.kv_group_size if self.provider.kv_group_size is not None else 64,
-                quantized_kv_start=self.provider.quantized_kv_start if self.provider.quantized_kv_start is not None else 0
-            ):
-                text.append(response.text)
+            status = console.status("Thinking...") if not is_quiet() and not is_only_final_output() else nullcontext()
+            with status:
+                for response in self.stream_generate(
+                    model=self.model,
+                    tokenizer=self.tokenizer,
+                    prompt=prompt,
+                    max_tokens=self.provider.max_tokens if self.provider.max_tokens is not None else 512,
+                    sampler=sampler,
+                    max_kv_size=self.provider.max_kv_size,
+                    prefill_step_size=self.provider.prefill_step_size if self.provider.prefill_step_size is not None else 2048,
+                    kv_bits=self.provider.kv_bits,
+                    kv_group_size=self.provider.kv_group_size if self.provider.kv_group_size is not None else 64,
+                    quantized_kv_start=self.provider.quantized_kv_start if self.provider.quantized_kv_start is not None else 0
+                ):
+                    if not is_quiet() and not is_only_final_output():
+                        status.stop()
+                    text.append(response.text)
+                    if self.show_response:
+                        console_print(response.text, end='')
                 if self.show_response:
-                    console_print(response.text, end='')
-            if self.show_response:
-                console_print()
-            return ''.join(text).strip()
+                    console_print()
+                return ''.join(text).strip()
         except Exception as e:
             raise click.ClickException(f"mlx_local provider error: {str(e)}")
     

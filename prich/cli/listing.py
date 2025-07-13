@@ -41,9 +41,9 @@ def list_templates(global_only: bool, local_only: bool, tags: List[str]):
 
     selected_tags = f" (tags: [green]{', '.join(tags)}[/green])" if tags else ""
     console_print(f"[bold]Available templates{selected_tags}:[/bold]")
-    for t in templates:
-        source = t.source
+    for template in templates:
+        source = template.source
         marker = " ([green]g[/green])" if source == "global" else ""
-        template_tags = f" [dim](tags: [green]{', '.join(t.tags)}[/green])[/dim]" if t.tags else ""
-        console_print(f"- [green]{t.name}[/green]{marker}: [dim][green]{t.description}[/green][/dim]{template_tags}")
+        template_tags = f" [dim](tags: [green]{', '.join(template.tags)}[/green])[/dim]" if template.tags else ""
+        console_print(f"- [green]{template.id}[/green]{marker}: [dim][green]{template.description}[/green][/dim]{template_tags}")
 

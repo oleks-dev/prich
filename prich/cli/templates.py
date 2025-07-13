@@ -8,7 +8,7 @@ import venv
 
 from prich.core.loaders import get_loaded_templates, get_loaded_config, get_loaded_template
 from prich.models.template import TemplateModel, VariableDefinition, LLMStep, PromptFields
-from prich.core.utils import console_print, is_valid_template_name, get_prich_dir, get_prich_templates_dir
+from prich.core.utils import console_print, is_valid_template_id, get_prich_dir, get_prich_templates_dir
 
 
 @click.command("install")
@@ -30,13 +30,13 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
     template_yaml = yaml_files[0]
     template_content = yaml.safe_load(template_yaml.read_text())
     template = TemplateModel(**template_content)
-    template_name = template.name
-    template_base = templates_dir / template_name
-    dest_yaml = template_base / f"{template_name}.yaml"
+    template_id = template.id
+    template_base = templates_dir / template_id
+    dest_yaml = template_base / f"{template_id}.yaml"
 
     if dest_yaml.exists() and not force:
         scope = "global" if global_install else "local"
-        raise click.ClickException(f"Template '{template_name}' already exists in {scope} directory ({dest_yaml}). Use --force to overwrite.")
+        raise click.ClickException(f"Template '{template_id}' already exists in {scope} directory ({dest_yaml}). Use --force to overwrite.")
 
     os.makedirs(template_base, exist_ok=True)
     # if not no_yaml:
@@ -63,8 +63,8 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
     if not no_venv and template.venv:
         install_template_venv(template, template_base, force)
 
-    console_print(f"Template [green]{template_name}[/green] installed successfully")
-    console_print(f"Run: [cyan]prich[/cyan] run [green]{template_name}[/green] --help")
+    console_print(f"Template [green]{template_id}[/green] installed successfully")
+    console_print(f"Run: [cyan]prich[/cyan] run [green]{template_id}[/green] --help")
 
 def install_template_venv(template: TemplateModel, template_base: Path, force: bool = False):
     console_print("Setup venv:")
@@ -116,33 +116,34 @@ def install_template_venv(template: TemplateModel, template_base: Path, force: b
 
 
 @click.command("venv-install")
-@click.argument("template_name")
+@click.argument("template_id")
 @click.option("-g", "--global", "global_only", is_flag=True, help="Only global config")
 @click.option("-f", "--force", "force", is_flag=True, help="Remove venv and re-install")
-def venv_install(template_name, global_only, force):
+def venv_install(template_id, global_only, force):
     """Install venv for Template with python script steps"""
-    template = get_loaded_template(template_name)
+    template = get_loaded_template(template_id)
     install_template_venv(template, force)
 
 @click.command("show")
-@click.argument("template_name")
+@click.argument("template_id")
 @click.option("-g", "--global", "global_only", is_flag=True, help="Only global config")
-def show_template(template_name, global_only):
+def show_template(template_id, global_only):
     """Show available options for a template."""
     import yaml
-    template = get_loaded_template(template_name)
+    template = get_loaded_template(template_id)
     console_print(f"[bold]Template[/bold]:")
     tpl = yaml.dump(template.model_dump(exclude_none=True), sort_keys=False, indent=2)
     console_print(tpl)
 
 @click.command("create")
-@click.argument("template_name")
+@click.argument("template_id")
 @click.option("-g", "--global", "global_only", is_flag=True, default=False, help="Only global template")
 @click.option("-l", "--local", "local_only", is_flag=True, default=False, help="Only local template")
-def create_template(template_name, global_only, local_only):
+def create_template(template_id, global_only, local_only):
     """Create new Template based on basic example template."""
     example_template = TemplateModel(
-        name=template_name,
+        id=template_id,
+        name=template_id.replace("_", " ").title(),
         description="Example description",
         version="1.0",
         tags=["example"],
@@ -174,22 +175,22 @@ def create_template(template_name, global_only, local_only):
 
     config, _ = get_loaded_config()
     installed_templates = get_loaded_templates()
-    if template_name in [tpl.name for tpl in installed_templates]:
-        raise click.ClickException(f"Template {template_name} is already exists.")
-    if not is_valid_template_name(template_name):
-        raise click.ClickException(f"Template {template_name} is not correct, please use only lowercase letters, numbers, hyphen, and optional underscore characters.")
+    if template_id in [template.id for template in installed_templates]:
+        raise click.ClickException(f"Template {template_id} is already exists.")
+    if not is_valid_template_id(template_id):
+        raise click.ClickException(f"Template {template_id} is not correct, please use only lowercase letters, numbers, hyphen, and optional underscore characters.")
     prich_dir = (Path.cwd() if not global_only else Path.home()) / ".prich"
-    template_dir = prich_dir / "templates" / template_name
+    template_dir = prich_dir / "templates" / template_id
     if template_dir.exists():
-        raise click.ClickException(f"Template {template_name} folder {template_dir} already exists.")
+        raise click.ClickException(f"Template {template_id} folder {template_dir} already exists.")
     template_dir.mkdir(parents=True, exist_ok=False)
     editor_cmd = config.settings.editor
     if not editor_cmd:
         raise click.ClickException(f"Default editor is not set, add settings.editor into config.")
-    template_file = template_dir / f"{template_name}.yaml"
+    template_file = template_dir / f"{template_id}.yaml"
     template_file.write_text(yaml.safe_dump(example_template.model_dump()))
     result = subprocess.run([editor_cmd, template_file], check=True)
     if result.returncode == 0:
-        console_print(f"Template {template_name} created in {template_file}")
+        console_print(f"Template {template_id} created in {template_file}")
     else:
-        raise click.ClickException(f"Editor returned error code {result.returncode} during template {template_name} creation.")
+        raise click.ClickException(f"Editor returned error code {result.returncode} during template {template_id} creation.")

@@ -102,8 +102,8 @@ def load_template_models(): #global_only: bool = False, local_only: bool = False
     local_templates = _load_template_models(Path.cwd())
     if should_use_local_only():
         return local_templates
-    local_names = {t.name for t in local_templates if t}
-    filtered_globals = [t for t in global_templates if t.name not in local_names]
+    local_ids = {template.id for template in local_templates if template}
+    filtered_globals = [template for template in global_templates if template.id not in local_ids]
     return local_templates + filtered_globals
 
 def get_loaded_config():
@@ -112,18 +112,18 @@ def get_loaded_config():
         _loaded_config, _loaded_config_paths = load_merged_config()
     return _loaded_config, _loaded_config_paths
 
-def get_loaded_template(template_name: str):
+def get_loaded_template(template_id: str):
     if not _loaded_templates:
         get_loaded_templates()
-    if template_name not in _loaded_templates:
-        raise click.ClickException(f"Template {template_name} not found.")
-    return _loaded_templates[template_name]
+    if template_id not in _loaded_templates:
+        raise click.ClickException(f"Template {template_id} not found.")
+    return _loaded_templates[template_id]
 
 def get_loaded_templates(tags: list[str]=None):
     if not _loaded_templates:
         templates = load_template_models()
         for template in templates:
-            _loaded_templates[template.name] = template
+            _loaded_templates[template.id] = template
     if tags:
         return [t for t in _loaded_templates.values() if t.has_any_tag(tags)]
     return list(_loaded_templates.values())

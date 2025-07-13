@@ -1,4 +1,5 @@
-name: csv_analysis
+id: csv_analysis
+name: CSV Analysis
 schema_version: "1.0"
 version: "1.0"
 description: Analyze CSV data and generate business insights
