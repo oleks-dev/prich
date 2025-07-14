@@ -10,7 +10,8 @@ from prich.models.template import TemplateModel, PromptFields, LLMStep
 
 TEMPLATE_YAML = """
 schema_version: "1.0"
-name: test_template
+id: test_template
+name: Test Template
 version: "1.0"
 description: A test template
 variables: []

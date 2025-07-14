@@ -10,21 +10,103 @@ from prich.core.loaders import get_loaded_templates, get_loaded_config, get_load
 from prich.models.template import TemplateModel, VariableDefinition, LLMStep, PromptFields
 from prich.core.utils import console_print, is_valid_template_id, get_prich_dir, get_prich_templates_dir
 
+def _download_zip(url: str) -> Path:
+    """ Download zip file into temporary file and return path to it """
+    import tempfile
+    import requests
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp:
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        for chunk in response.iter_content(chunk_size=8192):
+            tmp.write(chunk)
+        tmp.flush()
+        tmp_path = Path(tmp.name)
+    return tmp_path
+
+def _extract_zip(path: Path) -> Path:
+    """ Extract zip archive into temporary folder and return path of it """
+    import zipfile
+    import tempfile
+    tmp_path = Path(tempfile.mkdtemp())
+    with zipfile.ZipFile(path, 'r') as zip_ref:
+        zip_ref.extractall(tmp_path)
+    return tmp_path
+
+def safe_remove(path: Path):
+    """ Remove folder or file if present """
+    try:
+        if path.is_file() or path.is_symlink():
+            path.unlink()
+        elif path.is_dir():
+            shutil.rmtree(path)
+    except FileNotFoundError:
+        pass  # Ignore if it doesn't exist
+
+def check_if_dest_present(template_id: str, dest_folder: Path, global_install: bool, force: bool):
+    """ Check if dest template folder already present """
+    if dest_folder.exists() and not force:
+        scope = "global" if global_install else "local"
+        raise click.ClickException(
+            f"Template '{template_id}' already exists in {scope} directory ({dest_folder}). Use --force to overwrite.")
+
 
 @click.command("install")
 @click.argument("path")
 @click.option("--force", is_flag=True, help="Overwrite existing templates")
 @click.option("--no-venv", is_flag=True, help="Skip venv setup")
 @click.option("-g", "--global", "global_install", is_flag=True, help="Install to ~/.prich/templates")
-def template_install(path: str, force: bool, no_venv: bool, global_install: bool):
-    """Install a template from PATH."""
-    src_dir = Path(path).resolve()
-    if not src_dir.is_dir():
-        raise click.ClickException(f"Path is not a directory: {path}")
-
+@click.option("-r", "--remote", "from_remote", is_flag=True, help="Install template from prich-templates GitHub repo")
+def template_install(path: str, force: bool, no_venv: bool, global_install: bool, from_remote: bool):
+    """Install a template from PATH, zip, or prich-templates."""
+    from rich.console import Console
+    console = Console()
     templates_dir = get_prich_templates_dir()
+    src_dir = None
+    remove_source = False
+
+    if from_remote:
+        if not is_valid_template_id(path):
+            raise click.ClickException(f"Remote Template ID {path} is not valid.")
+        check_if_dest_present(path, templates_dir / path, global_install, force)
+
+        from_url = f"https://raw.githubusercontent.com/oleks-dev/prich-templates/main/dist/{path}.zip"
+        try:
+            with console.status(f"Downloading {path} from {from_url}..."):
+                tmp_zip_file = _download_zip(
+                    url = from_url
+                )
+        except Exception as e:
+            safe_remove(tmp_zip_file)
+            raise click.ClickException(f"Failed to download template {path} from prich-templates, check if the template is available.")
+        try:
+            with console.status(f"Extracting..."):
+                src_dir = _extract_zip(tmp_zip_file) / path
+                safe_remove(tmp_zip_file)
+        except Exception as e:
+            safe_remove(tmp_zip_file)
+            raise click.ClickException(f"Failed to extract downloaded template {tmp_zip_file}")
+        remove_source = True
+    elif path.endswith(".zip"):
+        template_id = path[:-4]
+        check_if_dest_present(template_id, templates_dir / template_id, global_install, force)
+        try:
+            src_dir = _extract_zip(Path(path)) / template_id
+        except Exception as e:
+            safe_remove(src_dir)
+            raise click.ClickException(f"Failed to extract template {path}")
+        remove_source = True
+    else:
+        src_dir = Path(path).resolve()
+        if not src_dir.is_dir():
+            raise click.ClickException(f"Path is not a directory: {path}")
+
+    if not src_dir:
+        raise click.ClickException("Failed to load or prepare source dir for template installation.")
+
     yaml_files = list(src_dir.glob("*.yaml"))
     if not yaml_files:
+        if remove_source:
+            safe_remove(src_dir)
         raise click.ClickException("No template YAML found")
 
     template_yaml = yaml_files[0]
@@ -34,9 +116,7 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
     template_base = templates_dir / template_id
     dest_yaml = template_base / f"{template_id}.yaml"
 
-    if dest_yaml.exists() and not force:
-        scope = "global" if global_install else "local"
-        raise click.ClickException(f"Template '{template_id}' already exists in {scope} directory ({dest_yaml}). Use --force to overwrite.")
+    check_if_dest_present(template_id, template_base, global_install, force)
 
     os.makedirs(template_base, exist_ok=True)
     # if not no_yaml:
@@ -59,6 +139,9 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
                     console_print(f"Running chmod {script} 755")
                     dest_script.chmod(0o755)
         console_print("[green]Done![/green]")
+
+    if remove_source:
+        safe_remove(src_dir)
 
     if not no_venv and template.venv:
         install_template_venv(template, template_base, force)

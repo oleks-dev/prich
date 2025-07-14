@@ -76,7 +76,7 @@ class TemplateModel(BaseModel):
     description: Optional[str] = None
     author: Optional[str] = None
     tags: Optional[List[str]] = []
-    venv: Optional[Literal["shared", "isolated"]] = "shared"
+    venv: Optional[Literal["shared", "isolated", None]] = None
     steps: list[PipelineStep]
     variables: Optional[List[VariableDefinition]] = []
 
