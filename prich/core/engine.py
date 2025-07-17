@@ -277,13 +277,15 @@ def create_dynamic_command(config, template: TemplateModel):
         click.Option(["-o", "--output"], type=click.Path(), default=None, show_default=True, help="Save LLM output to file"),
         click.Option(["-p", "--provider"], type=click.Choice(config.providers.keys()), show_default=True, help="Select LLM provider"),
         click.Option(["-s", "--skip-llm"], is_flag=True, default=False, help="Skip sending prompt to LLM"),
+        click.Option(["-v", "--verbose"], is_flag=True, default=False, help="Verbose mode"),
         click.Option(["-q", "--quiet"], is_flag=True, default=False, help="Suppress all output"),
         click.Option(["-f", "--only-final-output"], is_flag=True, default=False, help="Suppress output and show only the last step output")
     ])
 
     @click.pass_context
     def dynamic_command(ctx, **kwargs):
-        console_print(f"Template: [green]{template.id}[/green], Args: {', '.join([f'[blue]{k}[/blue]=[blue]{v}[/blue]' for k,v in kwargs.items() if v])}")
+        console_print(f"Template: [green]{template.name}[/green] {template.version}, Args: {', '.join([f'[blue]{k}[/blue]=[blue]{v}[/blue]' for k,v in kwargs.items() if v])}")
+        console_print(template.description)
         run_template(template.id, **kwargs)
 
     return click.Command(name=template.id, callback=dynamic_command, params=options, help=template.description, epilog=f"Template file: {shorten_home_path(template.file)}")
@@ -376,15 +378,17 @@ def run_template(template_id, **kwargs):
         last_output = ""
         for step in template.steps:
             step_idx += 1
-            # Set output variable to None
-            if step.output_variable:
-                variables[step.output_variable] = None
             step_brief = f"\n[bold]Step #{step_idx}: {step.name}[/bold]"
             should_run = should_run_step(step.when, variables)
             when_expression = f" (\"when\" expression \"{step.when}\" is {should_run})" if step.when else ""
-            console_print(f"{step_brief}{' - Skipped' if not should_run else ''}{when_expression}")
+            if (not should_run and is_verbose()) or should_run:
+                console_print(f"{step_brief}{' - Skipped' if not should_run else ''}{when_expression}")
             if not should_run:
                 continue
+
+            # Set output variable to None
+            if step.output_variable:
+                variables[step.output_variable] = None
 
             output_var = step.output_variable
             if type(step) in [PythonStep, CommandStep]:
