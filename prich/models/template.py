@@ -3,6 +3,8 @@ from pathlib import Path
 import click
 from pydantic import BaseModel, Field, model_validator
 from typing import List, Optional, Literal, Annotated, Union
+from prich.core.utils import is_valid_variable_name
+
 
 # Template Variables
 
@@ -79,6 +81,7 @@ class TemplateModel(BaseModel):
     venv: Optional[Literal["shared", "isolated", None]] = None
     steps: list[PipelineStep]
     variables: Optional[List[VariableDefinition]] = []
+    usage_examples: Optional[list[str]] = None
 
     schema_version: Literal["1.0"] = "1.0"
 
@@ -88,14 +91,19 @@ class TemplateModel(BaseModel):
     file: Optional[str] = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
-    def validate_unique_step_names(self) -> "TemplateModel":
+    def validate_unique_step_names_and_variable_names(self) -> "TemplateModel":
         seen = set()
         idx = 0
+        # validate step names
         for step in self.steps:
             idx += 1
             if step.name in seen:
-                raise ValueError(f"Duplicate {self.id} template step name (#{idx}): '{step.name}'")
+                raise click.ClickException(f"Duplicate {self.id} template step name (#{idx}): '{step.name}'")
             seen.add(step.name)
+        # validate variable names
+        for variable in self.variables:
+            if not is_valid_variable_name(variable.name):
+                raise click.ClickException(f"Invalid variable name '{variable.name}' in {self.id} template: Variable name should contain only upper and lowercase letters, underscores, and numbers.")
         return self
 
     def has_tag(self, tag: str) -> bool:

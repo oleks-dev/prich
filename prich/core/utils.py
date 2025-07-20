@@ -42,6 +42,11 @@ def is_valid_template_id(template_id):
     pattern = r'^[a-z0-9-]+(_[a-z0-9-]+)*$'
     return bool(re.match(pattern, template_id))
 
+def is_valid_variable_name(variable_name):
+    """ Validate Name Pattern: upper and lowercase letters, numbers, optional underscores, and no other characters"""
+    pattern = r'^[A-Za-z0-9]+([_A-Za-z0-9]+)*$'
+    return bool(re.match(pattern, variable_name))
+
 def get_prich_dir() -> Path:
     parent_path = Path.home() if should_use_global_only() else Path.cwd()
     return parent_path / ".prich"
