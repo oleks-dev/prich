@@ -20,24 +20,18 @@ class OpenAIProvider(LLMProvider, LazyOptionalProvider):
         if self.client:
             return
         OpenAI = self._lazy_import_from("openai", "OpenAI")
-        self.client = OpenAI(
-            api_key=replace_env_vars(self.provider.api_key),
-            base_url=self.provider.base_url,
-            timeout=self.provider.timeout
-        )
+        configuration = self.provider.configuration if self.provider.configuration is not None else {}
+        if configuration.get("api_key"):
+            configuration['api_key'] = replace_env_vars(configuration['api_key'])
+        self.client = OpenAI(**configuration)
 
     def send_prompt(self, prompt: str) -> str:
         self._ensure_client()
         try:
             messages = json.loads(prompt)
-            response = self.client.chat.completions.create(
-                model=self.provider.model,
-                messages=messages,
-                max_tokens=self.provider.max_tokens,
-                temperature=self.provider.temperature,
-                stop=self.provider.stop,
-                timeout=self.provider.timeout
-            )
+            options = self.provider.options if self.provider.options is not None else {}
+            options['messages'] = messages
+            response = self.client.chat.completions.create(**options)
             return response.choices[0].message.content
         except Exception as e:
             if "rate_limit" in str(e).lower():

@@ -2,7 +2,7 @@ import click
 from pathlib import Path
 from typing import List, Optional, Literal, Dict, Annotated, Union
 from pydantic import BaseModel, Field, field_validator, TypeAdapter
-from prich.models.config_providers import EchoProviderModel, OpenAIProviderModel, MLXLocalProviderModel, MLXLocalProviderModel, STDINConsumerProviderModel
+from prich.models.config_providers import EchoProviderModel, OpenAIProviderModel, MLXLocalProviderModel, STDINConsumerProviderModel, OllamaProviderModel
 
 
 ProviderConfig = Annotated[
@@ -10,6 +10,7 @@ ProviderConfig = Annotated[
         EchoProviderModel,
         OpenAIProviderModel,
         MLXLocalProviderModel,
+        OllamaProviderModel,
         STDINConsumerProviderModel
     ],
     Field(discriminator='provider_type')

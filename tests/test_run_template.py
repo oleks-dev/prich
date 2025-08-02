@@ -24,6 +24,7 @@ providers:
     provider_type: echo
 settings: 
     default_provider: "show_prompt"
+    editor: "vi"
 """
     config = adapter.validate_python(yaml.safe_load(config))
     return config
@@ -33,7 +34,8 @@ def shared_venv_template(tmp_path):
     tpl = TemplateModel(
         schema_version="1.0",
         version="1.0",
-        name="shared_tpl",
+        id="shared_tpl",
+        name="shared template",
         description="Shared venv template",
         tags=["test"],
         variables=[
@@ -73,6 +75,7 @@ def template(tmp_path):
     tpl = TemplateModel(
         schema_version="1.0",
         version="1.0",
+        id="tpl",
         name="tpl",
         description="Test template",
         tags=["test"],
@@ -173,7 +176,8 @@ def test_invalid_template_missing_required_variable(monkeypatch, template, basic
     tpl = TemplateModel(
         schema_version="1.0",
         version="1.0",
-        name="missing_var",
+        id="missing_var",
+        name="missing var",
         description="Invalid template",
         tags=[],
         variables=[

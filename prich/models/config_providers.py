@@ -14,23 +14,16 @@ class BaseProviderModel(BaseModel):
 class EchoProviderModel(BaseProviderModel):
     provider_type: Literal["echo"]
     model: Literal[None] = None
-    mode: Optional[str] = None
 
 
 class OpenAIProviderModel(BaseProviderModel):
     provider_type: Literal["openai"]
-    mode: Optional[str] = None
-    api_endpoint: str
-    api_key: str
-    model: str
-    max_tokens: Optional[int] = None
-    temperature: Optional[float] = None
-    top_p: Optional[float] = None
+    configuration: dict
+    options: dict
 
 
 class MLXLocalProviderModel(BaseProviderModel):
     provider_type: Literal["mlx_local"]
-    mode: Optional[str] = None
     model_path: str
 
     # generate
@@ -84,8 +77,14 @@ class MLXLocalProviderModel(BaseProviderModel):
 class STDINConsumerProviderModel(BaseProviderModel):
     provider_type: Literal["stdin_consumer"]
     model: Literal[None] = None
-    mode: Optional[str] = None
     cmd: Optional[str] = None
     args: Optional[List[str]] = None
     stdout_strip_prefix: Optional[str] = None
     stdout_slice: Optional[Tuple[Optional[int], Optional[int]]] = None
+
+class OllamaProviderModel(BaseProviderModel):
+    provider_type: Literal["ollama"]
+    model: str
+    base_url: Optional[str] = None
+    options: Optional[dict] = None
+    stream: Optional[bool] = None

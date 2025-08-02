@@ -30,6 +30,8 @@ def list_providers(global_only: bool, local_only: bool, details: bool):
         else:
             if 'model' in provider_config.model_dump().keys():
                 provider_model = provider_config.model
+            elif provider_config.model_dump().get("options") and 'model' in provider_config.model_dump()["options"].keys():
+                provider_model = provider_config.options.get("model")
         console_print(f"- [green]{provider}[/green] [dim]([green]{provider_config.provider_type}[/green]{f', [green]{provider_model}[/green]' if provider_model else ''})[/dim]")
         if details:
             for k, v in provider_config.model_dump().items():
