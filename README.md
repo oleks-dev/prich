@@ -26,6 +26,45 @@
 - **Secure venv Management**: Default (`.prich/venv/`) and custom Python venvs (e.g., `.prich/templates/code_review/preprocess/venv`) isolate dependencies.
 - **Simple CLI**: Commands like `prich run` and `prich install` streamline workflows.
 
+## Execution Example
+
+```commandline
+➜ prich run summarize-git-diff --provider "llama3.1-8b" --review
+prich v0.1.0 - CLI for reusable rich LLM prompts with script pipelines
+Template: Summarize git diff 1.0, Args: provider=llama3.1-8b, review=True
+Generate a summary and review of differences between local code and remote or committed states.
+
+Step #1: Run git diff working vs last commit ("when" expression "working_vs_last_commit or (not working_vs_last_commit and not working_vs_remote and not committed_vs_remote and not remote_vs_local)" is True)
+Execute command git diff HEAD
+
+Step #2: Get current branch ("when" expression "not working_vs_last_commit" is True)
+Execute command git rev-parse --abbrev-ref HEAD
+
+Step #6: Ask to summarize the diff
+LLM Response:
+**Summary**
+
+The changes made to the `README.md` file are significant, with a substantial addition of content related to configuring and using different providers for LLM (Large Language Model) processing. The new section covers supported providers, including 
+`echo`, `openai`, `mlx_local`, `ollama`, and `stdin_consumer`. Each provider has its own configuration options and rendering modes.
+
+**Review**
+
+The changes are well-structured and easy to follow, with clear headings and concise descriptions for each provider. The use of code blocks and YAML syntax makes it straightforward to understand the configuration options for each provider.
+
+Some notable improvements include:
+
+* **Expanded documentation**: The new section provides detailed information on configuring providers, including supported models, rendering modes, and configuration options.
+* **Improved readability**: The addition of clear headings, concise descriptions, and code blocks enhances the overall readability of the document.
+* **Increased flexibility**: The introduction of multiple providers allows users to choose the best option for their specific use case.
+
+However, there are a few minor suggestions for improvement:
+
+* **Consistency in formatting**: While the new section is well-formatted, some sections (e.g., `provider_type`) have inconsistent indentation or spacing.
+* **Clarification on usage**: Some providers (e.g., `stdin_consumer`) could benefit from additional guidance on how to use them effectively.
+
+Overall, the changes are a significant improvement to the document, providing valuable information for users and contributors.
+```
+
 ## Installation
 ### **Set up prich**:
     
@@ -334,6 +373,118 @@ variables:
 
 - **Custom Python Venvs**: Templates like code_review use dedicated venvs for dependency isolation.
 
+## Configure .prich/config.yaml
+
+### Supported Providers
+`provider_type`:
+* `echo` - Just output rendered prompt as is without any LLM processing, could be used to save or send to LLM later
+    ```yaml
+      show_prompt:
+        mode: "flat"
+        provider_type: "echo"
+    ```
+* `openai` - HTTP provider to work with OpenAI API compatible model providers
+    ```yaml
+      openai-gpt4o:
+        mode: "chatml"
+        provider_type: "openai"
+        configuration:
+          api_key: "${OPENAI_API_KEY}"
+          base_url: "https://openai.com/api"
+        options:
+          model: "gpt-4o"
+    ```
+* `mlx_local` - (for mac) Use MLX LM library with your local model
+    ```yaml
+      mlx-mistral-7b:
+        mode: "mistral-instruct"
+        provider_type: "mlx_local"
+        model_path: "~/.cache/huggingface/hub/models--mlx-community--Mistral-7B-Instruct-v0.3-4bit/snapshots/a4b8f870474b0eb527f466a03fbc187830d271f5"
+        max_tokens: 3000
+    ```
+* `ollama` - HTTP provider to work with Ollama models
+    ```yaml
+      llama3.1-8b:
+        mode: chatml
+        provider_type: ollama
+        model: "llama3.1:8b"
+        stream: false
+        options:
+          num_predict: 2000
+    ```
+* `stdin_consumer` - STDIN provider to work with local models that support STDIN (for example with `q chat`)
+    ```yaml
+      qchatcli:
+        mode: flat
+        provider_type: stdin_consumer
+        cmd: q
+        args:
+          - chat
+          - --no-interactive
+    ```
+
+### Provider Mode `mode`  
+User to specify how the prompt would be rendered
+
+* `plain`
+```text
+{prompt}
+```
+* `flat`
+```text
+### System:
+{system}
+
+### User:
+{user}
+
+### Assistant:
+```
+```text
+### User:
+{user}
+
+### Assistant:
+```
+* `chatml`
+```json
+[
+  {"role": "system", "content": system},
+  {"role": "user", "content": user}
+]
+```
+```json
+[
+  {"role": "user", "content": user}
+]
+```
+
+* `mistral-instruct` and `llama2-chat`
+```text
+<s>[INST]
+{system}
+
+{user}
+[/INST]
+```
+```text
+<s>[INST]
+{user}
+[/INST]
+```
+* `anthropic`
+```text
+Human: {system}
+
+{user}
+
+Assistant:
+```
+```text
+Human: {user}
+
+Assistant:
+```
 
 ## Contributing
 
