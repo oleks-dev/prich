@@ -96,6 +96,8 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
                     output = resp_data.get("response", "")
                     text.append(output)
                     if self.show_response and not is_quiet() and not is_only_final_output():
+                        if not is_quiet() and not is_only_final_output():
+                            status.stop()
                         console_print(output)
 
             return ''.join(text).strip()
