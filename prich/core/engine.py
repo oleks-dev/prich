@@ -2,6 +2,8 @@ import click
 from pathlib import Path
 from typing import Dict, List
 
+from click import ClickException
+
 from prich.models.config import ConfigModel
 from prich.models.template import TemplateModel, PromptFields, PipelineStep, LLMStep, PythonStep, RenderStep, \
     CommandStep, StepValidation
@@ -197,51 +199,14 @@ def render_template(template_dir: str, template_text: str, variables: dict = Dic
     rendered_text = get_jinja_env("template").from_string(template_text).render(**variables).strip()
     return rendered_text
 
-def render_prompt(fields: PromptFields, variables: Dict[str, str], template_dir: str, mode: str) -> str:
-    import re
-    system = render_template(template_dir, fields.system, variables)
-    user = render_template(template_dir, fields.user, variables)
-    prompt_string = render_template(template_dir, fields.prompt, variables)
-
-    if system and not re.search(r"[.:?!…]$|```$", system.strip()):
-        system += "."
-
-    if mode in ["chatml", "anthropic", "flat", "mistral-instruct", "llama2-chat"]:
-        if prompt_string:
-            console_print("[yellow]Warning: 'prompt_string' field is ignored in non-plain modes.[/yellow]")
-
-    if mode == "chatml":
-        if not user:
-            raise click.ClickException(f"Empty prompt: {mode} requires at least 'user' prompt.")
-        messages = []
-        if system:
-            messages.append({"role": "system", "content": system})
-        messages.append({"role": "user", "content": user})
-        prompt = messages
-    elif mode == "flat":
-        if re.match(r"^(human|user|system|assistant):", user.strip(), re.IGNORECASE):
-            prompt = user
-        elif system and user:
-            prompt = f"### System:\n{system}\n\n### User:\n{user}\n\n### Assistant:"
-        elif user:
-            prompt = f"### User:\n{user}\n\n### Assistant:"
-        else:
-            raise click.ClickException(f"Empty prompt: {mode} requires at least 'user' prompt.")
-    elif mode == "plain":
-        if not prompt_string:
-            raise click.ClickException(f"Empty prompt: {mode} requires at least 'prompt' prompt.")
-        prompt = prompt_string
-    elif mode in ["mistral-instruct", "llama2-chat"]:
-        if not user:
-            raise click.ClickException(f"Empty prompt: {mode} requires at least 'user' prompt.")
-        prompt = f"<s>[INST]\n{system}\n\n{user}\n[/INST]" if system else f"<s>[INST]\n{user}\n[/INST]"
-    elif mode == "anthropic":
-        if not user:
-            raise click.ClickException(f"Empty prompt: {mode} requires at least 'user' prompt.")
-        prompt = f"Human: {system}\n\n{user}\n\nAssistant:" if system else f"Human: {user}\n\nAssistant:"
-    else:
+def render_prompt(config: ConfigModel, fields: PromptFields, variables: Dict[str, str], template_dir: str, mode: str) -> str:
+    if not fields.prompt and not fields.user:
+        raise ClickException("There should be Prompt or User field at least.")
+    mode_prompt = [x for x in config.model_dump().get("provider_modes") if x.get("name")==mode]
+    if len(mode_prompt) == 0:
         raise click.ClickException(f"Prompt mode {mode} is not supported.")
-
+    prompt_fields = render_template(template_dir, mode_prompt[0].get("prompt"), fields.model_dump())
+    prompt = render_template(template_dir, prompt_fields, variables)
     return prompt
 
 def get_variable_type(variable_type):
@@ -311,7 +276,7 @@ def send_to_llm(template, step, provider, config, variables, skip_llm, output):
         selected_provider_name = config.settings.default_provider
     selected_provider = config.providers[selected_provider_name]
 
-    prompt = render_prompt(step.prompt, variables, template.source, selected_provider.mode)
+    prompt = render_prompt(config, step.prompt, variables, template.source, selected_provider.mode)
     if not prompt:
         raise click.ClickException("Prompt is empty.")
 

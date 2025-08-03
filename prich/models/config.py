@@ -27,9 +27,14 @@ class SettingsConfig(BaseModel):
     editor: Optional[str] = None
 
 
+class ProviderModeModel(BaseModel):
+    name: str
+    prompt: str
+
 class ConfigModel(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
     providers: Dict[str, ProviderConfig]
+    provider_modes: List[ProviderModeModel]
     settings: SettingsConfig
     security: Optional[SecurityConfig] = None
 
@@ -48,6 +53,14 @@ class ConfigModel(BaseModel):
 
     def save(self, location: Literal["local", "global"]):
         import yaml
+
+        def str_presenter(dumper, data):
+            if "\n" in data:  # multiline string
+                return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+            return dumper.represent_scalar("tag:yaml.org,2002:str", data)
+
+        yaml.add_representer(str, str_presenter, Dumper=yaml.SafeDumper)
+
         if location == "local":
             prich_dir = Path.cwd()
         elif location == "global":
@@ -61,4 +74,4 @@ class ConfigModel(BaseModel):
             prich_config_backup_file = prich_dir / "config.bak"
             shutil.copy(prich_config_file, prich_config_backup_file)
         with open(prich_config_file, "w") as f:
-            f.write(yaml.safe_dump(self.model_dump(exclude_none=True), sort_keys=False))
+            f.write(yaml.safe_dump(self.model_dump(exclude_none=True), sort_keys=False, width=float("inf")))

@@ -1,8 +1,7 @@
-import json
-
 import click
 import pytest
 
+from prich.models.config import ConfigModel
 from prich.core.engine import render_prompt, render_template
 from prich.models.template import PromptFields
 
@@ -11,39 +10,87 @@ variables = {
     "assistant": "System Assistant"
 }
 
-@pytest.mark.parametrize("chat_mode, prompt, expected", [
+@pytest.fixture
+def basic_config():
+    from pydantic import TypeAdapter
+    import yaml
+    adapter = TypeAdapter(ConfigModel)
+    config = """
+schema_version: "1.0"
+providers:
+  show_prompt:
+    mode: flat
+    provider_type: echo
+provider_modes:
+  - name: plain
+    prompt: '{{ prompt }}'
+  - name: flat
+    prompt: |-
+      {% if system %}### System:
+      {{ system }}
+
+      {% endif %}### User:
+      {{ user }}
+
+      ### Assistant:
+  - name: mistral-instruct
+    prompt: |-
+      <s>[INST]
+      {% if system %}{{ system }}
+
+      {% endif %}{{ user }}
+      [/INST]
+  - name: llama2-chat
+    prompt: |-
+      <s>[INST]
+      {% if system %}{{ system }}
+
+      {% endif %}{{ user }}
+      [/INST]
+  - name: anthropic
+    prompt: |-
+      Human: {% if system %}{{ system }}
+
+      {% endif %}{{ user }}
+
+      Assistant:
+  - name: chatml
+    prompt: '[{% if system %}{"role": "system", "content": "{{ system }}"},{% endif %}{"role": "user", "content": "{{ user }}"}]'
+settings: 
+    default_provider: "show_prompt"
+    editor: "vi"
+"""
+    config = adapter.validate_python(yaml.safe_load(config))
+    return config
+
+@pytest.mark.parametrize("provider_mode, prompt, expected", [
     ("chatml",
      PromptFields(
-        system="User name is {{ name }}",
+        system="User name is {{ name }}.",
         user="Hello, {{ assistant }}"),
-     [{"role": "system", "content": f"User name is {variables['name']}."},
-      {"role": "user", "content": f"Hello, {variables['assistant']}"}
-      ]),
+     f"""[{{"role": "system", "content": "User name is {variables['name']}."}},{{"role": "user", "content": "Hello, {variables['assistant']}"}}]"""),
 
     ("chatml",
      PromptFields(
-        system="User name is {{ name }}",
+        system="User name is {{ name }}.",
         user="Hello, {{ assistant }}",
         prompt="Ignored prompt"),
-     [{"role": "system", "content": f"User name is {variables['name']}."},
-      {"role": "user", "content": f"Hello, {variables['assistant']}"}
-      ]),
+     f"""[{{"role": "system", "content": "User name is {variables['name']}."}},{{"role": "user", "content": "Hello, {variables['assistant']}"}}]"""),
 
     ("chatml",
      PromptFields(
         user="Hello, {{ assistant }}"),
-     [{"role": "user", "content": f"Hello, {variables['assistant']}"}
-      ]),
+     f"""[{{"role": "user", "content": "Hello, {variables['assistant']}"}}]"""),
 
     ("flat",
      PromptFields(
-         user="User: Hello, {{ assistant }}"),
-     f"User: Hello, {variables['assistant']}"
+         user="Hello, {{ assistant }}"),
+     f"### User:\nHello, {variables['assistant']}\n\n### Assistant:"
      ),
 
     ("flat",
      PromptFields(
-        system="User name is {{ name }}",
+        system="User name is {{ name }}.",
         user="Hello, {{ assistant }}"),
      f"### System:\nUser name is {variables['name']}.\n\n### User:\nHello, {variables['assistant']}\n\n### Assistant:"
      ),
@@ -62,7 +109,7 @@ variables = {
 
     ("mistral-instruct",
      PromptFields(
-         system="User name is {{ name }}",
+         system="User name is {{ name }}.",
          user="Hello, {{ assistant }}"),
      f"<s>[INST]\nUser name is {variables['name']}.\n\nHello, {variables['assistant']}\n[/INST]"
      ),
@@ -75,7 +122,7 @@ variables = {
 
     ("anthropic",
      PromptFields(
-         system="User name is {{ name }}",
+         system="User name is {{ name }}.",
          user="Hello, {{ assistant }}"),
      f"Human: User name is {variables['name']}.\n\nHello, {variables['assistant']}\n\nAssistant:"
      ),
@@ -87,9 +134,9 @@ variables = {
      ),
 
 ])
-def test_render_prompt(chat_mode, prompt, expected):
-    actual = render_prompt(prompt, variables=variables, template_dir=".", mode=chat_mode)
-    assert json.dumps(actual) == json.dumps(expected)
+def test_render_prompt(provider_mode, prompt, expected, basic_config):
+    actual = render_prompt(basic_config, prompt, variables=variables, template_dir=".", mode=provider_mode)
+    assert actual == expected
 
 @pytest.mark.parametrize("chat_mode, prompt", [
     ("chatml",
@@ -113,9 +160,9 @@ def test_render_prompt(chat_mode, prompt, expected):
      )
 
 ])
-def test_render_prompt_exception(chat_mode, prompt):
+def test_render_prompt_exception(chat_mode, prompt, basic_config):
     with pytest.raises(click.ClickException):
-        render_prompt(prompt, variables=variables, template_dir=".", mode=chat_mode)
+        render_prompt(basic_config, prompt, variables=variables, template_dir=".", mode=chat_mode)
 
 @pytest.mark.parametrize("template_string, expected", [
     ("Hello {{ assistant }}", "Hello System Assistant"),

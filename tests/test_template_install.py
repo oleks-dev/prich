@@ -6,7 +6,7 @@ from click.testing import CliRunner
 from prich.cli.templates import template_install
 from prich.core.loaders import load_config_model, _load_template_model
 from prich.core.engine import render_prompt
-from prich.models.template import TemplateModel, PromptFields, LLMStep
+from prich.models.template import PromptFields
 
 TEMPLATE_YAML = """
 schema_version: "1.0"
@@ -40,6 +40,41 @@ providers:
   show_prompt:
     provider_type: "echo"
     mode: "flat"
+provider_modes:
+  - name: plain
+    prompt: '{{ prompt }}'
+  - name: flat
+    prompt: |-
+      {% if system %}### System:
+      {{ system }}
+
+      {% endif %}### User:
+      {{ user }}
+
+      ### Assistant:
+  - name: mistral-instruct
+    prompt: |-
+      <s>[INST]
+      {% if system %}{{ system }}
+
+      {% endif %}{{ user }}
+      [/INST]
+  - name: llama2-chat
+    prompt: |-
+      <s>[INST]
+      {% if system %}{{ system }}
+
+      {% endif %}{{ user }}
+      [/INST]
+  - name: anthropic
+    prompt: |-
+      Human: {% if system %}{{ system }}
+
+      {% endif %}{{ user }}
+
+      Assistant:
+  - name: chatml
+    prompt: '[{% if system %}{"role": "system", "content": "{{ system }}"},{% endif %}{"role": "user", "content": "{{ user }}"}]'
 settings:
   editor: "vim"
   default_provider: "show_prompt"
@@ -86,26 +121,14 @@ def test_config_model_load():
         assert "show_prompt" in config_model.providers
 
 def test_render_template_prompt_basic():
-    # model = TemplateModel(
-    #     schema_version="1.0",
-    #     name="simple",
-    #     description="A simple prompt",
-    #     version="1.0",
-    #     variables=[],
-    #     steps=[
-    #         LLMStep(
-    #             name="llm",
-    #             type="llm",
-    #             prompt=PromptFields(
-    #                 system="Hello {{ name }}",
-    #                 user="Your input is {{ value }}"
-    #             )
-    #         )
-    #     ]
-    # )
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config_path = Path(tmpdir) / "config.yaml"
+        config_path.write_text(CONFIG_YAML)
+        config_model, _ = load_config_model(config_path)
+
     fields = PromptFields(system="Hello {{ name }}", user="Your input is {{ value }}")
     variables = {"name": "Test", "value": "XYZ"}
-    rendered = render_prompt(fields, variables, template_dir=".", mode="flat")
+    rendered = render_prompt(config_model, fields, variables, template_dir=".", mode="flat")
     assert "Hello Test" in rendered
     assert "Your input is XYZ" in rendered
 

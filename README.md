@@ -424,7 +424,8 @@ variables:
     ```
 
 ### Provider Mode `mode`  
-User to specify how the prompt would be rendered
+Use to specify how the prompt would be constructed for the LLM, you can modify or add your own as needed in the `config.yaml` - `provider_modes`.
+There are three fields available that are used in the template prompts. It could be `prompt` for plain string or `system` and `user` for instructions and query, or just `user` for a query.
 
 * `plain`
 ```text

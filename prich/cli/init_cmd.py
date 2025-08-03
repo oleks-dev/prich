@@ -6,7 +6,7 @@ from pathlib import Path
 import click
 from prich.core.utils import console_print
 from prich.models.config_providers import EchoProviderModel, OpenAIProviderModel, STDINConsumerProviderModel, MLXLocalProviderModel
-from prich.models.config import SettingsConfig, ConfigModel
+from prich.models.config import SettingsConfig, ConfigModel, ProviderModeModel
 
 
 @click.command()
@@ -38,7 +38,15 @@ def init(global_init: bool, force: bool):
                 provider_type="echo",
                 mode="flat"
             )
-        }
+        },
+        provider_modes=[
+            ProviderModeModel(name="plain", prompt="{{ prompt }}"),
+            ProviderModeModel(name="flat", prompt="""{% if system %}### System:\n{{ system }}\n\n{% endif %}### User:\n{{ user }}\n\n### Assistant:"""),
+            ProviderModeModel(name="mistral-instruct", prompt="""<s>[INST]\n{% if system %}{{ system }}\n\n{% endif %}{{ user }}\n[/INST]"""),
+            ProviderModeModel(name="llama2-chat", prompt="""<s>[INST]\n{% if system %}{{ system }}\n\n{% endif %}{{ user }}\n[/INST]"""),
+            ProviderModeModel(name="anthropic", prompt="""Human: {% if system %}{{ system }}\n\n{% endif %}{{ user }}\n\nAssistant:"""),
+            ProviderModeModel(name="chatml", prompt="""[{% if system %}{"role": "system", "content": "{{ system }}" },{% endif %}{"role": "user", "content": "{{ user }}" }]""")
+        ]
     )
 
     config.save("global" if global_init else "local")

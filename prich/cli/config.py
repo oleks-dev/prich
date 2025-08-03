@@ -45,7 +45,7 @@ def show_config(global_only: bool, local_only: bool):
     """Show config."""
     config, paths = get_loaded_config()
     console_print(f"[bold]Configs[/bold]: {', '.join(_readable_paths(paths))}")
-    console_print(config.as_yaml())
+    console_print(config.as_yaml(), markup=False)
 
 @config_group.command(name="edit")
 @click.option("-g", "--global", "global_only", is_flag=True, help="Only global config")

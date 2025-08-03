@@ -8,8 +8,8 @@ from click.testing import CliRunner
 from prich.cli.config import list_providers, show_config, edit_config
 from prich.core.engine import run_template
 from prich.core.state import _loaded_templates
-from prich.models.template import TemplateModel, PromptFields, VariableDefinition, PipelineStep, PythonStep, RenderStep, CommandStep, LLMStep
-from prich.models.config import ConfigModel, SettingsConfig, ProviderConfig
+from prich.models.template import TemplateModel, PromptFields, VariableDefinition, PythonStep, CommandStep, LLMStep
+from prich.models.config import ConfigModel
 
 @pytest.fixture
 def basic_config():
@@ -22,6 +22,41 @@ providers:
   show_prompt:
     mode: flat
     provider_type: echo
+provider_modes:
+  - name: plain
+    prompt: '{{ prompt }}'
+  - name: flat
+    prompt: |-
+      {% if system %}### System:
+      {{ system }}
+
+      {% endif %}### User:
+      {{ user }}
+
+      ### Assistant:
+  - name: mistral-instruct
+    prompt: |-
+      <s>[INST]
+      {% if system %}{{ system }}
+
+      {% endif %}{{ user }}
+      [/INST]
+  - name: llama2-chat
+    prompt: |-
+      <s>[INST]
+      {% if system %}{{ system }}
+
+      {% endif %}{{ user }}
+      [/INST]
+  - name: anthropic
+    prompt: |-
+      Human: {% if system %}{{ system }}
+
+      {% endif %}{{ user }}
+
+      Assistant:
+  - name: chatml
+    prompt: '[{% if system %}{"role": "system", "content": "{{ system }}"},{% endif %}{"role": "user", "content": "{{ user }}"}]'
 settings: 
     default_provider: "show_prompt"
     editor: "vi"
@@ -262,7 +297,7 @@ def test_show_config(param, monkeypatch, template, basic_config, tmp_path):
         result = runner.invoke(show_config, [param] if param else [])
         assert result.exit_code == 0
         assert "Configs:" in result.output
-        assert basic_config.as_yaml() in result.output
+        assert basic_config.as_yaml().replace('\n', '') in result.output.replace('\n', '')
 
 @pytest.mark.parametrize("param", [
     ("-l"),
