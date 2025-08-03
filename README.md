@@ -235,6 +235,10 @@ Use shared templates to ensure consistent LLM outputs, whether for code reviews 
 Developers, data analysts, marketers, or support teams can use prich for their prompts, with templates tailored to each domain.
 
 
+## Template Creation Guide
+
+See [templates_guide.md](templates_guide.md)
+
 ## Example Templates
 
 ```yaml
