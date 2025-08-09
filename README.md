@@ -381,16 +381,28 @@ variables:
 
 ### Supported Providers
 `provider_type`:
-* `echo` - Just output rendered prompt as is without any LLM processing, could be used to save or send to LLM later
+* `echo` - Just output rendered prompt as is without any LLM processing, could be used to save or send to LLM later  
+  Structure:
+    ```python
+      provider_type: Literal["echo"]
+      mode: Optional[str]  # Prompt Provider Mode (for prompt templates)
+    ```
+  Example:
     ```yaml
       show_prompt:
-        mode: "flat"
         provider_type: "echo"
+        mode: "flat"
     ```
-* `openai` - HTTP provider to work with OpenAI API compatible model providers
+* `openai` - HTTP provider to work with OpenAI API compatible model providers  
+  Structure:
+    ```python
+      provider_type: Literal["openai"]
+      configuration: dict  # Configuration params (like api_key and base_url)
+      options: dict  # Optional params (like model)
+    ```
+  Example:
     ```yaml
       openai-gpt4o:
-        mode: "chatml"
         provider_type: "openai"
         configuration:
           api_key: "${OPENAI_API_KEY}"
@@ -398,30 +410,89 @@ variables:
         options:
           model: "gpt-4o"
     ```
-* `mlx_local` - (for mac) Use MLX LM library with your local model
+* `mlx_local` - (for mac) Use MLX LM library with your local model  
+  Structure:  
+    ```python
+      provider_type: Literal["mlx_local"]
+      model_path: str  # Path to a local file with a model
+      mode: Optional[str]  # Prompt Provider Mode (for prompt templates)
+      max_tokens: Optional[int] = None  # The maximum number of tokens. Use -1 for an infinite generator. Default: 256
+      temp: Optional[float] = None  # The temperature for sampling, if 0 the argmax is used. Default: 0
+      top_p: Optional[float] = None  # Nulceus sampling, higher means model considers more less likely words.
+      min_p: Optional[float] = None  # The minimum value (scaled by the top token's probability) that a token probability must have to be considered.
+      min_tokens_to_keep: Optional[int] = None  # Minimum number of tokens that cannot be filtered by min_p sampling.
+      top_k: Optional[int] = None  # The top k tokens ranked by probability to constrain the sampling to.
+    ```
+  Example:
     ```yaml
       mlx-mistral-7b:
-        mode: "mistral-instruct"
         provider_type: "mlx_local"
+        mode: "mistral-instruct"
         model_path: "~/.cache/huggingface/hub/models--mlx-community--Mistral-7B-Instruct-v0.3-4bit/snapshots/a4b8f870474b0eb527f466a03fbc187830d271f5"
         max_tokens: 3000
     ```
-* `ollama` - HTTP provider to work with Ollama models
+* `ollama` - HTTP provider to work with Ollama models  
+  Structure:
+    ```python
+      provider_type: Literal["ollama"]
+      model: str  # ollama model name
+      mode: Optional[str]  # Prompt Provider Mode (for prompt templates)
+      base_url: Optional[str] = None  # ollama url
+      options: Optional[dict] = None  # additional model options
+      stream: Optional[bool] = None  #  if false the response will be returned as a single response object, rather than a stream of objects
+      suffix: Optional[str] = None  # the text after the model response
+      template: Optional[str] = None  # custom prompt template
+      raw: Optional[bool] = None  # if true no formatting will be applied to the prompt. You may choose to use the raw parameter if you are specifying a full templated prompt in your request to the API
+      format: Optional[dict | str] = None  #  the format to return a response in. Format can be json or a JSON schema
+      think: Optional[bool] = None  # (for thinking models) should the model think before responding?
+    ```
+  Examples:
     ```yaml
       llama3.1-8b:
-        mode: chatml
         provider_type: ollama
         model: "llama3.1:8b"
         stream: false
         options:
           num_predict: 2000
     ```
-* `stdin_consumer` - STDIN provider to work with local models that support STDIN (for example with `q chat`)
     ```yaml
-      qchatcli:
+      qwen3-8b:
+        provider_type: ollama
+        model: "qwen3:8b"
+        stream: true
+        think: true
+        options:
+          num_predict: 3000
+    ```
+  Use `raw: true` and `mode: ...` for custom provider prompt mode format:  
+    ```yaml
+      qwen3-8b-raw:
+        provider_type: ollama
+        model: "qwen3:8b"
         mode: flat
+        raw: true
+        stream: true
+        think: false
+        options:
+          num_predict: 3000
+    ```
+* `stdin_consumer` - STDIN provider to work with local models that support STDIN (for example with `q chat`)
+  Structure:
+    ```python
+      provider_type: Literal["stdin_consumer"]
+      mode: Optional[str]  # Prompt Provider Mode (for prompt templates)
+      call: Optional[str] = None  # command call for shell execution
+      args: Optional[List[str]] = None  # arguments for shell execution
+      stdout_strip_prefix: Optional[str] = None  # strip prefix string from the response
+      stdout_slice_start: Optional[int] = None  # slice stdout from character number
+      stdout_slice_end: Optional[int] = None  # slice stdout to character number
+    ```
+  Example:
+    ```yaml
+      qchat:
         provider_type: stdin_consumer
-        cmd: q
+        mode: flat
+        call: q
         args:
           - chat
           - --no-interactive

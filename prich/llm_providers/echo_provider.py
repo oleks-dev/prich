@@ -7,5 +7,8 @@ class EchoProvider(LLMProvider):
         self.mode: str = provider.mode
         self.show_response: bool = False
 
-    def send_prompt(self, prompt: str) -> str:
-        return prompt
+    def send_prompt(self, prompt: str = None, system: str = None, user: str = None) -> str:
+        if prompt:
+            return prompt
+        else:
+            return f"{system}\n{user}"

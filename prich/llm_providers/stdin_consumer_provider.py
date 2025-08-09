@@ -25,8 +25,10 @@ class STDINConsumerProvider(LLMProvider):
         import re
         return re.sub(r'\x1b\[[0-9;]*m', '', text)
 
-    def send_prompt(self, prompt: str) -> str:
-        cmd = [self.provider.cmd]
+    def send_prompt(self, prompt: str = None, system: str = None, user: str = None) -> str:
+        if system or user:
+            raise click.ClickException("stdin consumer provider requires provider mode")
+        cmd = [self.provider.call]
         if self.provider.args:
             cmd.extend(self.provider.args)
         try:
@@ -43,6 +45,6 @@ class STDINConsumerProvider(LLMProvider):
         clean_output = self.clean_stdout(
             clean_output,
             strip_prefix=self.provider.stdout_strip_prefix,
-            slice_range=self.provider.stdout_slice
+            slice_range=(self.provider.stdout_slice_start, self.provider.stdout_slice_end) if self.provider.stdout_slice_start or self.provider.stdout_slice_end else None
         )
         return clean_output

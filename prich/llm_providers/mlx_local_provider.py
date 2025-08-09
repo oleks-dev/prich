@@ -47,7 +47,9 @@ class MLXLocalProvider(LLMProvider, LazyOptionalProvider):
 
         self.client = True
 
-    def send_prompt(self, prompt: str) -> str:
+    def send_prompt(self, prompt: str = None, system: str = None, user: str = None) -> str:
+        if system or user:
+            raise click.ClickException("mxl_local provider requires provider mode")
         self._ensure_client()
         text = []
         try:
@@ -56,10 +58,7 @@ class MLXLocalProvider(LLMProvider, LazyOptionalProvider):
                 top_p=self.provider.top_p if self.provider.top_p is not None else 0.9,
                 min_p=self.provider.min_p if self.provider.min_p is not None else 0.0,
                 min_tokens_to_keep=self.provider.min_tokens_to_keep if self.provider.min_tokens_to_keep is not None else 1,
-                top_k=self.provider.top_k if self.provider.top_k is not None else 0,
-                xtc_probability=self.provider.xtc_probability if self.provider.xtc_probability is not None else 0.0,
-                xtc_threshold=self.provider.xtc_threshold if self.provider.xtc_threshold is not None else 0.0,
-                xtc_special_tokens=self.provider.xtc_special_tokens if self.provider.xtc_special_tokens is not None else []
+                top_k=self.provider.top_k if self.provider.top_k is not None else 0
             )
             status = console.status("Thinking...") if not is_quiet() and not is_only_final_output() else nullcontext()
             with status:
@@ -68,12 +67,7 @@ class MLXLocalProvider(LLMProvider, LazyOptionalProvider):
                     tokenizer=self.tokenizer,
                     prompt=prompt,
                     max_tokens=self.provider.max_tokens if self.provider.max_tokens is not None else 512,
-                    sampler=sampler,
-                    max_kv_size=self.provider.max_kv_size,
-                    prefill_step_size=self.provider.prefill_step_size if self.provider.prefill_step_size is not None else 2048,
-                    kv_bits=self.provider.kv_bits,
-                    kv_group_size=self.provider.kv_group_size if self.provider.kv_group_size is not None else 64,
-                    quantized_kv_start=self.provider.quantized_kv_start if self.provider.quantized_kv_start is not None else 0
+                    sampler=sampler
                 ):
                     if not is_quiet() and not is_only_final_output():
                         status.stop()
