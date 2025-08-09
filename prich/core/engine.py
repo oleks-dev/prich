@@ -200,6 +200,7 @@ def render_template(template_dir: str, template_text: str, variables: dict = Dic
     return rendered_text
 
 def render_prompt(config: ConfigModel, fields: PromptFields, variables: Dict[str, str], template_dir: str, mode: str) -> str:
+    """ Render Prompt using provider mode prompt template (used for raw prompt construction) """
     if not fields.prompt and not fields.user:
         raise ClickException("There should be Prompt or User field at least.")
     mode_prompt = [x for x in config.model_dump().get("provider_modes") if x.get("name")==mode]
@@ -208,6 +209,20 @@ def render_prompt(config: ConfigModel, fields: PromptFields, variables: Dict[str
     prompt_fields = render_template(template_dir, mode_prompt[0].get("prompt"), fields.model_dump())
     prompt = render_template(template_dir, prompt_fields, variables)
     return prompt
+
+def render_prompt_fields(fields: PromptFields, variables: Dict[str, str], template_dir: str) -> PromptFields:
+    """ Render Prompt fields (used when provider supports prompt fields templates like system/user """
+    if not fields.prompt and not fields.user:
+        raise ClickException("There should be Prompt or User field at least.")
+    rendered_fields = PromptFields()
+    if fields.system:
+        rendered_fields.system = render_template(template_dir, fields.system, variables)
+    if fields.user:
+        rendered_fields.user = render_template(template_dir, fields.user, variables)
+    if fields.prompt:
+        rendered_fields.prompt = render_template(template_dir, fields.prompt, variables)
+    return rendered_fields
+
 
 def get_variable_type(variable_type):
     TYPE_MAPPING = {"str": click.STRING, "int": click.INT, "bool": click.BOOL, "path": click.Path}
@@ -276,15 +291,28 @@ def send_to_llm(template, step, provider, config, variables, skip_llm, output):
         selected_provider_name = config.settings.default_provider
     selected_provider = config.providers[selected_provider_name]
 
-    prompt = render_prompt(config, step.prompt, variables, template.source, selected_provider.mode)
-    if not prompt:
+    prompt = None
+    prompt_fields = None
+    if selected_provider.mode:
+        prompt = render_prompt(config, step.prompt, variables, template.source, selected_provider.mode)
+    else:
+        prompt_fields = render_prompt_fields(step.prompt, variables, template.source)
+    if not prompt and not prompt_fields:
         raise click.ClickException("Prompt is empty.")
 
     if skip_llm:
-        if type(prompt) is not str:
-            prompt = json.dumps(prompt)
-        if not is_quiet():
-            console_print(prompt, markup=False)
+        if prompt:
+            if type(prompt) is not str:
+                prompt = json.dumps(prompt)
+            if not is_quiet():
+                console_print(prompt, markup=False)
+        elif prompt_fields and not is_quiet():
+            if prompt_fields.system:
+                console_print(prompt_fields.system, markup=False)
+            if prompt_fields.user:
+                console_print(prompt_fields.user, markup=False)
+            if prompt_fields.prompt:
+                console_print(prompt_fields.prompt, markup=False)
         return ""
 
     llm_provider = get_llm_provider(selected_provider_name, selected_provider)
@@ -294,7 +322,15 @@ def send_to_llm(template, step, provider, config, variables, skip_llm, output):
 
     if is_verbose():
         console_print(f"[bold]Sending prompt to LLM [/bold][blue]({llm_provider.name})[/blue]")
-        console_print(prompt, markup=False)
+        if prompt:
+            console_print(prompt, markup=False)
+        else:
+            if prompt_fields.system:
+                console_print(prompt_fields.system, markup=False)
+            if prompt_fields.user:
+                console_print(prompt_fields.user, markup=False)
+            if prompt_fields.prompt:
+                console_print(prompt_fields.prompt, markup=False)
 
     if not is_quiet():
         console_print("[bold]LLM Response:[/bold]")
@@ -303,9 +339,17 @@ def send_to_llm(template, step, provider, config, variables, skip_llm, output):
             from rich.console import Console
             console = Console()
             with console.status("Thinking..."):
-                response = llm_provider.send_prompt(prompt)
+                response = llm_provider.send_prompt(
+                    prompt=prompt,
+                    system=prompt_fields.system if prompt_fields else None,
+                    user=prompt_fields.user if prompt_fields else None
+                )
         else:
-            response = llm_provider.send_prompt(prompt)
+            response = llm_provider.send_prompt(
+                prompt=prompt,
+                system=prompt_fields.system if prompt_fields else None,
+                user=prompt_fields.user if prompt_fields else None
+            )
         step_output = response.strip()
         if not llm_provider.show_response and not is_quiet():
             console_print(step_output, markup=False)

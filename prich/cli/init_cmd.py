@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 import click
 from prich.core.utils import console_print
-from prich.models.config_providers import EchoProviderModel, OpenAIProviderModel, STDINConsumerProviderModel, MLXLocalProviderModel
+from prich.models.config_providers import EchoProviderModel
 from prich.models.config import SettingsConfig, ConfigModel, ProviderModeModel
 
 
@@ -22,8 +22,9 @@ def init(global_init: bool, force: bool):
     os.makedirs(prich_dir / "templates", exist_ok=True)
 
     default_venv = prich_dir / "venv"
+    if force:
+        shutil.rmtree(default_venv, ignore_errors=True)
     if not default_venv.exists():
-        shutil.rmtree(default_venv)
         subprocess.run([sys.executable, "-m", "venv", str(default_venv)], check=True)
 
     config = ConfigModel(

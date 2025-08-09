@@ -13,7 +13,6 @@ class BaseProviderModel(BaseModel):
 
 class EchoProviderModel(BaseProviderModel):
     provider_type: Literal["echo"]
-    model: Literal[None] = None
 
 
 class OpenAIProviderModel(BaseProviderModel):
@@ -31,21 +30,6 @@ class MLXLocalProviderModel(BaseProviderModel):
     # The maximum number of tokens. Use``-1`` for an infinite
     #      generator. Default: ``256``.
     max_tokens: Optional[int] = None
-    # Maximum size of the key-value cache. Old
-    #           entries (except the first 4 tokens) will be overwritten.
-    max_kv_size: Optional[int] = None
-    # Step size for processing the prompt.
-    #         kv_bits (int, optional): Number of bits to use for KV cache quantization.
-    #           None implies no cache quantization. Default: ``None``.
-    prefill_step_size: Optional[int] = None
-    # Number of bits to use for KV cache quantization.
-    #           None implies no cache quantization. Default: ``None``.
-    kv_bits: Optional[int] = None
-    # Group size for KV cache quantization. Default: ``64``.
-    kv_group_size: Optional[int] = None
-    # Step to begin using a quantized KV cache.
-    #            when ``kv_bits`` is non-None. Default: ``0``.
-    quantized_kv_start: Optional[int] = None
 
     # sampler
     #
@@ -64,23 +48,14 @@ class MLXLocalProviderModel(BaseProviderModel):
     # The top k tokens ranked by probability to constrain
     #           the sampling to.
     top_k: Optional[int] = None
-    # The probability of applying XTC
-    #             sampling.
-    xtc_probability: Optional[float] = None
-    # The threshold the probs need to reach
-    #             for being sampled.
-    xtc_threshold: Optional[float] = None
-    # List of special tokens IDs to
-    #             be excluded from XTC sampling.
-    xtc_special_tokens: Optional[list[float]] = None
 
 class STDINConsumerProviderModel(BaseProviderModel):
     provider_type: Literal["stdin_consumer"]
-    model: Literal[None] = None
-    cmd: Optional[str] = None
+    call: Optional[str] = None
     args: Optional[List[str]] = None
     stdout_strip_prefix: Optional[str] = None
-    stdout_slice: Optional[Tuple[Optional[int], Optional[int]]] = None
+    stdout_slice_start: Optional[int] = None
+    stdout_slice_end: Optional[int] = None
 
 class OllamaProviderModel(BaseProviderModel):
     provider_type: Literal["ollama"]
@@ -88,3 +63,8 @@ class OllamaProviderModel(BaseProviderModel):
     base_url: Optional[str] = None
     options: Optional[dict] = None
     stream: Optional[bool] = None
+    suffix: Optional[str] = None
+    template: Optional[str] = None
+    raw: Optional[bool] = None
+    format: Optional[dict | str] = None
+    think: Optional[bool] = None

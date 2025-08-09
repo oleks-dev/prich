@@ -1,6 +1,5 @@
 import json
 import click
-import requests
 from rich.console import Console
 from contextlib import nullcontext
 
@@ -23,15 +22,16 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
         self.client_url = f"{self.base_url}/api/generate"
         self.show_response = True
         self.health_url = f"{self.base_url}/api/tags"
+        self.requests = None
 
     def _ensure_client(self):
         # Ensure 'requests' library is available
-        self._lazy_import("requests", pip_name="requests")
+        self.requests = self._lazy_import("requests", pip_name="requests")
         # Check Ollama server
         try:
-            resp = requests.get(self.health_url, timeout=2)
+            resp = self.requests.get(self.health_url, timeout=2)
             resp.raise_for_status()
-        except requests.RequestException:
+        except self.requests.RequestException:
             raise click.ClickException(
                 f"Cannot connect to Ollama at {self.base_url}. "
                 "Is Ollama running? Start it with: `ollama serve`"
@@ -45,21 +45,28 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
                 f"Install it with: `ollama pull {self.provider.model}`"
             )
 
-    def send_prompt(self, prompt: str) -> str:
+    def send_prompt(self, prompt: str = None, system: str = None, user: str = None) -> str:
         self._ensure_client()
         text = []
         try:
-            if type(prompt) != str:
-                prompt = json.dumps(prompt)
+            if prompt:
+                if type(prompt) != str:
+                    prompt = json.dumps(prompt)
+            else:
+                prompt = user
             payload = {
                 "model": self.provider.model,
                 "prompt": prompt,
                 "options": self.provider.options or {}
             }
+            if system:
+                payload['system'] = system
             if not is_only_final_output() and not is_quiet() and self.provider.stream is not None:
                 payload["stream"] = self.provider.stream
             else:
                 payload["stream"] = False
+            if self.provider.think is not None:
+                payload["think"] = self.provider.think
 
             headers = {"Content-Type": "application/json"}
             status = console.status("Thinking...") if not is_quiet() and not is_only_final_output() else nullcontext()
@@ -67,10 +74,8 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
             with status:
                 if payload["stream"]:
                     # Streaming mode
-                    with requests.post(self.client_url, json=payload, stream=True, headers=headers) as r:
+                    with self.requests.post(self.client_url, json=payload, stream=True, headers=headers) as r:
                         r.raise_for_status()
-                        if not is_quiet() and not is_only_final_output():
-                            status.stop()
                         for line in r.iter_lines(decode_unicode=True):
                             if not line:
                                 continue
@@ -80,6 +85,11 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
                                     chunk = data["response"]
                                     text.append(chunk)
                                     if self.show_response and not is_quiet() and not is_only_final_output():
+                                        if self.provider.think and status._live.is_started and not chunk:
+                                            if status.status != f"{self.provider.model} Thinking...":
+                                                status.update(status=f"{self.provider.model} Thinking...")
+                                        if status._live.is_started and chunk:
+                                            status.stop()
                                         console_print(chunk, end='')
                                 if data.get("done", False):
                                     break
@@ -90,7 +100,7 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
                             console_print()
                 else:
                     # Non-streaming mode
-                    r = requests.post(self.client_url, json=payload, headers=headers)
+                    r = self.requests.post(self.client_url, json=payload, headers=headers)
                     r.raise_for_status()
                     resp_data = r.json()
                     output = resp_data.get("response", "")
@@ -102,5 +112,5 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
 
             return ''.join(text).strip()
 
-        except requests.RequestException as e:
+        except self.requests.RequestException as e:
             raise click.ClickException(f"Ollama provider error: {str(e)}")
