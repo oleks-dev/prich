@@ -19,7 +19,7 @@
 - **Simple and Hackable**: Intuitive CLI and YAML configs make it easy to craft dynamic prompts, with support for Python, shell, or any scripting language.
 - **Portable**: Isolated virtual environments (default and custom venvs) ensure dependency safety and portability; or use standard commands like git, cat, etc.
 
-#### [See prich templates repository for examples](https://github.com/oleks-dev/prich-templates/blob/main/templates/index.md)
+#### [See prich templates repository for examples](https://github.com/oleks-dev/prich-templates/blob/main/templates/README.md)
 
 ## Key Features
 - **Modular Prompts**: Define prompts with Jinja2 templates and per-template YAML configs.
