@@ -4,6 +4,7 @@ import click
 
 from prich.core.loaders import get_loaded_templates
 from prich.core.utils import console_print
+from prich.models.template_repo_manifest import TemplatesRepoManifest, TemplateRepoItem
 
 
 @click.command(name="tags")
@@ -57,56 +58,61 @@ def list_github_templates(tags, json_only):
     from rich.table import Table
     from rich.console import Console
 
-    def has_any_tag(template: dict, tags: List[str]) -> bool:
-        lowered_tags = {t.lower() for t in template.get("tags")}
+    def has_any_tag(template: TemplateRepoItem, tags: List[str]) -> bool:
+        lowered_tags = {t.lower() for t in template.tags}
         return any(t.lower() in lowered_tags for t in tags)
 
-    TEMPLATE_INDEX_URL = "https://raw.githubusercontent.com/oleks-dev/prich-templates/main/templates/index.json"
+    TEMPLATES_MANIFEST_URL = "https://raw.githubusercontent.com/oleks-dev/prich-templates/main/templates/manifest.json"
+
     console = Console()
     try:
-        response = requests.get(TEMPLATE_INDEX_URL)
+        console.print(f"Fetching: {TEMPLATES_MANIFEST_URL}")
+        response = requests.get(TEMPLATES_MANIFEST_URL)
         response.raise_for_status()
-        data = json.loads(response.text)
+        json_data = json.loads(response.text)
+        manifest = TemplatesRepoManifest(**json_data)
     except Exception as e:
-        console.print(f"[bold red]Error:[/bold red] Failed to fetch or parse template index: {e}")
+        console.print(f"[bold red]Error:[/bold red] Failed to fetch or parse templates repository manifest: {e}")
         return
 
-    templates = data.get("templates", [])
+    templates = manifest.templates or []
     if not templates:
-        console.print("[yellow]No templates found in the index.[/yellow]")
+        console.print("[yellow]No templates found in the templates repository manifest.[/yellow]")
         return
 
     if tags:
         templates = [tpl for tpl in templates if has_any_tag(tpl, tags)]
         if not templates:
-            console.print("[yellow]No templates found in the index by provided tags.[/yellow]")
+            console.print("[yellow]No templates found by provided tags in the templates repository manifest.[/yellow]")
             return
         console.print(f"Filtered by tags: {','.join([f'[green]{tag}[/green]' for tag in tags])}")
 
     if json_only:
-        data['templates'] = templates
-        console_print(f"[bold]{TEMPLATE_INDEX_URL}[/bold]")
-        console_print(json.dumps(data, indent=2))
+        console_print(json.dumps([tpl.model_dump() for tpl in templates], indent=2))
         return
 
-    table = Table(title=data.get("name", "Templates"), show_lines=False)
+    table = Table(title=manifest.name or "prich Templates", caption=f'{manifest.description or ""} ({manifest.repository})', show_lines=False)
     table.add_column("ID", style="cyan", no_wrap=True)
     table.add_column("Name", style="green")
     table.add_column("Tags", style="magenta")
     table.add_column("Version", style="yellow")
     table.add_column("Description", style="white")
     table.add_column("Author", style="cyan")
-    table.add_column("Checksum", style="dim", overflow="fold")
+    table.add_column("Archive Checksum", style="dim", overflow="fold")
+    table.add_column("Folder Checksum", style="dim", overflow="fold")
 
     for template in templates:
         table.add_row(
-            template.get("id", "-"),
-            template.get("name", "-"),
-            ", ".join(template.get("tags", [])),
-            template.get("version", "-"),
-            template.get("description", "-"),
-            template.get("author", "-"),
-            template.get("checksum", "")[:12] + "…" if template.get("checksum") else ""
+            template.id or "-",
+            template.name or "-",
+            ", ".join(template.tags or []),
+            template.version or "-",
+            template.description or "-",
+            template.author or "-",
+            (template.archive_checksum or "")[:7] + "…" if template.archive_checksum else "",
+            (template.folder_checksum or "")[:7] + "…" if template.folder_checksum else ""
         )
 
     console.print(table)
+    console.print()
+    console.print("Install template by executing: prich install -r <template_id>")

@@ -15,9 +15,11 @@
 
 ## Why prich?
 - **Any Prompt, Any Domain**: Build prompts for coding (e.g., code review), data analysis (e.g., CSV summaries), content creation, or customer support, with preprocessing to prepare data (e.g., parse CSVs, clean text).
-- **Team Collaboration**: Share template packages via git repos, file transfers, or cloud storage (e.g., Google Drive, Dropbox), ensuring consistent LLM outputs across teams.
+- **Team Collaboration**: Share template packages via git repos - just add `.prich` folder with your shared templates, file transfers, or cloud storage (e.g., Google Drive, Dropbox), ensuring consistent LLM outputs across teams.
 - **Simple and Hackable**: Intuitive CLI and YAML configs make it easy to craft dynamic prompts, with support for Python, shell, or any scripting language.
-- **Portable**: Isolated virtual environments (default and custom venvs) ensure dependency safety and portability.
+- **Portable**: Isolated virtual environments (default and custom venvs) ensure dependency safety and portability; or use standard commands like git, cat, etc.
+
+#### [See prich templates repository for examples](https://github.com/oleks-dev/prich-templates/blob/main/templates/index.md)
 
 ## Key Features
 - **Modular Prompts**: Define prompts with Jinja2 templates and per-template YAML configs.
