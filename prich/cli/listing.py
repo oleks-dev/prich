@@ -29,9 +29,21 @@ def list_tags(global_only: bool, local_only: bool):
 @click.command(name="list")
 @click.option("-g", "--global", "global_only", is_flag=True, help="List only global templates")
 @click.option("-l", "--local", "local_only", is_flag=True, help="List only local templates")
-@click.option("-t", "--tag", "tags", multiple=True, help="Tag to include")
-def list_templates(global_only: bool, local_only: bool, tags: List[str]):
-    """List available templates."""
+@click.option("-t", "--tag", "tags", multiple=True, help="Tag to include (ex. '-t code -t review')")
+@click.option("-r", "--remote", "remote_repo", is_flag=True, help="List remote templates available for installation")
+@click.option("-j", "--json", "json_only", is_flag=True, help="Output in json format")
+def list_templates(global_only: bool, local_only: bool, remote_repo: bool, json_only: bool, tags: List[str]):
+    """List templates."""
+    if remote_repo and (global_only or local_only):
+        console_print("[yellow]When listing remote templates available for installation the global or local options are not supported, use: 'prich list -r'[/yellow]")
+        return
+    if remote_repo:
+        list_github_templates(tags, json_only)
+        return
+    if global_only and local_only:
+        console_print("[yellow]Use only one local or global option, use: 'prich list -g' or 'prich list -l'[/yellow]")
+        return
+
     templates = get_loaded_templates(tags)
     if not templates and not tags:
         console_print("[yellow]No templates found. Use 'prich install' or 'prich create' to add templates.[/yellow]")
@@ -39,18 +51,20 @@ def list_templates(global_only: bool, local_only: bool, tags: List[str]):
     if not templates and tags:
         console_print(f"[yellow]No templates found with specified tags: {', '.join(tags)}.[/yellow]")
         return
+    if json_only:
+        import json
+        json_templates_list = [template.model_dump(include=["id", "name", "description", "version", "source", "tags"], exclude_none=True, exclude_unset=True) for template in templates]
+        console_print(json.dumps(json_templates_list, indent=2))
+        return
 
     selected_tags = f" (tags: [green]{', '.join(tags)}[/green])" if tags else ""
     console_print(f"[bold]Available templates{selected_tags}:[/bold]")
     for template in templates:
         source = template.source
         marker = " ([green]g[/green])" if source == "global" else ""
-        template_tags = f" [dim](tags: [green]{', '.join(template.tags)}[/green])[/dim]" if template.tags else ""
+        template_tags = f" [dim](ver: {template.version}, tags: [green]{', '.join(template.tags)}[/green])[/dim]" if template.tags else ""
         console_print(f"- [green]{template.id}[/green]{marker}: [dim][green]{template.description}[/green][/dim]{template_tags}")
 
-@click.command("templates-repo")
-@click.option("-t", "--tag", "tags", multiple=True, help="Tag to filter templates")
-@click.option("-j", "--json", "json_only", is_flag=True, help="Output raw json index manifest")
 def list_github_templates(tags, json_only):
     """List available for installation templates from GitHub."""
     import requests
