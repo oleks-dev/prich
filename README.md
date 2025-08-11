@@ -14,7 +14,7 @@
 ### **NOTE**: Tool is still under development so there could be potential issues.
 
 ## Why prich?
-- **Any Prompt, Any Domain**: Build prompts for coding (e.g., code review), data analysis (e.g., CSV summaries), content creation, or customer support, with preprocessing to prepare data (e.g., parse CSVs, clean text).
+- **Any Prompt, Any Domain**: Build prompts for coding (e.g., code review), data analysis (e.g., CSV summaries), content creation, or customer support, with commands to prepare data (e.g., parse CSVs, clean text).
 - **Team Collaboration**: Share template packages via git repos - just add `.prich` folder with your shared templates, file transfers, or cloud storage (e.g., Google Drive, Dropbox), ensuring consistent LLM outputs across teams.
 - **Simple and Hackable**: Intuitive CLI and YAML configs make it easy to craft dynamic prompts, with support for Python, shell, or any scripting language.
 - **Portable**: Isolated virtual environments (default and custom venvs) ensure dependency safety and portability; or use standard commands like git, cat, etc.
@@ -25,13 +25,13 @@
 - **Modular Prompts**: Define prompts with Jinja2 templates and per-template YAML configs.
 - **Flexible Pipelines**: Chain preprocessing, postprocessing, and llm steps (e.g., parse CSVs, list files) using any language or shell command.
 - **Team-Friendly Sharing**: Package templates with dependencies for easy sharing via files, git, or cloud storage.
-- **Secure venv Management**: Default (`.prich/venv/`) and custom Python venvs (e.g., `.prich/templates/code_review/preprocess/venv`) isolate dependencies.
+- **Secure venv Management**: Default (`.prich/venv/`) and custom Python venvs (e.g., `.prich/templates/code_review/scripts/venv`) isolate dependencies.
 - **Simple CLI**: Commands like `prich run` and `prich install` streamline workflows.
 
 ## Execution Example
 
 ```commandline
-➜ prich run summarize-git-diff --provider "llama3.1-8b" --review
+➜ prich run summarize-git-diff --review
 prich v0.1.0 - CLI for reusable rich LLM prompts with script pipelines
 Template: Summarize git diff 1.0, Args: provider=llama3.1-8b, review=True
 Generate a summary and review of differences between local code and remote or committed states.
@@ -103,7 +103,7 @@ prich --help
 ```
 
 ### **Initialize prich**:
-**prich** uses nodejs-like home/local folder configurtions for flexible usage of the configs and templates per project.  
+**prich** uses nodejs-like home/local folder configurations for flexible usage of the configs and templates per project.  
 
    - Local folder based
        ```bash
@@ -129,17 +129,21 @@ Templates are stored in this [github prich-templates repository](https://www.git
 - **List Available Remote Templates for Installation**
 
     ```bash
-    prich templates-repo    
+    prich list --remote
+    ```
+
+    ```bash
+    prich list --remote --tag code --tag review
     ```
 
 - **Install Template from *prich-templates* Repository**
 
     ```bash
-    prich install -r <template_id>
+    prich install <template_id> --remote
     ```
 
     ```bash
-    prich install -r <template_id> -g
+    prich install <template_id> --remote --global
     ```
 
 
@@ -204,7 +208,7 @@ This copies files, sets up venvs, and installs dependencies - if python is used 
 
 - **Share Templates in your repository**:  
     Store `.prich/` folder with templates in your repository and work on them together.  
-    For templates with python preprocess scripts you can add `venv` folders to `.gitignore` and ask team to install venvs personally:
+    For templates with python scripts you can add `venv` folders to `.gitignore` and ask team to install venvs personally:
 
     ```bash
     prich venv-install <template_name>
@@ -380,6 +384,15 @@ variables:
 - **Custom Python Venvs**: Templates like code_review use dedicated venvs for dependency isolation.
 
 ## Configure .prich/config.yaml
+
+### Settings
+```python
+settings:
+  default_provider: "llama3.1-8b"
+  editor: "vim"
+```
+* `default_provider`: Name of the provider from providers that would be used by default in all templates if not overloaded with the `--provider <provider_name>` argument.
+* `editor`: Editor execution command used in by some commands (default: `vi`)
 
 ### Supported Providers
 `provider_type`:
