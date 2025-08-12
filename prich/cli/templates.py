@@ -80,7 +80,7 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
             raise click.ClickException(f"Failed to download template {path} from prich-templates, check if the template is available.")
         try:
             with console.status(f"Extracting..."):
-                src_dir = _extract_zip(tmp_zip_file) / path
+                src_dir = _extract_zip(tmp_zip_file)
                 safe_remove(tmp_zip_file)
         except Exception as e:
             safe_remove(tmp_zip_file)
@@ -90,7 +90,7 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
         template_id = path[:-4]
         check_if_dest_present(template_id, templates_dir / template_id, global_install, force)
         try:
-            src_dir = _extract_zip(Path(path)) / template_id
+            src_dir = _extract_zip(Path(path))
         except Exception as e:
             safe_remove(src_dir)
             raise click.ClickException(f"Failed to extract template {path}")
@@ -103,7 +103,7 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
     if not src_dir:
         raise click.ClickException("Failed to load or prepare source dir for template installation.")
 
-    yaml_files = list(src_dir.glob("*.yaml"))
+    yaml_files = list(src_dir.glob("**/*.yaml"))
     if not yaml_files:
         if remove_source:
             safe_remove(src_dir)
