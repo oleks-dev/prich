@@ -28,6 +28,19 @@
 - **Secure venv Management**: Default (`.prich/venv/`) and custom Python venvs (e.g., `.prich/templates/code_review/scripts/venv`) isolate dependencies.
 - **Simple CLI**: Commands like `prich run` and `prich install` streamline workflows.
 
+## Quick Start
+1. Install `prich` tool (see `Installation`)
+2. Initialize config (use global for the start): `prich init --global`
+3. Create simple example template (`prich create <template_id>`): `prich create my-template`
+4. Run template (`prich run <template_id>`): `prich run my-template`
+> Note: By default prich will set up and use echo provider which just outputs the rendered template  
+> To use it with LLM see `Configure .prich/config.yaml` and follow it to add your LLM provider  
+
+Optionally you can also run for the start:  
+* Run template with help flag (`prich run <template_id> --help`): `prich run my-template --help`
+* See installed templates: `prich list`
+* See templates available for installation from the remote repo: `prich list --remote`
+
 ## Execution Example
 
 ```commandline

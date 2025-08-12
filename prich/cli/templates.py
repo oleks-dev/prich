@@ -220,37 +220,41 @@ def show_template(template_id, global_only):
 
 @click.command("create")
 @click.argument("template_id")
-@click.option("-g", "--global", "global_only", is_flag=True, default=False, help="Only global template")
-@click.option("-l", "--local", "local_only", is_flag=True, default=False, help="Only local template")
-def create_template(template_id, global_only, local_only):
+@click.option("-g", "--global", "global_only", is_flag=True, default=False, help="Create global template")
+@click.option("-e", "--edit", "edit", is_flag=True, default=False, help="Open created template yaml file in editor")
+def create_template(template_id, global_only, edit):
     """Create new Template based on basic example template."""
     example_template = TemplateModel(
         id=template_id,
-        name=template_id.replace("_", " ").title(),
-        description="Example description",
+        name=template_id.replace("_", " ").replace("-", " ").title(),
+        description="Example template - Generate text about specified topic",
         version="1.0",
-        tags=["example"],
+        tags=["example", "writer"],
         steps=[
             LLMStep(
-                name="LLM Request",
+                name="Ask to generate text",
                 type="llm",
                 prompt=PromptFields(
-                    system="You are {{ actor }}",
-                    user="Based on {{ topic }}"
+                    system="You are {{ role }}",
+                    user="Generate text about {{ topic }}"
                 )
             )
         ],
         variables=[
             VariableDefinition(
-                name="actor",
+                name="role",
+                cli_option="--role",
                 description="Role of the Assistant",
-                required=True,
+                required=False,
+                default="article writer",
                 type="str"
             ),
             VariableDefinition(
                 name="topic",
-                description="Topic to describe",
-                required=True,
+                cli_option="--topic",
+                description="Generate text about Topic",
+                required=False,
+                default="short brief about LLM usage",
                 type="str"
             )
         ]
@@ -259,7 +263,7 @@ def create_template(template_id, global_only, local_only):
     config, _ = get_loaded_config()
     installed_templates = get_loaded_templates()
     if template_id in [template.id for template in installed_templates]:
-        raise click.ClickException(f"Template {template_id} is already exists.")
+        raise click.ClickException(f"Template {template_id} already exists.")
     if not is_valid_template_id(template_id):
         raise click.ClickException(f"Template {template_id} is not correct, please use only lowercase letters, numbers, hyphen, and optional underscore characters.")
     prich_dir = (Path.cwd() if not global_only else Path.home()) / ".prich"
@@ -271,9 +275,14 @@ def create_template(template_id, global_only, local_only):
     if not editor_cmd:
         raise click.ClickException(f"Default editor is not set, add settings.editor into config.")
     template_file = template_dir / f"{template_id}.yaml"
-    template_file.write_text(yaml.safe_dump(example_template.model_dump()))
-    result = subprocess.run([editor_cmd, template_file], check=True)
-    if result.returncode == 0:
-        console_print(f"Template {template_id} created in {template_file}")
-    else:
-        raise click.ClickException(f"Editor returned error code {result.returncode} during template {template_id} creation.")
+    template_file.write_text(yaml.safe_dump(example_template.model_dump(exclude_none=True), indent=2, sort_keys=False))
+    console_print(f"Template {template_id} created in {template_file}")
+    console_print()
+    console_print(f"You can try to run it or modify as you need:")
+    console_print(f"* Execute with default values: [green]prich run {template_id}[/green]")
+    console_print(f"* Execute with custom values: [green]prich run {template_id} --role journalist --topic \"Large Language Models in the modern data science\"[/green]")
+    console_print(f"* Execute with custom value: [green]prich run {template_id} --topic \"Large Language Models usage in CLI tools\"[/green]")
+    if edit:
+        result = subprocess.run([editor_cmd, template_file], check=True)
+        if result.returncode != 0:
+            raise click.ClickException(f"Editor returned error code {result.returncode} during opening template {template_id}.")
