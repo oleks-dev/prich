@@ -4,6 +4,7 @@ import click
 from pydantic import BaseModel, Field, model_validator
 from typing import List, Optional, Literal, Annotated, Union
 from prich.core.utils import is_valid_variable_name
+from prich.version import TEMPLATE_SCHEMA_VERSION
 
 
 # Template Variables
@@ -83,7 +84,7 @@ class TemplateModel(BaseModel):
     variables: Optional[List[VariableDefinition]] = []
     usage_examples: Optional[list[str]] = None
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0"] = TEMPLATE_SCHEMA_VERSION
 
     # These fields are injected at runtime
     source: Optional[Literal["local", "global"]] = Field(default=None, exclude=True)

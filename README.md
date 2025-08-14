@@ -28,6 +28,8 @@
 - **Secure venv Management**: Default (`.prich/venv/`) and custom Python venvs (e.g., `.prich/templates/code_review/scripts/venv`) isolate dependencies.
 - **Simple CLI**: Commands like `prich run` and `prich install` streamline workflows.
 
+> **Supported LLMs**: Ollama API, OpenAI API, MLX LM, STDIN
+
 ## Quick Start
 1. Install `prich` tool (see `Installation`)
 2. Initialize config (use global for the start): `prich init --global`
@@ -387,6 +389,31 @@ variables:
     required: false
     type: bool
 ```
+
+## Validate Templates  
+Validation of templates help to detect yaml schema issues.
+
+There are several commands that you can execute the check the templates:  
+
+* Validate all available templates. Add `-l`/`--local` or `-g`/`--global` for validation of only local (current folder) or global templates.
+  ```shell
+  prich validate
+  prich validate --global
+  prich validate --local
+  ```
+
+* Validate one template by template id
+  ```shell
+  prich validate --id <template_id>
+  prich validate --id code-review
+  ```
+
+* Validate selected yaml file
+  ```shell
+  prich validate --file <template_yaml_file>
+  prich validate --file ./.prich/templates/my-template/my-template.yaml
+  ```
+
 
 ## Advanced Features
 

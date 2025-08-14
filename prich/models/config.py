@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import List, Optional, Literal, Dict, Annotated, Union
 from pydantic import BaseModel, Field, field_validator, TypeAdapter
 from prich.models.config_providers import EchoProviderModel, OpenAIProviderModel, MLXLocalProviderModel, STDINConsumerProviderModel, OllamaProviderModel
-
+from prich.version import CONFIG_SCHEMA_VERSION
 
 ProviderConfig = Annotated[
     Union[
@@ -32,7 +32,7 @@ class ProviderModeModel(BaseModel):
     prompt: str
 
 class ConfigModel(BaseModel):
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0"] = CONFIG_SCHEMA_VERSION
     providers: Dict[str, ProviderConfig]
     provider_modes: List[ProviderModeModel]
     settings: SettingsConfig

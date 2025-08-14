@@ -35,14 +35,14 @@ def list_tags(global_only: bool, local_only: bool):
 def list_templates(global_only: bool, local_only: bool, remote_repo: bool, json_only: bool, tags: List[str]):
     """List templates."""
     if remote_repo and (global_only or local_only):
-        console_print("[yellow]When listing remote templates available for installation the global or local options are not supported, use: 'prich list -r'[/yellow]")
-        return
+        console_print("[red]When listing remote templates available for installation the global or local options are not supported, use: 'prich list -r'[/red]")
+        exit(1)
     if remote_repo:
         list_github_templates(tags, json_only)
         return
     if global_only and local_only:
-        console_print("[yellow]Use only one local or global option, use: 'prich list -g' or 'prich list -l'[/yellow]")
-        return
+        console_print("[red]Use only one local or global option, use: 'prich list -g' or 'prich list -l'[/red]")
+        exit(1)
 
     templates = get_loaded_templates(tags)
     if not templates and not tags:
@@ -53,7 +53,7 @@ def list_templates(global_only: bool, local_only: bool, remote_repo: bool, json_
         return
     if json_only:
         import json
-        json_templates_list = [template.model_dump(include=["id", "name", "description", "version", "source", "tags"], exclude_none=True, exclude_unset=True) for template in templates]
+        json_templates_list = [template.model_dump(include={"id", "name", "description", "version", "source", "tags"}, exclude_none=True, exclude_unset=True) for template in templates]
         console_print(json.dumps(json_templates_list, indent=2))
         return
 
@@ -86,8 +86,8 @@ def list_github_templates(tags, json_only):
         json_data = json.loads(response.text)
         manifest = TemplatesRepoManifest(**json_data)
     except Exception as e:
-        console.print(f"[bold red]Error:[/bold red] Failed to fetch or parse templates repository manifest: {e}")
-        return
+        console.print(f"[red]Error: Failed to fetch or parse templates repository manifest: {e}[/red]")
+        exit(1)
 
     templates = manifest.templates or []
     if not templates:

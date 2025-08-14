@@ -264,7 +264,7 @@ def create_dynamic_command(config, template: TemplateModel):
 
     @click.pass_context
     def dynamic_command(ctx, **kwargs):
-        console_print(f"Template: [green]{template.name}[/green] {template.version}, Args: {', '.join([f'[blue]{k}[/blue]=[blue]{v}[/blue]' for k,v in kwargs.items() if v])}")
+        console_print(f"Template: [green]{template.name}[/green] ({template.version}, {template.source}), Args: {', '.join([f'[blue]{k}[/blue]=[blue]{v}[/blue]' for k,v in kwargs.items() if v])}")
         console_print(template.description)
         run_template(template.id, **kwargs)
 

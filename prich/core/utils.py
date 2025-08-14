@@ -37,12 +37,12 @@ def console_print(message: str = "", end: str = "\n", markup = None, flush: bool
     if not is_quiet() and not is_only_final_output():
         console.print(message, end=end, markup=markup)
 
-def is_valid_template_id(template_id):
+def is_valid_template_id(template_id) -> bool:
     """ Validate Name Pattern: lowercase letters, numbers, hyphen, optional underscores, and no other characters"""
     pattern = r'^[a-z0-9-]+(_[a-z0-9-]+)*$'
     return bool(re.match(pattern, template_id))
 
-def is_valid_variable_name(variable_name):
+def is_valid_variable_name(variable_name) -> bool:
     """ Validate Name Pattern: upper and lowercase letters, numbers, optional underscores, and no other characters"""
     pattern = r'^[A-Za-z0-9]+([_A-Za-z0-9]+)*$'
     return bool(re.match(pattern, variable_name))
@@ -54,7 +54,7 @@ def get_prich_dir() -> Path:
 def get_prich_templates_dir() -> Path:
     return get_prich_dir() / "templates"
 
-def replace_env_vars(text):
+def replace_env_vars(text) -> str:
     """
     Replace $VAR or ${VAR} in a text string with environment variable values.
 
