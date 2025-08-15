@@ -1,11 +1,13 @@
 import click
 from pathlib import Path
-from typing import Dict, Optional, Tuple
-from prich.core.utils import console_print, shorten_home_path
+from typing import Dict, Optional, Tuple, List
+from prich.core.file_scope import classify_path
+from prich.core.state import _loaded_templates, _loaded_config
+from prich.core.utils import console_print, shorten_home_path, get_prich_dir
 from prich.models.utils import recursive_update
 from prich.models.config import ConfigModel
 from prich.models.template import TemplateModel
-from prich.core.state import _loaded_templates, _loaded_config
+from prich.version import TEMPLATE_SCHEMA_VERSION, CONFIG_SCHEMA_VERSION
 
 
 def _load_yaml(path: Path) -> Dict:
@@ -15,21 +17,21 @@ def _load_yaml(path: Path) -> Dict:
     with path.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
-def load_config_model(path: Path) -> Tuple[Optional[ConfigModel], Optional[Path]]:
-    raw_yaml = _load_yaml(path)
-    if not raw_yaml:
-        return None, path
-    if raw_yaml.get("schema_version") != "1.0":
-        raise click.ClickException(f"Unsupported config schema version: {raw_yaml.get('schema_version')}")
+def load_config_model(config_file: Path) -> Tuple[Optional[ConfigModel], Optional[Path]]:
+    config_yaml = _load_yaml(config_file)
+    if not config_yaml:
+        return None, config_file
+    if config_yaml.get("schema_version") != CONFIG_SCHEMA_VERSION:
+        raise click.ClickException(f"Unsupported config schema version {config_yaml.get('schema_version')}, this prich version supports only {CONFIG_SCHEMA_VERSION}: {shorten_home_path(str(config_file))}")
     from pydantic import TypeAdapter
 
     # Parse full config
     try:
         adapter = TypeAdapter(ConfigModel)
-        config = adapter.validate_python(raw_yaml)
-        return config, path
+        config = adapter.validate_python(config_yaml)
+        return config, config_file
     except Exception as e:
-        msg_lines = [f"[yellow]Failed to load config: {shorten_home_path(str(path))}"]
+        msg_lines = [f"[yellow]Failed to load config: {shorten_home_path(str(config_file))}"]
         if 'errors' in e.__dir__():
             for error in e.errors():
                 msg_lines.append(f"  * {error.get('msg')}. {error.get('type')}: {'.'.join(error.get('loc'))}")
@@ -38,12 +40,12 @@ def load_config_model(path: Path) -> Tuple[Optional[ConfigModel], Optional[Path]
         return None, None
 
 def load_local_config() -> Tuple[ConfigModel, Path]:
-    return load_config_model(Path.cwd() / ".prich/config.yaml")
+    return load_config_model(get_prich_dir(global_only=False) / "config.yaml")
 
 def load_global_config() -> Tuple[ConfigModel, Path]:
-    return load_config_model(Path.home() / ".prich/config.yaml")
+    return load_config_model(get_prich_dir(global_only=True) / "config.yaml")
 
-def load_merged_config() -> Tuple[ConfigModel, list[Path]]:
+def load_merged_config() -> Tuple[ConfigModel, List[Path]]:
     from prich.core.utils import should_use_global_only, shorten_home_path, should_use_local_only
 
     if not should_use_local_only():
@@ -67,35 +69,53 @@ def load_merged_config() -> Tuple[ConfigModel, list[Path]]:
         raise click.ClickException(f"No providers config found. Check config files: {[shorten_home_path(str(path_item)) for path_item in result[1]]}")
     raise click.ClickException(f"No config found. Run 'prich init' first.")
 
-def _load_template_model(yaml_file: Path, base_dir: Path = None) -> TemplateModel | None:
-    template = None
+def load_template_model(yaml_file: Path) -> TemplateModel | None:
+    template_yaml = None
     try:
         if yaml_file.is_file():
-            template = _load_yaml(yaml_file)
-            if template:
-                template["source"] = "global" if base_dir == Path.home() else "local"
-                template["folder"] = str(yaml_file.parent)
-                template["file"] = str(yaml_file)
-                return TemplateModel(**template)
+            template_yaml = _load_yaml(yaml_file)
+            if template_yaml:
+                if template_yaml.get("schema_version") != TEMPLATE_SCHEMA_VERSION:
+                    raise click.ClickException(
+                        f"Unsupported template schema version {template_yaml.get('schema_version') if template_yaml.get('schema_version') else 'NOT SET'}, this prich version supports only {TEMPLATE_SCHEMA_VERSION}: {shorten_home_path(str(yaml_file))}")
+                template_yaml["source"] = classify_path(file=yaml_file)
+                template_yaml["folder"] = str(yaml_file.parent)
+                template_yaml["file"] = str(yaml_file)
+                return TemplateModel(**template_yaml)
+        raise click.ClickException(f"Failed to load {shorten_home_path(str(yaml_file))}, check if file or contents are correct.")
     except Exception as e:
         if 'errors' in e.__dir__():
-            raise click.ClickException(f"""Failed to load template {template.get('name') if template else '?'} from {yaml_file}: {', '.join([f'{x.get("msg")}: {x.get("loc")}' for x in e.errors()])}""")
+            raise click.ClickException(f"""Failed to load template {template_yaml.get('name') if template_yaml else '?'} from {yaml_file}: {', '.join([f'{x.get("msg")}: {x.get("loc")}' for x in e.errors()])}""")
         else:
-            raise click.ClickException(f"Failed to load template {template.get('name') if template else '?'} from {yaml_file}: {e}")
+            raise click.ClickException(f"Failed to load template {template_yaml.get('name') if template_yaml else '?'} from {yaml_file}: {e}")
 
-def _load_template_models(base_dir: Path) -> list[TemplateModel]:
-    templates = []
+def find_template_files(base_dir: Path) -> List[Path]:
+    """Find template YAML files"""
+    template_files = []
     template_dir = base_dir / ".prich/templates"
     if template_dir.exists():
         for subdir in template_dir.iterdir():
             if subdir.is_dir():
                 yaml_file = subdir / f"{subdir.name}.yaml"
-                template = _load_template_model(yaml_file, base_dir)
-                templates.append(template)
+                template_files.append(yaml_file)
+    return template_files
+
+def _load_template_models(base_dir: Path) -> List[TemplateModel]:
+    """Load Template Models from the base_dir (ignores templates that are failing to load)"""
+    templates = []
+    template_files = find_template_files(base_dir)
+    template_files.sort()
+    for template_file in template_files:
+        try:
+            template = load_template_model(template_file)
+            templates.append(template)
+        except click.ClickException:
+            pass  # ignore load templates that are failed to load
     return templates
 
-def load_template_models(): #global_only: bool = False, local_only: bool = False) -> list[TemplateModel]:
-    from prich.core.utils import should_use_global_only, shorten_home_path, should_use_local_only
+def load_templates() -> List[TemplateModel]:
+    """Load templates based on the global+local or only local or only global"""
+    from prich.core.utils import should_use_global_only, should_use_local_only
     global_templates = _load_template_models(Path.home())
     if should_use_global_only():
         return global_templates
@@ -106,22 +126,22 @@ def load_template_models(): #global_only: bool = False, local_only: bool = False
     filtered_globals = [template for template in global_templates if template.id not in local_ids]
     return local_templates + filtered_globals
 
-def get_loaded_config():
+def get_loaded_config() -> Tuple[ConfigModel, List[Path]]:
     global _loaded_config, _loaded_config_paths
     if _loaded_config is None:
         _loaded_config, _loaded_config_paths = load_merged_config()
     return _loaded_config, _loaded_config_paths
 
-def get_loaded_template(template_id: str):
+def get_loaded_template(template_id: str) -> TemplateModel:
     if not _loaded_templates:
         get_loaded_templates()
     if template_id not in _loaded_templates:
         raise click.ClickException(f"Template {template_id} not found.")
     return _loaded_templates[template_id]
 
-def get_loaded_templates(tags: list[str]=None):
+def get_loaded_templates(tags: List[str] = None) -> List[TemplateModel]:
     if not _loaded_templates:
-        templates = load_template_models()
+        templates = load_templates()
         for template in templates:
             _loaded_templates[template.id] = template
     if tags:

@@ -1,7 +1,7 @@
 from typing import List
 
 import click
-
+from prich.models.file_scope import FileScope
 from prich.core.loaders import get_loaded_templates
 from prich.core.utils import console_print
 from prich.models.template_repo_manifest import TemplatesRepoManifest, TemplateRepoItem
@@ -35,14 +35,12 @@ def list_tags(global_only: bool, local_only: bool):
 def list_templates(global_only: bool, local_only: bool, remote_repo: bool, json_only: bool, tags: List[str]):
     """List templates."""
     if remote_repo and (global_only or local_only):
-        console_print("[yellow]When listing remote templates available for installation the global or local options are not supported, use: 'prich list -r'[/yellow]")
-        return
+        raise click.ClickException("When listing remote templates available for installation the global or local options are not supported, use: 'prich list -r'")
     if remote_repo:
         list_github_templates(tags, json_only)
         return
     if global_only and local_only:
-        console_print("[yellow]Use only one local or global option, use: 'prich list -g' or 'prich list -l'[/yellow]")
-        return
+        raise click.ClickException("Use only one local or global option, use: 'prich list -g' or 'prich list -l'")
 
     templates = get_loaded_templates(tags)
     if not templates and not tags:
@@ -53,17 +51,17 @@ def list_templates(global_only: bool, local_only: bool, remote_repo: bool, json_
         return
     if json_only:
         import json
-        json_templates_list = [template.model_dump(include=["id", "name", "description", "version", "source", "tags"], exclude_none=True, exclude_unset=True) for template in templates]
+        json_templates_list = [template.model_dump(include={"id", "name", "description", "version", "source", "tags"}, exclude_none=True, exclude_unset=True) for template in templates]
         console_print(json.dumps(json_templates_list, indent=2))
         return
 
     selected_tags = f" (tags: [green]{', '.join(tags)}[/green])" if tags else ""
-    console_print(f"[bold]Available templates{selected_tags}:[/bold]")
+    console_print(f"Available templates{selected_tags}:")
     for template in templates:
         source = template.source
-        marker = " ([green]g[/green])" if source == "global" else ""
-        template_tags = f" [dim](ver: {template.version}, tags: [green]{', '.join(template.tags)}[/green])[/dim]" if template.tags else ""
-        console_print(f"- [green]{template.id}[/green]{marker}: [dim][green]{template.description}[/green][/dim]{template_tags}")
+        marker = " ([green]g[/green])" if source == FileScope.GLOBAL else " ([green]l[/green])" if source == FileScope.LOCAL else ""
+        template_details = f" (ver:{template.version}, tags:[green]{','.join(template.tags) if template.tags else '-'}[/green])"
+        console_print(f"- {template.id}[dim]{marker}[/dim]: [dim]{template.description or '-'}{template_details}[/dim]")
 
 def list_github_templates(tags, json_only):
     """List available for installation templates from GitHub."""
@@ -86,8 +84,7 @@ def list_github_templates(tags, json_only):
         json_data = json.loads(response.text)
         manifest = TemplatesRepoManifest(**json_data)
     except Exception as e:
-        console.print(f"[bold red]Error:[/bold red] Failed to fetch or parse templates repository manifest: {e}")
-        return
+        raise click.ClickException(f"Error: Failed to fetch or parse templates repository manifest: {e}")
 
     templates = manifest.templates or []
     if not templates:

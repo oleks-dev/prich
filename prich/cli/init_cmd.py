@@ -2,9 +2,8 @@ import os
 import shutil
 import sys
 import subprocess
-from pathlib import Path
 import click
-from prich.core.utils import console_print
+from prich.core.utils import console_print, get_prich_dir
 from prich.models.config_providers import EchoProviderModel
 from prich.models.config import SettingsConfig, ConfigModel, ProviderModeModel
 
@@ -14,7 +13,7 @@ from prich.models.config import SettingsConfig, ConfigModel, ProviderModeModel
 @click.option("--force", is_flag=True, help="Overwrite existing config")
 def init(global_init: bool, force: bool):
     """Initialize prich configuration and default venv."""
-    prich_dir = Path.home() / ".prich" if global_init else Path.cwd() / ".prich"
+    prich_dir = get_prich_dir(global_init)
 
     if prich_dir.exists() and not force:
         raise click.ClickException(f"{prich_dir} exists. Use --force to overwrite.")
