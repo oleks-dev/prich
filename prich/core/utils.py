@@ -47,12 +47,12 @@ def is_valid_variable_name(variable_name) -> bool:
     pattern = r'^[A-Za-z0-9]+([_A-Za-z0-9]+)*$'
     return bool(re.match(pattern, variable_name))
 
-def get_prich_dir() -> Path:
-    parent_path = Path.home() if should_use_global_only() else Path.cwd()
+def get_prich_dir(global_only: bool = None) -> Path:
+    parent_path = Path.home() if global_only or should_use_global_only() else Path.cwd()
     return parent_path / ".prich"
 
-def get_prich_templates_dir() -> Path:
-    return get_prich_dir() / "templates"
+def get_prich_templates_dir(global_only: bool = None) -> Path:
+    return get_prich_dir(global_only) / "templates"
 
 def replace_env_vars(text) -> str:
     """

@@ -1,11 +1,12 @@
 import click
 from pathlib import Path
 from typing import Dict, Optional, Tuple, List
-from prich.core.utils import console_print, shorten_home_path
+from prich.core.file_scope import classify_path
+from prich.core.state import _loaded_templates, _loaded_config
+from prich.core.utils import console_print, shorten_home_path, get_prich_dir
 from prich.models.utils import recursive_update
 from prich.models.config import ConfigModel
 from prich.models.template import TemplateModel
-from prich.core.state import _loaded_templates, _loaded_config
 from prich.version import TEMPLATE_SCHEMA_VERSION, CONFIG_SCHEMA_VERSION
 
 
@@ -39,10 +40,10 @@ def load_config_model(config_file: Path) -> Tuple[Optional[ConfigModel], Optiona
         return None, None
 
 def load_local_config() -> Tuple[ConfigModel, Path]:
-    return load_config_model(Path.cwd() / ".prich/config.yaml")
+    return load_config_model(get_prich_dir(global_only=False) / "config.yaml")
 
 def load_global_config() -> Tuple[ConfigModel, Path]:
-    return load_config_model(Path.home() / ".prich/config.yaml")
+    return load_config_model(get_prich_dir(global_only=True) / "config.yaml")
 
 def load_merged_config() -> Tuple[ConfigModel, List[Path]]:
     from prich.core.utils import should_use_global_only, shorten_home_path, should_use_local_only
@@ -73,11 +74,11 @@ def load_template_model(yaml_file: Path) -> TemplateModel | None:
     try:
         if yaml_file.is_file():
             template_yaml = _load_yaml(yaml_file)
-            if template_yaml.get("schema_version") != TEMPLATE_SCHEMA_VERSION:
-                raise click.ClickException(f"Unsupported template schema version {template_yaml.get('schema_version')}, this prich version supports only {TEMPLATE_SCHEMA_VERSION}: {shorten_home_path(str(yaml_file))}")
-
             if template_yaml:
-                template_yaml["source"] = "local" if Path.cwd() != Path.home() and str(yaml_file.absolute()).startswith(f"{str(Path.cwd() / '.prich')}") else "global"
+                if template_yaml.get("schema_version") != TEMPLATE_SCHEMA_VERSION:
+                    raise click.ClickException(
+                        f"Unsupported template schema version {template_yaml.get('schema_version') if template_yaml.get('schema_version') else 'NOT SET'}, this prich version supports only {TEMPLATE_SCHEMA_VERSION}: {shorten_home_path(str(yaml_file))}")
+                template_yaml["source"] = classify_path(file=yaml_file)
                 template_yaml["folder"] = str(yaml_file.parent)
                 template_yaml["file"] = str(yaml_file)
                 return TemplateModel(**template_yaml)
@@ -103,6 +104,7 @@ def _load_template_models(base_dir: Path) -> List[TemplateModel]:
     """Load Template Models from the base_dir (ignores templates that are failing to load)"""
     templates = []
     template_files = find_template_files(base_dir)
+    template_files.sort()
     for template_file in template_files:
         try:
             template = load_template_model(template_file)

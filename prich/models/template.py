@@ -3,6 +3,7 @@ from pathlib import Path
 import click
 from pydantic import BaseModel, Field, model_validator
 from typing import List, Optional, Literal, Annotated, Union
+from prich.models.file_scope import FileScope
 from prich.core.utils import is_valid_variable_name
 from prich.version import TEMPLATE_SCHEMA_VERSION
 
@@ -87,7 +88,7 @@ class TemplateModel(BaseModel):
     schema_version: Literal["1.0"] = TEMPLATE_SCHEMA_VERSION
 
     # These fields are injected at runtime
-    source: Optional[Literal["local", "global"]] = Field(default=None, exclude=True)
+    source: Optional[Literal[FileScope.LOCAL, FileScope.GLOBAL, FileScope.EXTERNAL]] = Field(default=None, exclude=True)
     folder: Optional[str] = Field(default=None, exclude=True)
     file: Optional[str] = Field(default=None, exclude=True)
 

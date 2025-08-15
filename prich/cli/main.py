@@ -10,7 +10,7 @@ from prich.core.utils import console_print
 from prich.version import VERSION
 
 @click.group()
-@click.version_option(VERSION, package_name="prich")
+@click.version_option(VERSION, prog_name="prich")
 def cli():
     """prich: CLI for reusable rich LLM prompts with script pipelines."""
     console_print(f"[bold][cyan]prich v{VERSION}[/cyan][/bold] - CLI for reusable rich LLM prompts with script pipelines")

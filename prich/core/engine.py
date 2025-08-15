@@ -3,12 +3,11 @@ from pathlib import Path
 from typing import Dict, List
 
 from click import ClickException
-
 from prich.models.config import ConfigModel
 from prich.models.template import TemplateModel, PromptFields, PipelineStep, LLMStep, PythonStep, RenderStep, \
     CommandStep, StepValidation
 from prich.core.utils import console_print, replace_env_vars, shorten_home_path, is_quiet, is_only_final_output, \
-    is_verbose
+    is_verbose, get_prich_dir
 
 jinja_env = {}
 
@@ -121,13 +120,12 @@ def validate_step_output(step_validation: StepValidation, value: str)-> bool:
         return True  # validation passed
     return False
 
-def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, variables: Dict[str, str], config: ConfigModel, template_id: str, template_source: str) -> str:
+def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, variables: Dict[str, str]) -> str:
     import subprocess
     from rich.console import Console
     console = Console()
 
     method = step.call
-    prich_dir = (Path.cwd() if template_source == "local" else Path.home()) / ".prich"
     try:
         template_dir = Path(template.folder)
     except Exception as e:
@@ -142,6 +140,7 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
         cmd = [str(method_path)]
 
         if template.venv == "shared":
+            prich_dir = get_prich_dir()
             shared_venv = prich_dir / "venv"
             python_path = shared_venv / "bin/python"
             if use_venv and method.endswith(".py") and python_path.exists():
@@ -177,7 +176,7 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
     except Exception as e:
         raise click.ClickException(f"Unexpected error in {method}: {str(e)}")
 
-def render_template(template_dir: str, template_text: str, variables: dict = Dict[str, str]) -> str:
+def render_template(template_text: str, variables: dict = Dict[str, str]) -> str:
     from datetime import datetime
     import os
     import getpass
@@ -199,36 +198,36 @@ def render_template(template_dir: str, template_text: str, variables: dict = Dic
     rendered_text = get_jinja_env("template").from_string(template_text).render(**variables).strip()
     return rendered_text
 
-def render_prompt(config: ConfigModel, fields: PromptFields, variables: Dict[str, str], template_dir: str, mode: str) -> str:
+def render_prompt(config: ConfigModel, fields: PromptFields, variables: Dict[str, str], mode: str) -> str:
     """ Render Prompt using provider mode prompt template (used for raw prompt construction) """
     if not fields.prompt and not fields.user:
         raise ClickException("There should be Prompt or User field at least.")
     mode_prompt = [x for x in config.model_dump().get("provider_modes") if x.get("name")==mode]
     if len(mode_prompt) == 0:
         raise click.ClickException(f"Prompt mode {mode} is not supported.")
-    prompt_fields = render_template(template_dir, mode_prompt[0].get("prompt"), fields.model_dump())
-    prompt = render_template(template_dir, prompt_fields, variables)
+    prompt_fields = render_template(mode_prompt[0].get("prompt"), fields.model_dump())
+    prompt = render_template(prompt_fields, variables)
     return prompt
 
-def render_prompt_fields(fields: PromptFields, variables: Dict[str, str], template_dir: str) -> PromptFields:
+def render_prompt_fields(fields: PromptFields, variables: Dict[str, str]) -> PromptFields:
     """ Render Prompt fields (used when provider supports prompt fields templates like system/user """
     if not fields.prompt and not fields.user:
         raise ClickException("There should be Prompt or User field at least.")
     rendered_fields = PromptFields()
     if fields.system:
-        rendered_fields.system = render_template(template_dir, fields.system, variables)
+        rendered_fields.system = render_template(fields.system, variables)
     if fields.user:
-        rendered_fields.user = render_template(template_dir, fields.user, variables)
+        rendered_fields.user = render_template(fields.user, variables)
     if fields.prompt:
-        rendered_fields.prompt = render_template(template_dir, fields.prompt, variables)
+        rendered_fields.prompt = render_template(fields.prompt, variables)
     return rendered_fields
 
 
-def get_variable_type(variable_type):
+def get_variable_type(variable_type: str) -> click.types:
     TYPE_MAPPING = {"str": click.STRING, "int": click.INT, "bool": click.BOOL, "path": click.Path}
     return TYPE_MAPPING.get(variable_type, None)
 
-def create_dynamic_command(config, template: TemplateModel):
+def create_dynamic_command(config, template: TemplateModel) -> click.Command:
     options = []
     for arg in template.variables if template.variables else []:
         arg_name = arg.name
@@ -255,7 +254,7 @@ def create_dynamic_command(config, template: TemplateModel):
         click.Option(["-g", "--global"], is_flag=True, default=False, help="Use global config and template"),
         click.Option(["-l", "--local"], is_flag=True, default=False, help="Use local config and template"),
         click.Option(["-o", "--output"], type=click.Path(), default=None, show_default=True, help="Save LLM output to file"),
-        click.Option(["-p", "--provider"], type=click.Choice(config.providers.keys()), show_default=True, help="Select LLM provider"),
+        click.Option(["-p", "--provider"], type=click.Choice(config.providers.keys()), show_default=True, help="Override LLM provider"),
         click.Option(["-s", "--skip-llm"], is_flag=True, default=False, help="Skip sending prompt to LLM"),
         click.Option(["-v", "--verbose"], is_flag=True, default=False, help="Verbose mode"),
         click.Option(["-q", "--quiet"], is_flag=True, default=False, help="Suppress all output"),
@@ -264,15 +263,14 @@ def create_dynamic_command(config, template: TemplateModel):
 
     @click.pass_context
     def dynamic_command(ctx, **kwargs):
-        console_print(f"Template: [green]{template.name}[/green] ({template.version}, {template.source}), Args: {', '.join([f'[blue]{k}[/blue]=[blue]{v}[/blue]' for k,v in kwargs.items() if v])}")
+        console_print(f"Template: [green]{template.name}[/green] ({template.version}, {template.source.value}), Args: {', '.join([f'[blue]{k}[/blue]=[blue]{v}[/blue]' for k,v in kwargs.items() if v])}")
         console_print(template.description)
         run_template(template.id, **kwargs)
 
-    return click.Command(name=template.id, callback=dynamic_command, params=options, help=template.description, epilog=f"Template file: {shorten_home_path(template.file)}")
+    return click.Command(name=template.id, callback=dynamic_command, params=options, help=f"{template.description if template.description else ''}", epilog=f"{template.name} (ver: {template.version}, {template.source.value})")
 
-def send_to_llm(template, step, provider, config, variables, skip_llm, output):
+def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: ConfigModel, variables: dict, skip_llm: bool, output_file: Path) -> str:
     import json
-    import sys
     from prich.llm_providers.get_llm_provider import get_llm_provider
 
     if not step.prompt and (not step.prompt.system and not step.prompt.user):
@@ -294,9 +292,9 @@ def send_to_llm(template, step, provider, config, variables, skip_llm, output):
     prompt = None
     prompt_fields = None
     if selected_provider.mode:
-        prompt = render_prompt(config, step.prompt, variables, template.source, selected_provider.mode)
+        prompt = render_prompt(config, step.prompt, variables, selected_provider.mode)
     else:
-        prompt_fields = render_prompt_fields(step.prompt, variables, template.source)
+        prompt_fields = render_prompt_fields(step.prompt, variables)
     if not prompt and not prompt_fields:
         raise click.ClickException("Prompt is empty.")
 
@@ -353,10 +351,10 @@ def send_to_llm(template, step, provider, config, variables, skip_llm, output):
         step_output = response.strip()
         if not llm_provider.show_response and not is_quiet():
             console_print(step_output, markup=False)
-        if output:
-            with open(output, "w") as f:
+        if output_file:
+            with open(output_file, "w") as f:
                 f.write(str(step_output))
-            console_print(f"Response saved to [green]{output}[/green]")
+            console_print(f"Response saved to [green]{output_file}[/green]")
     except Exception as e:
         raise click.ClickException(f"Failed to get LLM response: {str(e)}")
     return step_output
@@ -367,7 +365,7 @@ def run_template(template_id, **kwargs):
     config, _ = get_loaded_config()
     skip_llm = kwargs.get('skip_llm')
     provider = kwargs.get('provider')
-    output = kwargs.get('output')
+    output_file = kwargs.get('output')
 
     template = get_loaded_template(template_id)
 
@@ -401,11 +399,11 @@ def run_template(template_id, **kwargs):
 
             output_var = step.output_variable
             if type(step) in [PythonStep, CommandStep]:
-                step_output = run_command_step(template, step, variables, config, template_id, template.source)
+                step_output = run_command_step(template, step, variables)
             elif type(step) == RenderStep:
-                step_output = render_template(template.folder, step.template, variables)
+                step_output = render_template(step.template, variables)
             elif type(step) == LLMStep:
-                step_output = send_to_llm(template, step, provider, config, variables, skip_llm, output)
+                step_output = send_to_llm(template, step, provider, config, variables, skip_llm, output_file)
             else:
                 raise click.ClickException(f"Step {step.type} type is not supported.")
 

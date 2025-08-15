@@ -60,7 +60,7 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
     """Install a template from PATH, zip, or prich-templates."""
     from rich.console import Console
     console = Console()
-    templates_dir = get_prich_templates_dir()
+    templates_dir = get_prich_templates_dir(global_install)
     src_dir = None
     remove_source = False
 
@@ -222,7 +222,7 @@ def show_template(template_id, global_only):
 @click.argument("template_id")
 @click.option("-g", "--global", "global_only", is_flag=True, default=False, help="Create global template")
 @click.option("-e", "--edit", "edit", is_flag=True, default=False, help="Open created template yaml file in editor")
-def create_template(template_id, global_only, edit):
+def create_template(template_id: str, global_only: bool, edit: bool):
     """Create new Template based on basic example template."""
     example_template = TemplateModel(
         id=template_id,
@@ -266,8 +266,7 @@ def create_template(template_id, global_only, edit):
         raise click.ClickException(f"Template {template_id} already exists.")
     if not is_valid_template_id(template_id):
         raise click.ClickException(f"Template {template_id} is not correct, please use only lowercase letters, numbers, hyphen, and optional underscore characters.")
-    prich_dir = (Path.cwd() if not global_only else Path.home()) / ".prich"
-    template_dir = prich_dir / "templates" / template_id
+    template_dir = get_prich_templates_dir(global_only) / template_id
     if template_dir.exists():
         raise click.ClickException(f"Template {template_id} folder {template_dir} already exists.")
     template_dir.mkdir(parents=True, exist_ok=False)

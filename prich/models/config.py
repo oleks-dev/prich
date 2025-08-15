@@ -2,6 +2,7 @@ import click
 from pathlib import Path
 from typing import List, Optional, Literal, Dict, Annotated, Union
 from pydantic import BaseModel, Field, field_validator, TypeAdapter
+from prich.models.file_scope import FileScope
 from prich.models.config_providers import EchoProviderModel, OpenAIProviderModel, MLXLocalProviderModel, STDINConsumerProviderModel, OllamaProviderModel
 from prich.version import CONFIG_SCHEMA_VERSION
 
@@ -51,7 +52,7 @@ class ConfigModel(BaseModel):
         import yaml
         return yaml.safe_dump(self.model_dump(exclude_none=True), sort_keys=False)
 
-    def save(self, location: Literal["local", "global"]):
+    def save(self, location: Literal[FileScope.LOCAL, FileScope.GLOBAL]):
         import yaml
 
         def str_presenter(dumper, data):
@@ -61,13 +62,13 @@ class ConfigModel(BaseModel):
 
         yaml.add_representer(str, str_presenter, Dumper=yaml.SafeDumper)
 
-        if location == "local":
-            prich_dir = Path.cwd()
-        elif location == "global":
-            prich_dir = Path.home()
+        if location == FileScope.LOCAL:
+            base_dir = Path.cwd()
+        elif location == FileScope.GLOBAL:
+            base_dir = Path.home()
         else:
             raise click.ClickException("Save config location param value is not supported")
-        prich_dir = prich_dir / ".prich"
+        prich_dir = base_dir / ".prich"
         prich_config_file = prich_dir / "config.yaml"
         if prich_config_file.exists():
             import shutil
