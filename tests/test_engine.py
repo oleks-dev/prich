@@ -1,7 +1,7 @@
 import click
 import pytest
 
-from prich.models.config import ConfigModel
+from tests.fixtures.config import basic_config_with_prompts
 from prich.core.engine import render_prompt, render_template
 from prich.models.template import PromptFields
 
@@ -9,59 +9,6 @@ variables = {
     "name": "Example Name",
     "assistant": "System Assistant"
 }
-
-@pytest.fixture
-def basic_config():
-    from pydantic import TypeAdapter
-    import yaml
-    adapter = TypeAdapter(ConfigModel)
-    config = """
-schema_version: "1.0"
-providers:
-  show_prompt:
-    mode: flat
-    provider_type: echo
-provider_modes:
-  - name: plain
-    prompt: '{{ prompt }}'
-  - name: flat
-    prompt: |-
-      {% if system %}### System:
-      {{ system }}
-
-      {% endif %}### User:
-      {{ user }}
-
-      ### Assistant:
-  - name: mistral-instruct
-    prompt: |-
-      <s>[INST]
-      {% if system %}{{ system }}
-
-      {% endif %}{{ user }}
-      [/INST]
-  - name: llama2-chat
-    prompt: |-
-      <s>[INST]
-      {% if system %}{{ system }}
-
-      {% endif %}{{ user }}
-      [/INST]
-  - name: anthropic
-    prompt: |-
-      Human: {% if system %}{{ system }}
-
-      {% endif %}{{ user }}
-
-      Assistant:
-  - name: chatml
-    prompt: '[{% if system %}{"role": "system", "content": "{{ system }}"},{% endif %}{"role": "user", "content": "{{ user }}"}]'
-settings: 
-    default_provider: "show_prompt"
-    editor: "vi"
-"""
-    config = adapter.validate_python(yaml.safe_load(config))
-    return config
 
 @pytest.mark.parametrize("provider_mode, prompt, expected", [
     ("chatml",
@@ -134,8 +81,8 @@ settings:
      ),
 
 ])
-def test_render_prompt(provider_mode, prompt, expected, basic_config):
-    actual = render_prompt(basic_config, prompt, variables=variables, template_dir=".", mode=provider_mode)
+def test_render_prompt(provider_mode, prompt, expected, basic_config_with_prompts):
+    actual = render_prompt(basic_config_with_prompts, prompt, variables=variables, mode=provider_mode)
     assert actual == expected
 
 @pytest.mark.parametrize("chat_mode, prompt", [
@@ -160,9 +107,9 @@ def test_render_prompt(provider_mode, prompt, expected, basic_config):
      )
 
 ])
-def test_render_prompt_exception(chat_mode, prompt, basic_config):
+def test_render_prompt_exception(chat_mode, prompt, basic_config_with_prompts):
     with pytest.raises(click.ClickException):
-        render_prompt(basic_config, prompt, variables=variables, template_dir=".", mode=chat_mode)
+        render_prompt(basic_config_with_prompts, prompt, variables=variables, mode=chat_mode)
 
 @pytest.mark.parametrize("template_string, expected", [
     ("Hello {{ assistant }}", "Hello System Assistant"),
@@ -172,5 +119,5 @@ def test_render_prompt_exception(chat_mode, prompt, basic_config):
     (None, "")
 ])
 def test_render_template(template_string, expected):
-    actual = render_template(".", template_string, variables=variables)
+    actual = render_template(template_string, variables=variables)
     assert expected == actual

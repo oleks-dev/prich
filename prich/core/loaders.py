@@ -2,7 +2,7 @@ import click
 from pathlib import Path
 from typing import Dict, Optional, Tuple, List
 from prich.core.file_scope import classify_path
-from prich.core.state import _loaded_templates, _loaded_config
+from prich.core.state import _loaded_templates, _loaded_config, _loaded_config_paths
 from prich.core.utils import console_print, shorten_home_path, get_prich_dir
 from prich.models.utils import recursive_update
 from prich.models.config import ConfigModel
