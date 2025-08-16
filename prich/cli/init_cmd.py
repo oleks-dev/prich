@@ -2,6 +2,7 @@ import os
 import shutil
 import sys
 import subprocess
+import venv
 import click
 from prich.core.utils import console_print, get_prich_dir
 from prich.models.config_providers import EchoProviderModel
@@ -24,7 +25,10 @@ def init(global_init: bool, force: bool):
     if force:
         shutil.rmtree(default_venv, ignore_errors=True)
     if not default_venv.exists():
-        subprocess.run([sys.executable, "-m", "venv", str(default_venv)], check=True)
+        builder = venv.EnvBuilder(with_pip=True)
+        builder.create(default_venv)
+        # replaced with venv lib
+        # subprocess.run([sys.executable, "-m", "venv", str(default_venv)], check=True)
 
     config = ConfigModel(
         settings=SettingsConfig(

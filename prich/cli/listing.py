@@ -12,6 +12,9 @@ from prich.models.template_repo_manifest import TemplatesRepoManifest, TemplateR
 @click.option("-l", "--local", "local_only", is_flag=True, help="List only local templates")
 def list_tags(global_only: bool, local_only: bool):
     """List available tags from templates."""
+    if global_only and local_only:
+        raise click.ClickException("Use only one local or global option, use: 'prich tags -g' or 'prich tags -l'")
+
     from collections import Counter
     templates = get_loaded_templates()
     if not templates:
