@@ -4,7 +4,7 @@ from pydantic import BaseModel
 def recursive_update(target: BaseModel, source: BaseModel) -> BaseModel:
     updated_data = {}
 
-    for field in target.model_fields.keys():
+    for field in target.__class__.model_fields.keys():
         target_value = getattr(target, field)
         source_value = getattr(source, field)
 

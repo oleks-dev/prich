@@ -119,24 +119,23 @@ class TemplateModel(BaseModel):
         import yaml
         return yaml.safe_dump(self.model_dump())
 
-    def save(self, location: Literal["local", "global"] | None = None, filename: Path | str = None):
-        import yaml
+    def save(self, location: Literal[FileScope.LOCAL, FileScope.GLOBAL] | None = None):
+        import os, yaml
         prich_dir = None
-        if location and filename:
-            if location == "local":
-                prich_dir = Path.home()
-            elif location == "global":
-                prich_dir = Path.cwd()
-            prich_dir = prich_dir / ".prich"
-            template_file = prich_dir / "templates" / self.id
-        elif not filename and self.folder and self.file:
-            template_file = Path(self.folder) / self.file
+        if location == "local" or (not location and self.source == FileScope.LOCAL):
+            prich_dir = Path.cwd() / ".prich"
+        elif location == "global" or (not location and self.source == FileScope.GLOBAL):
+            prich_dir = Path.home() / ".prich"
+        if location or (not location and self.source):
+            template_file = prich_dir / "templates" / self.id / f"{self.id}.yaml"
         else:
             raise click.ClickException(f"Failed to prepare file path for template {self.id}")
         if template_file.exists():
             import shutil
             template_backup_file = str(template_file).replace(".yaml", ".bak", -1)
             shutil.copy(template_file, template_backup_file)
+        else:
+            os.makedirs(template_file.parent, exist_ok=True)
         with open(template_file, "w") as f:
             return yaml.safe_dump(self.model_dump(), f)
 

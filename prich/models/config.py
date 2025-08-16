@@ -1,3 +1,5 @@
+import os
+
 import click
 from pathlib import Path
 from typing import List, Optional, Literal, Dict, Annotated, Union
@@ -69,6 +71,7 @@ class ConfigModel(BaseModel):
         else:
             raise click.ClickException("Save config location param value is not supported")
         prich_dir = base_dir / ".prich"
+        os.makedirs(prich_dir, exist_ok=True)
         prich_config_file = prich_dir / "config.yaml"
         if prich_config_file.exists():
             import shutil
