@@ -70,3 +70,13 @@ def templates(count: int = 1, isolated_venv: bool = False, global_location: bool
             tpl.tags.append(tag_name)
         templates_list.append(tpl)
     return templates_list
+
+def templates_list_to_dict(templates_list: list):
+    tpl_dict = {}
+    for tpl in templates_list:
+        tpl_dict[tpl.id] = tpl
+    return tpl_dict
+
+def templates_dict(count: int = 1, isolated_venv: bool = False, global_location: bool = False, tag_first_n: int = None):
+    templates_list = templates(count=count, isolated_venv=isolated_venv, global_location=global_location, tag_first_n=tag_first_n)
+    return templates_list_to_dict(templates_list)
