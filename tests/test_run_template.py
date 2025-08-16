@@ -9,60 +9,8 @@ from prich.cli.config import list_providers, show_config, edit_config
 from prich.core.engine import run_template
 from prich.core.state import _loaded_templates
 from prich.models.template import TemplateModel, PromptFields, VariableDefinition, PythonStep, CommandStep, LLMStep
-from prich.models.config import ConfigModel
+from tests.fixtures.config import basic_config
 
-@pytest.fixture
-def basic_config():
-    from pydantic import TypeAdapter
-    import yaml
-    adapter = TypeAdapter(ConfigModel)
-    config = """
-schema_version: "1.0"
-providers:
-  show_prompt:
-    mode: flat
-    provider_type: echo
-provider_modes:
-  - name: plain
-    prompt: '{{ prompt }}'
-  - name: flat
-    prompt: |-
-      {% if system %}### System:
-      {{ system }}
-
-      {% endif %}### User:
-      {{ user }}
-
-      ### Assistant:
-  - name: mistral-instruct
-    prompt: |-
-      <s>[INST]
-      {% if system %}{{ system }}
-
-      {% endif %}{{ user }}
-      [/INST]
-  - name: llama2-chat
-    prompt: |-
-      <s>[INST]
-      {% if system %}{{ system }}
-
-      {% endif %}{{ user }}
-      [/INST]
-  - name: anthropic
-    prompt: |-
-      Human: {% if system %}{{ system }}
-
-      {% endif %}{{ user }}
-
-      Assistant:
-  - name: chatml
-    prompt: '[{% if system %}{"role": "system", "content": "{{ system }}"},{% endif %}{"role": "user", "content": "{{ user }}"}]'
-settings: 
-    default_provider: "show_prompt"
-    editor: "vi"
-"""
-    config = adapter.validate_python(yaml.safe_load(config))
-    return config
 
 @pytest.fixture
 def shared_venv_template(tmp_path):
@@ -141,13 +89,14 @@ def template(tmp_path):
 
 def test_run_template_shared_venv(monkeypatch, template, basic_config, tmp_path):
     template.name = 'test_shared_venv_tpl'
+    template.id = 'test_shared_venv_tpl'
     template.file = str(tmp_path / "shared_venv_tpl.yaml")
     template.venv = "shared"
     template.steps.insert(0, PythonStep(name="python step", call="test.py", type="python", args=[], output_variable="test_output"))
 
     _loaded_templates.clear()
     _loaded_config = None
-    _loaded_templates[template.name] = template
+    _loaded_templates[template.id] = template
 
     from prich.core.state import _loaded_config_paths
 

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 from prich.cli.templates import template_install
-from prich.core.loaders import load_config_model, _load_template_model
+from prich.core.loaders import load_config_model, load_template_model
 from prich.core.engine import render_prompt
 from prich.models.template import PromptFields
 
@@ -128,7 +128,7 @@ def test_render_template_prompt_basic():
 
     fields = PromptFields(system="Hello {{ name }}", user="Your input is {{ value }}")
     variables = {"name": "Test", "value": "XYZ"}
-    rendered = render_prompt(config_model, fields, variables, template_dir=".", mode="flat")
+    rendered = render_prompt(config_model, fields, variables, mode="flat")
     assert "Hello Test" in rendered
     assert "Your input is XYZ" in rendered
 
@@ -137,5 +137,5 @@ def test_invalid_template_validation():
         file_path = Path(tmpdir) / "invalid.yaml"
         file_path.write_text(INVALID_TEMPLATE_YAML)
         with pytest.raises(Exception) as exc:
-            _load_template_model(file_path)
+            load_template_model(file_path)
         assert "Field required" in str(exc.value)
