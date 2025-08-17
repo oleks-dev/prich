@@ -37,12 +37,11 @@ def expand_vars(args: List[str], internal_vars: Dict[str, str] = None):
     
     expanded_args = []
     for arg in args:
-        # First expand internal variables
-        if type(arg) != str:
-            continue
-        arg = re.sub(internal_pattern, replace_internal_var, arg)
-        # Then expand environment variables ($VAR or ${VAR})
-        arg = replace_env_vars(arg)
+        if type(arg) == str:
+            # First expand internal variables
+            arg = re.sub(internal_pattern, replace_internal_var, arg)
+            # Then expand environment variables ($VAR or ${VAR})
+            arg = replace_env_vars(arg)
         expanded_args.append(arg)
     
     return expanded_args
@@ -56,7 +55,7 @@ def get_jinja_env(name: str, conditional_expression_only: bool = False):
             cwd = Path.cwd()
             file_path = (cwd / filename).resolve()
             if cwd not in file_path.parents and cwd != file_path:
-                return f"Error: File '{filename}' is outside the current working directory"
+                raise click.ClickException(f"File is outside the current working directory")
             with file_path.open("r", encoding="utf-8") as f:
                 return f.read()
         except FileNotFoundError:
@@ -134,22 +133,23 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
     if type(step) == PythonStep and step.type == "python":
         method_path = template_dir / "scripts" / method
         if not method_path.exists():
-            raise click.ClickException(f"Script not found: {method_path}")
-
-        use_venv = True
-        cmd = [str(method_path)]
+            raise click.ClickException(f"Python script not found: {method_path}")
+        if not method.endswith(".py"):
+            raise click.ClickException(f"Python script file should end with .py: {method_path}")
 
         if template.venv == "shared":
             prich_dir = get_prich_dir()
             shared_venv = prich_dir / "venv"
-            python_path = shared_venv / "bin/python"
-            if use_venv and method.endswith(".py") and python_path.exists():
-                cmd = [str(python_path), str(method_path)]
-        elif template.venv == "isolated" and use_venv and method.endswith(".py"):
+            python_path = shared_venv / "bin" / "python"
+            if not python_path.exists():
+                raise click.ClickException(f"Shared venv python not found: {python_path}")
+            cmd = [str(python_path), str(method_path)]
+        elif template.venv == "isolated":
             isolated_venv = template_dir / "scripts" / "venv"
-            if not isolated_venv.exists():
-                raise click.ClickException(f"Isolated venv not found: {isolated_venv}")
-            cmd = [str(isolated_venv / "bin/python"), str(method_path)]
+            python_path = isolated_venv / "bin" / "python"
+            if not python_path.exists():
+                raise click.ClickException(f"Isolated venv python not found: {python_path}")
+            cmd = [str(python_path), str(method_path)]
         else:
             raise click.ClickException(f"Script with venv {template.venv} is not defined.")
     elif type(step) == CommandStep and step.type == "command":
@@ -211,8 +211,8 @@ def render_prompt(config: ConfigModel, fields: PromptFields, variables: Dict[str
 
 def render_prompt_fields(fields: PromptFields, variables: Dict[str, str]) -> PromptFields:
     """ Render Prompt fields (used when provider supports prompt fields templates like system/user """
-    if not fields.prompt and not fields.user:
-        raise ClickException("There should be Prompt or User field at least.")
+    if not fields.prompt and not fields.user or (fields.prompt and fields.system):
+        raise ClickException("There should be Prompt or User or System and User fields.")
     rendered_fields = PromptFields()
     if fields.system:
         rendered_fields.system = render_template(fields.system, variables)
@@ -225,7 +225,7 @@ def render_prompt_fields(fields: PromptFields, variables: Dict[str, str]) -> Pro
 
 def get_variable_type(variable_type: str) -> click.types:
     TYPE_MAPPING = {"str": click.STRING, "int": click.INT, "bool": click.BOOL, "path": click.Path}
-    return TYPE_MAPPING.get(variable_type, None)
+    return TYPE_MAPPING.get(variable_type.lower(), None)
 
 def create_dynamic_command(config, template: TemplateModel) -> click.Command:
     options = []
