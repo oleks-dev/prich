@@ -1,18 +1,20 @@
 from pathlib import Path
 
 import click
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, ConfigDict
 from typing import List, Optional, Literal, Annotated, Union
+from prich.constants import RESERVED_RUN_TEMPLATE_CLI_OPTIONS
 from prich.models.file_scope import FileScope
-from prich.core.utils import is_valid_variable_name
+from prich.core.utils import is_valid_variable_name, is_cli_option_name
 from prich.version import TEMPLATE_SCHEMA_VERSION
 
 
 # Template Variables
 
 class VariableDefinition(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     name: str
-    type: Literal["str", "list[str]", "int", "list[int]", "bool"] = "str"
+    type: Literal["str", "list[str]", "int", "list[int]", "bool", "list[bool]", "path", "list[path]"] = "str"
     description: Optional[str] = None
     default: Optional[str | bool | int | list] = None
     required: Optional[bool] = False
@@ -22,18 +24,21 @@ class VariableDefinition(BaseModel):
 # Template Pipeline Steps
 
 class PromptFields(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     system: Optional[str] = None
     user: Optional[str] = None
     prompt: Optional[str] = None
 
 
 class StepValidation(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     match: Optional[str] = None
     not_match: Optional[str] = None
     on_fail: Literal["error", "warn", "skip", "continue"] = "error"
 
 
 class BaseStepModel(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     name: str
     output_variable: str | None = None
     output_file: str | None = None
@@ -74,6 +79,7 @@ PipelineStep = Annotated[
 # Main Template
 
 class TemplateModel(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     id: str
     name: str
     version: str = "1.0"
@@ -103,9 +109,44 @@ class TemplateModel(BaseModel):
                 raise click.ClickException(f"Duplicate {self.id} template step name (#{idx}): '{step.name}'")
             seen.add(step.name)
         # validate variable names
+        variable_default_value_type_error = False
         for variable in self.variables:
             if not is_valid_variable_name(variable.name):
                 raise click.ClickException(f"Invalid variable name '{variable.name}' in {self.id} template: Variable name should contain only upper and lowercase letters, underscores, and numbers.")
+            cli_option_name_set_from_name = False
+            if not variable.cli_option:
+                variable.cli_option = f"--{variable.name}"
+                cli_option_name_set_from_name = True
+            if not is_cli_option_name(variable.cli_option):
+                if cli_option_name_set_from_name:
+                    raise click.ClickException(f"Invalid cli_option name '{variable.cli_option}' (template {self.id}) auto-set from variable name '{variable.name}', it should contain only lowercase letters, numbers, underscores, and hyphens - or add a separate 'cli_option' param with another name.")
+                else:
+                    raise click.ClickException(f"Invalid cli_option name '{variable.cli_option}' (template {self.id}) in variable '{variable.name}', it should start with double hyphen '--<option_name>' and contain only lowercase letters, numbers, underscores, and hyphens")
+            reserved_names = [x for x in RESERVED_RUN_TEMPLATE_CLI_OPTIONS if x.startswith("--")]
+            if variable.cli_option in reserved_names:
+                raise click.ClickException(f"Not allowed cli_option name '{variable.cli_option}' (template {self.id}) in variable '{variable.name}', please do not use the following reserved option names: {reserved_names}")
+            if variable.default is not None:
+                type_variable_default = type(variable.default)
+                if ((variable.type == "str" and type_variable_default != str) or
+                        (variable.type == "bool" and type_variable_default != bool) or
+                        (variable.type == "int" and type_variable_default != int) or
+                        (variable.type == "path" and type_variable_default != str)
+                ):
+                    variable_default_value_type_error = True
+
+                elif variable.type.startswith("list"):
+                    if type_variable_default != list:
+                        variable_default_value_type_error = True
+                    else:
+                        list_type = variable.type.split('[')[1][:-1]
+                        if list_type == "path":
+                            list_type = "str"
+                        for list_item in variable.default:
+                            if type(list_item).__name__ != list_type:
+                                variable_default_value_type_error = True
+                                break
+                if variable_default_value_type_error:
+                    raise click.ClickException(f"Variable {variable.name} default value type error, should be {variable.type} but has value: {variable.default}")
         return self
 
     def has_tag(self, tag: str) -> bool:
