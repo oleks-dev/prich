@@ -30,6 +30,7 @@ def is_only_final_output() -> bool:
     return any(flag in sys.argv for flag in ("-f", "--only-final-output"))
 
 def is_piped() -> bool:
+    """ Check if prich executed with a piped command (should work only when not executed from pytest) """
     return not console.is_terminal and not os.getenv("PYTEST_CURRENT_TEST")
 
 def console_print(message: str = "", end: str = "\n", markup = None, flush: bool = None):
@@ -47,11 +48,18 @@ def is_valid_variable_name(variable_name) -> bool:
     pattern = r'^[A-Za-z0-9]+([_A-Za-z0-9]+)*$'
     return bool(re.match(pattern, variable_name))
 
+def is_cli_option_name(option_name) -> bool:
+    """ Validate CLI Option Name Pattern: lowercase letters, numbers, optional underscores, and no other characters"""
+    pattern = r'^--[a-z0-9]+([-_a-z0-9]+)*$'
+    return bool(re.match(pattern, option_name))
+
 def get_prich_dir(global_only: bool = None) -> Path:
+    """ Return current prich dir path based on global_only param or should_use_global_only() """
     parent_path = Path.home() if global_only or should_use_global_only() else Path.cwd()
     return parent_path / ".prich"
 
 def get_prich_templates_dir(global_only: bool = None) -> Path:
+    """ Return current prich templates folder path based on global_only param or should_use_global_only() """
     return get_prich_dir(global_only) / "templates"
 
 def replace_env_vars(text) -> str:
@@ -83,8 +91,16 @@ def replace_env_vars(text) -> str:
     return re.sub(env_pattern, replace_match, text)
 
 def shorten_home_path(path: str) -> str:
+    """ Return short path using ~/... instead of a full absolute path """
     home = str(Path.home())
     path = str(path)
     if path.startswith(home):
         return path.replace(home, "~", 1)
     return path
+
+def is_just_filename(filename: Path | str):
+    """ Check if filename is just a basename, not a path """
+    s = str(filename)
+    if s in ("", ".", "..") or ("/" in s) or ("\\" in s):
+        return False
+    return True
