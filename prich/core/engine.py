@@ -3,11 +3,12 @@ from pathlib import Path
 from typing import Dict, List
 
 from click import ClickException
+from prich.constants import RESERVED_RUN_TEMPLATE_CLI_OPTIONS
 from prich.models.config import ConfigModel
 from prich.models.template import TemplateModel, PromptFields, PipelineStep, LLMStep, PythonStep, RenderStep, \
     CommandStep, StepValidation
 from prich.core.utils import console_print, replace_env_vars, shorten_home_path, is_quiet, is_only_final_output, \
-    is_verbose, get_prich_dir
+    is_verbose, get_prich_dir, is_just_filename
 
 jinja_env = {}
 
@@ -137,23 +138,24 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
         if not method.endswith(".py"):
             raise click.ClickException(f"Python script file should end with .py: {method_path}")
 
-        if template.venv == "shared":
-            prich_dir = get_prich_dir()
-            shared_venv = prich_dir / "venv"
-            python_path = shared_venv / "bin" / "python"
+        if template.venv in ["shared", "isolated"]:
+            if template.venv == "shared":
+                venv_path = get_prich_dir() / "venv"
+            else:
+                venv_path = template_dir / "scripts" / "venv"
+            python_path = venv_path / "bin" / "python"
             if not python_path.exists():
-                raise click.ClickException(f"Shared venv python not found: {python_path}")
+                raise click.ClickException(f"{template.venv.capitalize()} venv python not found: {python_path}")
             cmd = [str(python_path), str(method_path)]
-        elif template.venv == "isolated":
-            isolated_venv = template_dir / "scripts" / "venv"
-            python_path = isolated_venv / "bin" / "python"
-            if not python_path.exists():
-                raise click.ClickException(f"Isolated venv python not found: {python_path}")
-            cmd = [str(python_path), str(method_path)]
+        elif template.venv is None:
+            cmd = ["python", str(method_path)]
         else:
-            raise click.ClickException(f"Script with venv {template.venv} is not defined.")
+            raise click.ClickException(f"Python script venv {template.venv} is not supported.")
     elif type(step) == CommandStep and step.type == "command":
-        cmd = [method]
+        if is_just_filename(method) and (template_dir / "scripts" / method).exists():
+            cmd = [str(template_dir / "scripts" / method)]
+        else:
+            cmd = [method]
     else:
         raise click.ClickException(f"Template command step type {step.type} is not supported.")
 
@@ -172,7 +174,7 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
-        raise click.ClickException(f"Script error in {method}: {e.stderr}")
+        raise click.ClickException(f"Execution error in {method}: {e.stderr}")
     except Exception as e:
         raise click.ClickException(f"Unexpected error in {method}: {str(e)}")
 
@@ -209,6 +211,7 @@ def render_prompt(config: ConfigModel, fields: PromptFields, variables: Dict[str
     prompt = render_template(prompt_fields, variables)
     return prompt
 
+# TODO: Cross check if the change here makes sense with system and prompt
 def render_prompt_fields(fields: PromptFields, variables: Dict[str, str]) -> PromptFields:
     """ Render Prompt fields (used when provider supports prompt fields templates like system/user """
     if not fields.prompt and not fields.user or (fields.prompt and fields.system):
@@ -234,8 +237,7 @@ def create_dynamic_command(config, template: TemplateModel) -> click.Command:
         arg_type = get_variable_type(arg.type)
         help_text = arg.description or f"{arg_name} option"
         cli_option = arg.cli_option or f"--{arg_name}"
-        reserved_options = ["-g", "--global", "-q", "--quiet", "-o", "--output", "-p", "--provider", "-f", "--only-final-output", "-s", "--skip-llm", "-v", "--verbose"]
-        if cli_option in reserved_options:
+        if cli_option in RESERVED_RUN_TEMPLATE_CLI_OPTIONS:
             raise click.ClickException(f"{arg_name} cli option uses a reserved option name: {cli_option}")
 
         if arg_type == click.BOOL:
@@ -448,3 +450,5 @@ def run_template(template_id, **kwargs):
         # Print last step output if last option enabled
         if is_only_final_output() and not is_quiet():
             print(last_output, flush=True)
+    else:
+        raise click.ClickException(f"No steps found in template {template.id}.")
