@@ -3,7 +3,7 @@ import os
 import click
 from pathlib import Path
 from typing import List, Optional, Literal, Dict, Annotated, Union
-from pydantic import BaseModel, Field, field_validator, TypeAdapter
+from pydantic import BaseModel, Field, field_validator, TypeAdapter, ConfigDict
 from prich.models.file_scope import FileScope
 from prich.models.config_providers import EchoProviderModel, OpenAIProviderModel, MLXLocalProviderModel, STDINConsumerProviderModel, OllamaProviderModel
 from prich.version import CONFIG_SCHEMA_VERSION
@@ -21,20 +21,24 @@ ProviderConfig = Annotated[
 
 
 class SecurityConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     allowed_environment_variables: Optional[List[str]] = None
 
 
 class SettingsConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     default_provider: str
     provider_assignments: Optional[Dict[str, str]] = None
     editor: Optional[str] = None
 
 
 class ProviderModeModel(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     name: str
     prompt: str
 
 class ConfigModel(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     schema_version: Literal["1.0"] = CONFIG_SCHEMA_VERSION
     providers: Dict[str, ProviderConfig]
     provider_modes: List[ProviderModeModel]

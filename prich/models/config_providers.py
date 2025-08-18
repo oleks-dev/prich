@@ -1,8 +1,9 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Literal, Optional, List, Tuple
 
 
 class BaseProviderModel(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     name: str | None = Field(default=None, exclude=True)  # will be injected
     mode: Optional[str] = None
 
