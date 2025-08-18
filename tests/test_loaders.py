@@ -1,14 +1,16 @@
 import os
+import tempfile
 from pathlib import Path
 
 import click
 import pytest
 
-from tests.fixtures.config import basic_config
+from tests.fixtures.config import basic_config, CONFIG_YAML
+from tests.fixtures.templates import INVALID_TEMPLATE_YAML
 from tests.generate.templates import templates, templates_list_to_dict
 from prich.core.state import _loaded_templates, _loaded_config_paths
-from prich.core.loaders import get_loaded_templates, get_loaded_template, get_loaded_config, load_templates
-
+from prich.core.loaders import get_loaded_templates, get_loaded_template, get_loaded_config, load_templates, \
+    load_config_model, load_template_model
 
 load_templates_CASES = [
     {"id": "no_templates", "count": 0, "global_location": False, "local_only": False, "global_only": False, "expected_count": 0},
@@ -223,3 +225,20 @@ def test_find_template_files_no_templates_folder():
     from prich.core.loaders import find_template_files
     actual = find_template_files(Path("./non-existing"))
     assert len(actual) == 0
+
+def test_config_model_load():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config_path = Path(tmpdir) / "config.yaml"
+        config_path.write_text(CONFIG_YAML)
+        config_model, loaded_path = load_config_model(config_path)
+        assert config_model is not None
+        assert config_model.settings.default_provider == "show_prompt"
+        assert "show_prompt" in config_model.providers
+
+def test_invalid_template_validation():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        file_path = Path(tmpdir) / "invalid.yaml"
+        file_path.write_text(INVALID_TEMPLATE_YAML)
+        with pytest.raises(Exception) as exc:
+            load_template_model(file_path)
+        assert "Field required" in str(exc.value)

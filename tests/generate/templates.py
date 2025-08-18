@@ -7,7 +7,7 @@ from prich.models.template import TemplateModel, VariableDefinition, PythonStep,
 
 faker = Faker()
 
-def generate_template(prich_path: Path = ".", template_id: str=None, isolated_venv: bool = False, global_location: bool = False):
+def generate_template(prich_path: Path = Path("./test"), template_id: str=None, isolated_venv: bool = False, global_location: bool = False):
     tpl_name = faker.company()
     tpl_description = faker.text(max_nb_chars=100)
     if not template_id:
@@ -49,8 +49,8 @@ def generate_template(prich_path: Path = ".", template_id: str=None, isolated_ve
             )
         ],
         source=FileScope.LOCAL if not global_location else FileScope.GLOBAL,
-        folder=str(prich_path / "templates"),
-        file=str(prich_path / "templates" / f"{tpl_id}.yaml"),
+        folder=str(Path(prich_path / "templates" / tpl_id)),
+        file=str(Path(prich_path / "templates" / tpl_id / f"{tpl_id}.yaml")),
     )
     return tpl
 

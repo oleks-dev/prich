@@ -98,6 +98,180 @@ get_model_template_CASES = [
       "expected_exception": click.ClickException,
       "expected_exception_text": "Invalid variable name 'wrong-variable-name' in test template"
     },
+    {
+      "id": "invalid_variable_as_cli_option",
+      "data": {
+        "id": "test",
+        "name": "Test",
+        "schema_version": "1.0",
+        "steps": [
+        ],
+        "variables": [
+          {"name": "Wrong_variable_for_option"}
+        ]
+      },
+      "expected_exception": click.ClickException,
+      "expected_exception_text": "Invalid cli_option name '--Wrong_variable_for_option' (template test) auto-set from variable name 'Wrong_variable_for_option', it should contain"
+    },
+    {
+      "id": "invalid_variable_cli_option",
+      "data": {
+        "id": "test",
+        "name": "Test",
+        "schema_version": "1.0",
+        "steps": [
+        ],
+        "variables": [
+          {"name": "variable_name",
+           "cli_option": "option_name"}
+        ]
+      },
+      "expected_exception": click.ClickException,
+      "expected_exception_text": "Invalid cli_option name 'option_name' (template test) in variable 'variable_name', it should start with "
+    },
+    {
+      "id": "reserved_name_in_cli_option_from_var",
+      "data": {
+        "id": "test",
+        "name": "Test",
+        "schema_version": "1.0",
+        "steps": [
+        ],
+        "variables": [
+          {"name": "global"}
+        ]
+      },
+      "expected_exception": click.ClickException,
+      "expected_exception_text": "Not allowed cli_option name '--global' (template test) in variable 'global'"
+    },
+    {
+      "id": "reserved_name_in_cli_option",
+      "data": {
+        "id": "test",
+        "name": "Test",
+        "schema_version": "1.0",
+        "steps": [
+        ],
+        "variables": [
+          {"name": "test_var",
+           "cli_option": "--global"}
+        ]
+      },
+      "expected_exception": click.ClickException,
+      "expected_exception_text": "Not allowed cli_option name '--global' (template test) in variable 'test_var'"
+    },
+    {
+      "id": "var_list_type_wrong_default_type",
+      "data": {
+        "id": "test",
+        "name": "Test",
+        "schema_version": "1.0",
+        "steps": [
+        ],
+        "variables": [
+          {"name": "test_var",
+           "cli_option": "--test_var",
+           "type": "list[int]",
+           "default": ["test", "test2"]}
+        ]
+      },
+      "expected_exception": click.ClickException,
+      "expected_exception_text": "Variable test_var default value type error, should be list[int] but has value: ['test', 'test2']"
+    },
+    {
+      "id": "var_list_type_wrong_default_type_2",
+      "data": {
+        "id": "test",
+        "name": "Test",
+        "schema_version": "1.0",
+        "steps": [
+        ],
+        "variables": [
+          {"name": "test_var",
+           "cli_option": "--test_var",
+           "type": "list[int]",
+           "default": "test"}
+        ]
+      },
+      "expected_exception": click.ClickException,
+      "expected_exception_text": "Variable test_var default value type error, should be list[int] but has value: test"
+    },
+    {
+      "id": "var_list_type_default_type",
+      "data": {
+        "id": "test",
+        "name": "Test",
+        "schema_version": "1.0",
+        "steps": [
+        ],
+        "variables": [
+          {"name": "test_var",
+           "cli_option": "--test_var",
+           "type": "list[int]",
+           "default": [1, 2]}
+        ]
+      }
+    },
+    {
+      "id": "var_list_type_default_type_path",
+      "data": {
+        "id": "test",
+        "name": "Test",
+        "schema_version": "1.0",
+        "steps": [
+        ],
+        "variables": [
+          {"name": "file",
+           "cli_option": "--file",
+           "type": "list[path]",
+           "default": ["./file.txt", "./file2.txt"]}
+        ]
+      }
+    },
+    {
+      "id": "var_list_type_default_type_bool",
+      "data": {
+        "id": "test",
+        "name": "Test",
+        "schema_version": "1.0",
+        "steps": [
+        ],
+        "variables": [
+          {"name": "bool",
+           "cli_option": "--bool",
+           "type": "list[bool]",
+           "default": [True, False]}
+        ]
+      }
+    },
+    {
+      "id": "var_types",
+      "data": {
+        "id": "test",
+        "name": "Test",
+        "schema_version": "1.0",
+        "steps": [
+        ],
+        "variables": [
+          {"name": "text",
+           "cli_option": "--text",
+           "type": "str",
+           "default": "Test text"},
+          {"name": "bool",
+           "cli_option": "--bool",
+           "type": "bool",
+           "default": True},
+          {"name": "count",
+           "cli_option": "--count",
+           "type": "int",
+           "default": 10},
+          {"name": "file",
+           "cli_option": "--file",
+           "type": "path",
+           "default": "./file.txt"},
+        ]
+      }
+    },
 ]
 @pytest.mark.parametrize("case", get_model_template_CASES, ids=[c["id"] for c in get_model_template_CASES])
 def test_model_template(case):
