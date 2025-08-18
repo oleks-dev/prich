@@ -14,3 +14,6 @@ clean:
 
 freeze:
 	pip freeze > requirements.txt
+
+test:
+	cd tests && pytest --cov=prich --cov-report=term && cd ..

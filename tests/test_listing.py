@@ -39,7 +39,7 @@ def test_list_tags(tmp_path, monkeypatch, case):
         result = runner.invoke(list_tags, case.get("args"))
         if case.get("expected_output") is not None:
             assert case.get("expected_output") in result.output
-            assert len(result.output.split('\n')) == expected_tags_number + 2
+            assert len(result.output.strip().split('\n')) == expected_tags_number + 1
 
 
 get_list_templates_CASES = [
@@ -83,4 +83,4 @@ def test_list_templates(tmp_path, monkeypatch, case):
         if case.get("expected_output") is not None:
             assert case.get("expected_output") in result.output
             if case.get("check_count", True):
-                assert len(result.output.split('- ')) == len(template_list) + 1
+                assert len(result.output.strip().split('- ')) == len(template_list) + 1

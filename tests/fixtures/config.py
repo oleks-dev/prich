@@ -3,6 +3,52 @@ import yaml
 from pydantic import TypeAdapter
 from prich.models.config import ConfigModel
 
+CONFIG_YAML = """
+schema_version: "1.0"
+providers:
+  show_prompt:
+    provider_type: "echo"
+    mode: "flat"
+provider_modes:
+  - name: plain
+    prompt: '{{ prompt }}'
+  - name: flat
+    prompt: |-
+      {% if system %}### System:
+      {{ system }}
+
+      {% endif %}### User:
+      {{ user }}
+
+      ### Assistant:
+  - name: mistral-instruct
+    prompt: |-
+      <s>[INST]
+      {% if system %}{{ system }}
+
+      {% endif %}{{ user }}
+      [/INST]
+  - name: llama2-chat
+    prompt: |-
+      <s>[INST]
+      {% if system %}{{ system }}
+
+      {% endif %}{{ user }}
+      [/INST]
+  - name: anthropic
+    prompt: |-
+      Human: {% if system %}{{ system }}
+
+      {% endif %}{{ user }}
+
+      Assistant:
+  - name: chatml
+    prompt: '[{% if system %}{"role": "system", "content": "{{ system }}"},{% endif %}{"role": "user", "content": "{{ user }}"}]'
+settings:
+  editor: "vim"
+  default_provider: "show_prompt"
+"""
+
 
 @pytest.fixture
 def basic_config():
