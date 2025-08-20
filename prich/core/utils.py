@@ -82,7 +82,7 @@ def replace_env_vars(text: str, secure: bool = True) -> str:
         if secure and config.security and config.security.allowed_environment_variables:
             if var_name in config.security.allowed_environment_variables:
                 return os.getenv(var_name, "")
-        else:
+        elif not secure:
             return os.getenv(var_name, "")
         raise click.ClickException(f"Environment variable {var_name} is not listed in allowed environment variables. Add it to config.security.allowed_environment_variables for usage.")
 
