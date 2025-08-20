@@ -40,10 +40,10 @@ class StepValidation(BaseModel):
 class BaseStepModel(BaseModel):
     model_config = ConfigDict(extra='forbid')
     name: str
-    output_variable: str | None = None
-    output_file: str | None = None
-    output_file_mode: Literal["write", "append"] = None
-    when: str | None = None
+    output_variable: Optional[str | None] = None
+    output_file: Optional[str | None] = None
+    output_file_mode: Optional[Literal["write", "append"]] = None
+    when: Optional[str | None] = None
     validation: Optional[StepValidation] = None
 
 
@@ -103,6 +103,8 @@ class TemplateModel(BaseModel):
         seen = set()
         idx = 0
         # validate step names
+        if not self.steps:
+            raise click.ClickException(f"No steps found in {self.id} template.")
         for step in self.steps:
             idx += 1
             if step.name in seen:

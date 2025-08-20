@@ -417,8 +417,8 @@ def run_template(template_id, **kwargs):
                     save_to_file = step.output_file.replace('~', str(Path.home()), 1)
                 else:
                     save_to_file = step.output_file
-                write_mode = step.output_file_mode[:1] if step.output_file_mode else 'w'
                 try:
+                    write_mode = step.output_file_mode[:1] if step.output_file_mode else 'w'
                     with open(save_to_file, write_mode) as step_output_file:
                         console_print(f"{'Save' if write_mode == 'w' else 'Append'} output to file: {save_to_file}")
                         step_output_file.write(step_output)
