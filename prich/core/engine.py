@@ -271,7 +271,7 @@ def create_dynamic_command(config, template: TemplateModel) -> click.Command:
 
     return click.Command(name=template.id, callback=dynamic_command, params=options, help=f"{template.description if template.description else ''}", epilog=f"{template.name} (ver: {template.version}, {template.source.value})")
 
-def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: ConfigModel, variables: dict, skip_llm: bool, output_file: Path) -> str:
+def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: ConfigModel, variables: dict, skip_llm: bool) -> str:
     import json
     from prich.llm_providers.get_llm_provider import get_llm_provider
 
@@ -353,10 +353,6 @@ def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: C
         step_output = response.strip()
         if not llm_provider.show_response and not is_quiet():
             console_print(step_output, markup=False)
-        if output_file:
-            with open(output_file, "w") as f:
-                f.write(str(step_output))
-            console_print(f"Response saved to [green]{output_file}[/green]")
     except Exception as e:
         raise click.ClickException(f"Failed to get LLM response: {str(e)}")
     return step_output
@@ -405,7 +401,7 @@ def run_template(template_id, **kwargs):
             elif type(step) == RenderStep:
                 step_output = render_template(step.template, variables)
             elif type(step) == LLMStep:
-                step_output = send_to_llm(template, step, provider, config, variables, skip_llm, output_file)
+                step_output = send_to_llm(template, step, provider, config, variables, skip_llm)
             else:
                 raise click.ClickException(f"Step {step.type} type is not supported.")
 
@@ -423,9 +419,9 @@ def run_template(template_id, **kwargs):
                     save_to_file = step.output_file
                 write_mode = step.output_file_mode[:1] if step.output_file_mode else 'w'
                 try:
-                    with open(save_to_file, write_mode) as output_file:
+                    with open(save_to_file, write_mode) as step_output_file:
                         console_print(f"{'Save' if write_mode == 'w' else 'Append'} output to file: {save_to_file}")
-                        output_file.write(step_output)
+                        step_output_file.write(step_output)
                 except Exception as e:
                     raise click.ClickException(f"Failed to save output to file {save_to_file}: {e}")
             # Validation
@@ -447,6 +443,10 @@ def run_template(template_id, **kwargs):
                         raise click.ClickException(f"Validation type {action} is not supported.")
                 else:
                     console_print(f"[green]Validation passed.[/green]")
+        # Save last step output if output file option added
+        if output_file:
+            with open(output_file, 'w') as final_output_file:
+                final_output_file.write(last_output)
         # Print last step output if last option enabled
         if is_only_final_output() and not is_quiet():
             print(last_output, flush=True)
