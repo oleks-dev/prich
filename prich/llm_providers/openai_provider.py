@@ -22,7 +22,7 @@ class OpenAIProvider(LLMProvider, LazyOptionalProvider):
         OpenAI = self._lazy_import_from("openai", "OpenAI")
         configuration = self.provider.configuration if self.provider.configuration is not None else {}
         if configuration.get("api_key"):
-            configuration['api_key'] = replace_env_vars(configuration['api_key'])
+            configuration['api_key'] = replace_env_vars(configuration['api_key'], False)
         self.client = OpenAI(**configuration)
 
     def send_prompt(self, prompt: str = None, system: str = None, user: str = None) -> str:

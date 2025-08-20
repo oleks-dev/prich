@@ -52,7 +52,7 @@ class MLXLocalProviderModel(BaseProviderModel):
 
 class STDINConsumerProviderModel(BaseProviderModel):
     provider_type: Literal["stdin_consumer"]
-    call: Optional[str] = None
+    call: str = None
     args: Optional[List[str]] = None
     stdout_strip_prefix: Optional[str] = None
     stdout_slice_start: Optional[int] = None
