@@ -6,6 +6,7 @@ from pathlib import Path
 import click
 import venv
 
+from prich.core.utils import shorten_home_path
 from prich.core.loaders import get_loaded_templates, get_loaded_config, get_loaded_template
 from prich.models.template import TemplateModel, VariableDefinition, LLMStep, PromptFields
 from prich.core.utils import console_print, is_valid_template_id, get_prich_dir, get_prich_templates_dir
@@ -144,58 +145,71 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
         safe_remove(src_dir)
 
     if not no_venv and template.venv:
-        install_template_venv(template, template_base, force)
+        install_template_venv(template=template, force=force, template_base=template_base)
 
     console_print(f"Template [green]{template_id}[/green] installed successfully")
     console_print(f"Run: [cyan]prich[/cyan] run [green]{template_id}[/green] --help")
 
-def install_template_venv(template: TemplateModel, template_base: Path, force: bool = False):
-    console_print("Setup venv:")
+def install_template_venv(template: TemplateModel, template_base: Path = None, force: bool = False):
+    if not template_base:
+        template_base = Path(template.folder)
     scripts_folder = template_base / "scripts"
     src_requirements = scripts_folder / "requirements.txt"
-    src_setup_venv = scripts_folder / "setup_venv.sh"
-    if src_requirements.exists() or src_setup_venv.exists():
-        isolated = template.venv == "isolated"
-        if isolated:
-            template_venv = scripts_folder / "venv"
-            if template_venv.exists() and force:
-                console_print(f"Removing existing venv {str(template_venv)}...", end="")
-                shutil.rmtree(template_venv)
-                console_print(" [green]done![/green]")
-            console_print(f"Creating folder {str(template_venv)}...", end="")
+    if template.venv == "isolated":
+        template_venv = scripts_folder / "venv"
+        if template_venv.exists() and force:
+            console_print(f"Removing existing venv {shorten_home_path(str(template_venv))}...", end="")
+            shutil.rmtree(template_venv)
+            console_print(" [green]done![/green]")
+        if not template_venv.exists():
+            console_print(f"Creating folder {shorten_home_path(str(template_venv))}...", end="")
             os.makedirs(template_venv, exist_ok=True)
             console_print(" [green]done![/green]")
-            if src_setup_venv.exists():
-                console_print(f"Installing {str(src_setup_venv)}...", end="")
-                console_print(f"Shell {str(src_setup_venv)} file content:")
-                console_print(src_setup_venv.read_text())
-                selection = input("Accept execution [y/n]?:")
-                if selection.lower() != "y":
-                    raise click.ClickException("No permission granted, venv installation terminated.")
-                subprocess.run([str(src_setup_venv), str(template_venv)], check=True)
-                console_print(" [green]done![/green]")
-            elif src_requirements.exists():
-                console_print(f"Installing isolated venv...", end="")
+            console_print(f"Installing isolated venv...", end="")
 
-                # Install venv
+            # Install venv
+            try:
                 builder = venv.EnvBuilder(with_pip=True)
                 builder.create(template_venv)
                 # Optional Install venv using cmd
                 # subprocess.run([sys.executable, "-m", "venv", str(template_venv)], check=True)
-
-                console_print(" [green]done![/green]")
-                console_print(f"Installing dependencies...")
-                pip_cmd = str(template_venv / "bin/pip")
-                subprocess.run([pip_cmd, "install", "-r", str(src_requirements)], check=True)
-                console_print("[green]Done![/green]")
-        else:
-            console_print(f"Installing dependencies to shared venv:")
-            prich_dir = get_prich_dir()
-            pip_cmd = prich_dir / "venv" / "bin/pip"
+            except Exception as e:
+                console_print()
+                raise click.ClickException(f"Failed to install venv: {str(e)}")
+            console_print(" [green]done![/green]")
+        if src_requirements.exists():
+            console_print("Installing dependencies...")
+            pip_cmd = template_venv / "bin/pip"
             if not pip_cmd.exists():
-                raise click.ClickException(f"No pip {str(pip_cmd)} found in shared venv.")
+                raise click.ClickException(f"No pip {shorten_home_path(str(pip_cmd))} found in isolated template venv.")
+            subprocess.run([str(pip_cmd), "install", "-r", str(src_requirements)], check=True)
+        else:
+            console_print(f"No dependencies {shorten_home_path(str(src_requirements))} file found in the template.")
+        console_print("[green]Done![/green]")
+    elif template.venv == "shared":
+        prich_dir = get_prich_dir()
+        shared_venv = prich_dir / "venv"
+        if shared_venv.exists() and force:
+            raise click.ClickException(f"Shared venv with --force is not supported as it might break other templates that uses shared venv, if you are sure that you want to do this you can remove {shorten_home_path(str(shared_venv))} folder manually and then execute this command again without --force option flag.")
+        if not shared_venv.exists():
+            console_print("No shared venv found, installing...")
+            try:
+                builder = venv.EnvBuilder(with_pip=True)
+                builder.create(shared_venv)
+            except Exception as e:
+                raise click.ClickException(f"Failed to install venv: {e}")
+            console_print(f"Shared venv installed: {shorten_home_path(str(shared_venv))}")
+        if src_requirements.exists():
+            console_print(f"Installing dependencies to shared venv:")
+            pip_cmd = shared_venv / "bin/pip"
+            if not pip_cmd.exists():
+                raise click.ClickException(f"No pip {shorten_home_path(str(pip_cmd))} found in shared venv.")
             subprocess.run([pip_cmd, "install", "-r", str(src_requirements)], check=True)
-            console_print("[green]Done![/green]")
+        else:
+            console_print(f"No dependencies {shorten_home_path(str(src_requirements))} file found in the template.")
+        console_print("[green]Done![/green]")
+    else:
+        console_print(f"Template {template.id} doesn't require venv. To setup venv add 'venv: \"isolated\"' or 'venv: \"shared\" into the template and rerun this command.'")
 
 
 @click.command("venv-install")
@@ -205,7 +219,7 @@ def install_template_venv(template: TemplateModel, template_base: Path, force: b
 def venv_install(template_id, global_only, force):
     """Install venv for Template with python script steps"""
     template = get_loaded_template(template_id)
-    install_template_venv(template, force)
+    install_template_venv(template=template, force=force)
 
 @click.command("show")
 @click.argument("template_id")
@@ -214,7 +228,7 @@ def show_template(template_id, global_only):
     """Show available options for a template."""
     import yaml
     template = get_loaded_template(template_id)
-    console_print(f"[bold]Template[/bold]:")
+    console_print(f"Template:")
     tpl = yaml.dump(template.model_dump(exclude_none=True), sort_keys=False, indent=2)
     console_print(tpl)
 
