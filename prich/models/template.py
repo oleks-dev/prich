@@ -30,12 +30,12 @@ class PromptFields(BaseModel):
     prompt: Optional[str] = None
 
 
-class StepValidation(BaseModel):
+class ValidateStepOutput(BaseModel):
     model_config = ConfigDict(extra='forbid')
     match: Optional[str] = None
     not_match: Optional[str] = None
-    on_fail: Literal["error", "warn", "skip", "continue"] = "error"
-
+    on_fail: Optional[Literal["error", "warn", "skip", "continue"]] = "error"
+    message: Optional[str] = None
 
 class BaseStepModel(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -43,8 +43,9 @@ class BaseStepModel(BaseModel):
     output_variable: Optional[str | None] = None
     output_file: Optional[str | None] = None
     output_file_mode: Optional[Literal["write", "append"]] = None
+    output_console: Optional[bool | None] = None
     when: Optional[str | None] = None
-    validation: Optional[StepValidation] = None
+    validate_: Optional[ValidateStepOutput | list[ValidateStepOutput]] = Field(alias="validate", default=None)
 
 
 class LLMStep(BaseStepModel):
@@ -164,6 +165,14 @@ class TemplateModel(BaseModel):
 
     def save(self, location: Literal[FileScope.LOCAL, FileScope.GLOBAL] | None = None):
         import os, yaml
+
+        def str_presenter(dumper, data):
+            if "\n" in data:  # multiline string
+                return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+            return dumper.represent_scalar("tag:yaml.org,2002:str", data)
+
+        yaml.add_representer(str, str_presenter, Dumper=yaml.SafeDumper)
+
         prich_dir = None
         if location == "local" or (not location and self.source == FileScope.LOCAL):
             prich_dir = Path.cwd() / ".prich"
@@ -179,8 +188,12 @@ class TemplateModel(BaseModel):
             shutil.copy(template_file, template_backup_file)
         else:
             os.makedirs(template_file.parent, exist_ok=True)
+        model_dict = self.model_dump(exclude_none=True)
+        # fix 'validate_' field
+        for step in model_dict.get("steps"):
+            step["validate"] = step.pop("validate_") if step.get("validate_") else None
         with open(template_file, "w") as f:
-            return yaml.safe_dump(self.model_dump(), f)
+            f.write(yaml.safe_dump(model_dict, sort_keys=False, width=float("inf")))
 
     def describe(self):
         return f"""

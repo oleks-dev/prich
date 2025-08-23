@@ -1,12 +1,12 @@
 import os
 import click
 from pathlib import Path
-from prich.core.utils import shorten_home_path
+from prich.core.utils import shorten_path
 from prich.core.loaders import get_loaded_config, load_local_config, load_global_config
 from prich.core.utils import console_print
 
 def _readable_paths(paths: list[Path]):
-    return [f"[green]{shorten_home_path(str(p))}[/green]" for p in paths]
+    return [f"[green]{shorten_path(str(p))}[/green]" for p in paths]
 
 @click.group("config")
 def config_group():
@@ -65,7 +65,7 @@ def edit_config(global_only: bool, local_only: bool):
     elif global_config and global_path:
         config, path = global_config, global_path
     if not config:
-        raise click.ClickException(f"No config file found {shorten_home_path(str(path))}. Please check your configuration or run init.")
+        raise click.ClickException(f"No config file found {shorten_path(str(path))}. Please check your configuration or run init.")
     editor_cmd = config.settings.editor if config.settings and config.settings.editor else os.getenv("EDITOR", "vi")
     console_print(f"Executing: {editor_cmd} {str(path)}")
     subprocess.run([editor_cmd, str(path)], check=True, stdout=None)

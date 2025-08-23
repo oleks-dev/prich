@@ -6,8 +6,8 @@ from click import ClickException
 from prich.constants import RESERVED_RUN_TEMPLATE_CLI_OPTIONS
 from prich.models.config import ConfigModel
 from prich.models.template import TemplateModel, PromptFields, PipelineStep, LLMStep, PythonStep, RenderStep, \
-    CommandStep, StepValidation
-from prich.core.utils import console_print, replace_env_vars, shorten_home_path, is_quiet, is_only_final_output, \
+    CommandStep, ValidateStepOutput
+from prich.core.utils import console_print, replace_env_vars, shorten_path, is_quiet, is_only_final_output, \
     is_verbose, get_prich_dir, is_just_filename
 
 jinja_env = {}
@@ -111,10 +111,10 @@ def should_run_step(when_expr: str, variables: dict) -> bool:
     except Exception as e:
         raise ValueError(f"Invalid `when` expression: {when_expr} - {str(e)}")
 
-def validate_step_output(step_validation: StepValidation, value: str)-> bool:
+def validate_step_output(validate_step: ValidateStepOutput, value: str)-> bool:
     import re
-    matched = re.search(step_validation.match, value) if step_validation and step_validation.match else True
-    not_matched = not re.search(step_validation.not_match, value) if step_validation and step_validation.not_match else True
+    matched = re.search(validate_step.match, value) if validate_step and validate_step.match else True
+    not_matched = not re.search(validate_step.not_match, value) if validate_step and validate_step.not_match else True
 
     if matched and not_matched:
         return True  # validation passed
@@ -164,12 +164,10 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
     [cmd.append(arg) for arg in expanded_args]
 
     try:
-        console_print(f"Execute {step.type} [green]{' '.join(cmd)}[/green]")
+        console_print(f"[dim]Execute {step.type} [green]{' '.join(cmd)}[/green][/dim]")
         if not is_quiet() and not is_only_final_output():
             with console.status("Processing..."):
                 result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            if is_verbose():
-                console_print(result.stdout)
         else:
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         return result.stdout.strip()
@@ -179,7 +177,7 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
         raise click.ClickException(f"Unexpected error in {method}: {str(e)}")
 
 def render_template(template_text: str, variables: dict = Dict[str, str]) -> str:
-    from datetime import datetime
+    import datetime
     import os
     import getpass
     import platform
@@ -188,16 +186,18 @@ def render_template(template_text: str, variables: dict = Dict[str, str]) -> str
         return ""
 
     builtin = {
-        "now": datetime.now(),
-        "now_utc": datetime.utcnow(),
-        "today": datetime.today().date(),
+        "now": datetime.datetime.now(),
+        "now_utc": datetime.datetime.now(datetime.UTC),
+        "today": datetime.datetime.today().date(),
         "cwd": os.getcwd(),
         "user": getpass.getuser(),
         "hostname": platform.node(),
     }
     variables["builtin"] = builtin
-
-    rendered_text = get_jinja_env("template").from_string(template_text).render(**variables).strip()
+    try:
+        rendered_text = get_jinja_env("template").from_string(template_text).render(**variables).strip()
+    except Exception as e:
+        raise click.ClickException(f"Render step error: {str(e)}")
     return rendered_text
 
 def render_prompt(config: ConfigModel, fields: PromptFields, variables: Dict[str, str], mode: str) -> str:
@@ -253,11 +253,10 @@ def create_dynamic_command(config, template: TemplateModel) -> click.Command:
             raise click.ClickException(f"Unsupported variable type: {arg.type}")
 
     options.extend([
-        click.Option(["-g", "--global"], is_flag=True, default=False, help="Use global config and template"),
-        click.Option(["-l", "--local"], is_flag=True, default=False, help="Use local config and template"),
+        click.Option(["-g", "--global", "global_only"], is_flag=True, default=False, help="Use global config and template"),
+        click.Option(["-l", "--local", "local_only"], is_flag=True, default=False, help="Use local config and template"),
         click.Option(["-o", "--output"], type=click.Path(), default=None, show_default=True, help="Save LLM output to file"),
         click.Option(["-p", "--provider"], type=click.Choice(config.providers.keys()), show_default=True, help="Override LLM provider"),
-        click.Option(["-s", "--skip-llm"], is_flag=True, default=False, help="Skip sending prompt to LLM"),
         click.Option(["-v", "--verbose"], is_flag=True, default=False, help="Verbose mode"),
         click.Option(["-q", "--quiet"], is_flag=True, default=False, help="Suppress all output"),
         click.Option(["-f", "--only-final-output"], is_flag=True, default=False, help="Suppress output and show only the last step output")
@@ -265,14 +264,14 @@ def create_dynamic_command(config, template: TemplateModel) -> click.Command:
 
     @click.pass_context
     def dynamic_command(ctx, **kwargs):
-        console_print(f"Template: [green]{template.name}[/green] ({template.version}, {template.source.value}), Args: {', '.join([f'[blue]{k}[/blue]=[blue]{v}[/blue]' for k,v in kwargs.items() if v])}")
-        console_print(template.description)
+        console_print(f"[dim]Template: [green]{template.name}[/green] ({template.version}), {template.source.value}, args: {', '.join([f'{k}={v}' for k,v in kwargs.items() if v])}[/dim]")
+        if is_verbose():
+            console_print(f"[dim]{template.description}[/dim]")
         run_template(template.id, **kwargs)
 
     return click.Command(name=template.id, callback=dynamic_command, params=options, help=f"{template.description if template.description else ''}", epilog=f"{template.name} (ver: {template.version}, {template.source.value})")
 
-def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: ConfigModel, variables: dict, skip_llm: bool) -> str:
-    import json
+def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: ConfigModel, variables: dict) -> str:
     from prich.llm_providers.get_llm_provider import get_llm_provider
 
     if not step.prompt and (not step.prompt.system and not step.prompt.user):
@@ -298,42 +297,31 @@ def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: C
     else:
         prompt_fields = render_prompt_fields(step.prompt, variables)
     if not prompt and not prompt_fields:
-        raise click.ClickException("Prompt is empty.")
-
-    if skip_llm:
-        if prompt:
-            if type(prompt) is not str:
-                prompt = json.dumps(prompt)
-            if not is_quiet():
-                console_print(prompt, markup=False)
-        elif prompt_fields and not is_quiet():
-            if prompt_fields.system:
-                console_print(prompt_fields.system, markup=False)
-            if prompt_fields.user:
-                console_print(prompt_fields.user, markup=False)
-            if prompt_fields.prompt:
-                console_print(prompt_fields.prompt, markup=False)
-        return ""
+        raise click.ClickException(f"Prompt is empty in step {step.name}.")
 
     llm_provider = get_llm_provider(selected_provider_name, selected_provider)
-    if is_quiet() and llm_provider.show_response:
+    if ((not step.output_console and not is_verbose()) or is_quiet()) and llm_provider.show_response:
         # Override show response when quiet mode
         llm_provider.show_response = False
 
-    if is_verbose():
-        console_print(f"[bold]Sending prompt to LLM [/bold][blue]({llm_provider.name})[/blue]")
-        if prompt:
-            console_print(prompt, markup=False)
-        else:
-            if prompt_fields.system:
-                console_print(prompt_fields.system, markup=False)
-            if prompt_fields.user:
-                console_print(prompt_fields.user, markup=False)
-            if prompt_fields.prompt:
-                console_print(prompt_fields.prompt, markup=False)
+    # prompt lines
+    prompt_lines = []
+    if prompt:
+        prompt_lines.append(prompt)
+    else:
+        if prompt_fields.system:
+            prompt_lines.append(prompt_fields.system)
+        if prompt_fields.user:
+            prompt_lines.append(prompt_fields.user)
+        if prompt_fields.prompt:
+            prompt_lines.append(prompt_fields.prompt)
+    prompt_full = '\n'.join(prompt_lines)
 
-    if not is_quiet():
-        console_print("[bold]LLM Response:[/bold]")
+    console_print(f"[dim]Sending prompt to LLM ([green]{llm_provider.name}[/green]), {len(prompt_full)} chars[/dim]")
+    if is_verbose():
+        console_print(prompt_full, markup=False)
+        console_print()
+        console_print("[dim]LLM Response:[/dim]")
     try:
         if not is_quiet() and not is_only_final_output() and not llm_provider.show_response:
             from rich.console import Console
@@ -351,7 +339,7 @@ def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: C
                 user=prompt_fields.user if prompt_fields else None
             )
         step_output = response.strip()
-        if not llm_provider.show_response and not is_quiet():
+        if (is_verbose() or step.output_console) and not llm_provider.show_response and not is_quiet():
             console_print(step_output, markup=False)
     except Exception as e:
         raise click.ClickException(f"Failed to get LLM response: {str(e)}")
@@ -361,7 +349,6 @@ def run_template(template_id, **kwargs):
     from prich.core.loaders import get_loaded_config, get_loaded_template
 
     config, _ = get_loaded_config()
-    skip_llm = kwargs.get('skip_llm')
     provider = kwargs.get('provider')
     output_file = kwargs.get('output')
 
@@ -383,11 +370,16 @@ def run_template(template_id, **kwargs):
         last_output = ""
         for step in template.steps:
             step_idx += 1
-            step_brief = f"\n[bold]Step #{step_idx}: {step.name}[/bold]"
+
+            if not is_verbose() and step.name == template.steps[-1].name and step.output_console is None:
+                # show final step output when non-verbose execution
+                step.output_console = True
+
+            step_brief = f"\nStep #{step_idx}: {step.name}"
             should_run = should_run_step(step.when, variables)
             when_expression = f" (\"when\" expression \"{step.when}\" is {should_run})" if step.when else ""
             if (not should_run and is_verbose()) or should_run:
-                console_print(f"{step_brief}{' - Skipped' if not should_run else ''}{when_expression}")
+                console_print(f"[dim]{step_brief}{' - Skipped' if not should_run else ''}{when_expression}[/dim]")
             if not should_run:
                 continue
 
@@ -399,9 +391,14 @@ def run_template(template_id, **kwargs):
             if type(step) in [PythonStep, CommandStep]:
                 step_output = run_command_step(template, step, variables)
             elif type(step) == RenderStep:
+                if is_verbose():
+                    console_print("[dim]Render template:[/dim]")
+                    console_print(step.template)
+                    console_print()
+                    console_print("[dim]Result:[/dim]")
                 step_output = render_template(step.template, variables)
             elif type(step) == LLMStep:
-                step_output = send_to_llm(template, step, provider, config, variables, skip_llm)
+                step_output = send_to_llm(template, step, provider, config, variables)
             else:
                 raise click.ClickException(f"Step {step.type} type is not supported.")
 
@@ -420,29 +417,40 @@ def run_template(template_id, **kwargs):
                 try:
                     write_mode = step.output_file_mode[:1] if step.output_file_mode else 'w'
                     with open(save_to_file, write_mode) as step_output_file:
-                        console_print(f"{'Save' if write_mode == 'w' else 'Append'} output to file: {save_to_file}")
+                        console_print(f"[dim]{'Save' if write_mode == 'w' else 'Append'} output to file: {save_to_file}[/dim]")
                         step_output_file.write(step_output)
                 except Exception as e:
                     raise click.ClickException(f"Failed to save output to file {save_to_file}: {e}")
-            # Validation
-            if step.validation:
-                validated = validate_step_output(step.validation, step_output)
-                if not validated:
-                    action = step.validation.on_fail
-                    failure_msg = "Validation failed for step output"
-                    if action == "warn":
-                        console_print(f"[yellow]Warning: {failure_msg}![/yellow]")
-                    elif action == "error":
-                        raise click.ClickException(failure_msg)
-                    elif action == "skip":
-                        console_print(f"{failure_msg} – skipping next steps.")
-                        break
-                    elif action == "continue":
-                        pass
+            # Print step output to console
+            if ((step.output_console or is_verbose()) and (type(step) != LLMStep)) and not is_only_final_output() and not is_quiet():
+                console_print(step_output)
+            # Validate
+            if step.validate_:
+                if type(step.validate_) == ValidateStepOutput:
+                    step.validate_ = [step.validate_]
+                idx = 0
+                for validate in step.validate_:
+                    idx += 1
+                    validated = validate_step_output(validate, step_output)
+                    if not validated:
+                        action = validate.on_fail
+                        failure_msg = validate.message or "Validation failed for step output"
+                        if action == "warn":
+                            console_print(f"[yellow]Warning: {failure_msg}![/yellow]")
+                        elif action == "error":
+                            raise click.ClickException(failure_msg)
+                        elif action == "skip":
+                            console_print(f"[yellow]{failure_msg} – skipping next steps.[/yellow]")
+                            break
+                        elif action == "continue":
+                            console_print(f"[yellow]{failure_msg} – continue.[/yellow]")
+                            pass
+                        else:
+                            raise click.ClickException(f"Validation type {action} is not supported.")
                     else:
-                        raise click.ClickException(f"Validation type {action} is not supported.")
-                else:
-                    console_print(f"[green]Validation passed.[/green]")
+                        if is_verbose() and len(step.validate_) > 1:
+                            console_print(f"[dim]Validation #{idx} [green]passed[/green].[/dim]")
+                console_print(f"[dim][green]Validation{'s' if len(step.validate_) > 1 else ''} completed.[/green][/dim]")
         # Save last step output if output file option added
         if output_file:
             with open(output_file, 'w') as final_output_file:

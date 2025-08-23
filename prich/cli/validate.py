@@ -2,7 +2,7 @@ from pathlib import Path
 import click
 from prich.core.file_scope import classify_path
 from prich.core.loaders import find_template_files, load_template_model
-from prich.core.utils import console_print, shorten_home_path
+from prich.core.utils import console_print, shorten_path
 
 
 @click.command(name="validate")
@@ -52,10 +52,10 @@ def validate_templates(template_id: str, validate_file: Path, global_only: bool,
     for template_file in template_files:
         try:
             template = load_template_model(template_file)
-            console_print(f"- {template.id} [dim]({template.source.value}) {shorten_home_path(str(template_file))}[/dim]: [green]is valid[/green]" )
+            console_print(f"- {template.id} [dim]({template.source.value}) {shorten_path(str(template_file))}[/dim]: [green]is valid[/green]")
         except click.ClickException as e:
             failures_found = True
             template_source = classify_path(template_file)
-            console_print(f"- [dim]({template_source.value}) {shorten_home_path(str(template_file))}[/dim]: [red]is not valid\n  {e.message.replace(f' from {template_file}', '')}[/red]")
+            console_print(f"- [dim]({template_source.value}) {shorten_path(str(template_file))}[/dim]: [red]is not valid[/red]\n  [red]{e.message.replace(f' from {template_file}', '')}[/red]")
     if failures_found:
         sys.exit(1)

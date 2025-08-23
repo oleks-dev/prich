@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple, List
 from prich.core.file_scope import classify_path
 from prich.core.state import _loaded_templates, _loaded_config, _loaded_config_paths
-from prich.core.utils import console_print, shorten_home_path, get_prich_dir
+from prich.core.utils import console_print, shorten_path, get_prich_dir
 from prich.models.utils import recursive_update
 from prich.models.config import ConfigModel
 from prich.models.template import TemplateModel
@@ -22,7 +22,7 @@ def load_config_model(config_file: Path) -> Tuple[Optional[ConfigModel], Optiona
     if not config_yaml:
         return None, config_file
     if config_yaml.get("schema_version") != CONFIG_SCHEMA_VERSION:
-        raise click.ClickException(f"Unsupported config schema version {config_yaml.get('schema_version')}, this prich version supports only {CONFIG_SCHEMA_VERSION}: {shorten_home_path(str(config_file))}")
+        raise click.ClickException(f"Unsupported config schema version {config_yaml.get('schema_version')}, this prich version supports only {CONFIG_SCHEMA_VERSION}: {shorten_path(str(config_file))}")
     from pydantic import TypeAdapter
 
     # Parse full config
@@ -31,7 +31,7 @@ def load_config_model(config_file: Path) -> Tuple[Optional[ConfigModel], Optiona
         config = adapter.validate_python(config_yaml)
         return config, config_file
     except Exception as e:
-        msg_lines = [f"[yellow]Failed to load config: {shorten_home_path(str(config_file))}"]
+        msg_lines = [f"[yellow]Failed to load config: {shorten_path(str(config_file))}"]
         if 'errors' in e.__dir__():
             for error in e.errors():
                 msg_lines.append(f"  * {error.get('msg')}. {error.get('type')}: {'.'.join(error.get('loc'))}")
@@ -46,7 +46,7 @@ def load_global_config() -> Tuple[ConfigModel, Path]:
     return load_config_model(get_prich_dir(global_only=True) / "config.yaml")
 
 def load_merged_config() -> Tuple[ConfigModel, List[Path]]:
-    from prich.core.utils import should_use_global_only, shorten_home_path, should_use_local_only
+    from prich.core.utils import should_use_global_only, shorten_path, should_use_local_only
 
     if not should_use_local_only():
         global_config, global_path = load_global_config()
@@ -66,7 +66,7 @@ def load_merged_config() -> Tuple[ConfigModel, List[Path]]:
     if result and result[0] and result[0].providers:
         return result
     elif result and result[0] and not result[0].providers and result[1]:
-        raise click.ClickException(f"No providers config found. Check config files: {[shorten_home_path(str(path_item)) for path_item in result[1]]}")
+        raise click.ClickException(f"No providers config found. Check config files: {[shorten_path(str(path_item)) for path_item in result[1]]}")
     raise click.ClickException(f"No config found. Run 'prich init' first.")
 
 def load_template_model(yaml_file: Path) -> TemplateModel | None:
@@ -77,12 +77,12 @@ def load_template_model(yaml_file: Path) -> TemplateModel | None:
             if template_yaml:
                 if template_yaml.get("schema_version") != TEMPLATE_SCHEMA_VERSION:
                     raise click.ClickException(
-                        f"Unsupported template schema version {template_yaml.get('schema_version') if template_yaml.get('schema_version') else 'NOT SET'}, this prich version supports only {TEMPLATE_SCHEMA_VERSION}: {shorten_home_path(str(yaml_file))}")
+                        f"Unsupported template schema version {template_yaml.get('schema_version') if template_yaml.get('schema_version') else 'NOT SET'}, this prich version supports only {TEMPLATE_SCHEMA_VERSION}: {shorten_path(str(yaml_file))}")
                 template_yaml["source"] = classify_path(file=yaml_file)
                 template_yaml["folder"] = str(yaml_file.parent)
                 template_yaml["file"] = str(yaml_file)
                 return TemplateModel(**template_yaml)
-        raise click.ClickException(f"Failed to load {shorten_home_path(str(yaml_file))}, check if file or contents are correct.")
+        raise click.ClickException(f"Failed to load {shorten_path(str(yaml_file))}, check if file or contents are correct.")
     except Exception as e:
         if 'errors' in e.__dir__():
             raise click.ClickException(f"""Failed to load template {template_yaml.get('name') if template_yaml else '?'} from {yaml_file}: {', '.join([f'{x.get("msg")}: {x.get("loc")}' for x in e.errors()])}""")

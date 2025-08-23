@@ -9,10 +9,24 @@ console = Console()
 
 def should_use_global_only() -> bool:
     """ Should only global config/templates used? """
+    try:
+        global_only_options = ["global_only", "global_init", "global_install"]
+        for global_ in global_only_options:
+            if click.get_current_context().params.get(global_):
+                return True
+    except:
+        pass
     return any(flag in sys.argv for flag in ("-g", "--global"))
 
 def should_use_local_only() -> bool:
     """ Should only local config/templates used? """
+    try:
+        local_only_options = ["local_only"]
+        for global_ in local_only_options:
+            if click.get_current_context().params.get(global_):
+                return True
+    except:
+        pass
     return any(flag in sys.argv for flag in ("-l", "--local"))
 
 def is_verbose() -> bool:
@@ -93,12 +107,16 @@ def replace_env_vars(text: str, secure: bool = True) -> str:
     env_pattern = r'\$(?:\{([^}]+)\}|([a-zA-Z_][a-zA-Z0-9_]*))'
     return re.sub(env_pattern, replace_match, text)
 
-def shorten_home_path(path: str) -> str:
-    """ Return short path using ~/... instead of a full absolute path """
+def shorten_path(path: str | Path) -> str:
+    """ Return short path using ~/... or ./... instead of a full absolute path """
     home = str(Path.home())
-    path = str(path)
+    cwd = str(Path.cwd())
+    if type(path) == Path:
+        path = str(path)
     if path.startswith(home):
         return path.replace(home, "~", 1)
+    elif path.startswith(cwd):
+        return path.replace(cwd, ".", 1)
     return path
 
 def is_just_filename(filename: Path | str):
