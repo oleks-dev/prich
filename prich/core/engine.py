@@ -402,13 +402,20 @@ def run_template(template_id, **kwargs):
             else:
                 raise click.ClickException(f"Step {step.type} type is not supported.")
 
-            if step.strip_output_prefix or step.slice_output_start or step.slice_output_end:
-                if is_verbose():
-                    if step.strip_output_prefix:
-                        console_print(f"[dim]Strip output prefix: {step.strip_output_prefix}[/dim]")
-                    if step.slice_output_start or step.slice_output_end:
-                        console_print(f"[dim]Slice output text{f' from {step.slice_output_start}' if step.slice_output_start else ''}{f' to {step.slice_output_end}' if step.slice_output_end else ''}[/dim]")
-                step_output = step.strip_and_slice_output(step_output)
+            if is_verbose():
+                if step.extract_vars or step.output_regex or step.strip_output_prefix or step.slice_output_start or step.slice_output_end:
+                    console_print(f"[dim]Output: '{step_output}'[/dim]")
+            step_output = step.postprocess_output(output=step_output, variables=variables)
+            if is_verbose():
+                if step.extract_vars:
+                    for spec in step.extract_vars:
+                        console_print(f"[dim]Inject \"{spec.regex}\" {f'({len(variables.get(spec.variable))} matches) ' if spec.multiple else ''}→ {spec.variable}: {f'{variables.get(spec.variable)}' if type(variables.get(spec.variable) == str) else variables.get(spec.variable)}[/dim]")
+                if step.output_regex:
+                    console_print(f"[dim]Apply regex: \"{step.output_regex}\"[/dim]")
+                if step.strip_output_prefix:
+                    console_print(f"[dim]Strip output prefix: \"{step.strip_output_prefix}\"[/dim]")
+                if step.slice_output_start or step.slice_output_end:
+                    console_print(f"[dim]Slice output text{f' from {step.slice_output_start}' if step.slice_output_start else ''}{f' to {step.slice_output_end}' if step.slice_output_end else ''}[/dim]")
 
             # Store last output
             last_output = step_output
