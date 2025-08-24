@@ -54,9 +54,6 @@ class STDINConsumerProviderModel(BaseProviderModel):
     provider_type: Literal["stdin_consumer"]
     call: str = None
     args: Optional[List[str]] = None
-    stdout_strip_prefix: Optional[str] = None
-    stdout_slice_start: Optional[int] = None
-    stdout_slice_end: Optional[int] = None
 
 class OllamaProviderModel(BaseProviderModel):
     provider_type: Literal["ollama"]

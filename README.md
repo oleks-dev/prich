@@ -426,7 +426,7 @@ There are several commands that you can execute the check the templates:
 ## Configure .prich/config.yaml
 
 ### Settings
-```python
+```yaml
 settings:
   default_provider: "llama3.1-8b"
   editor: "vim"
@@ -538,9 +538,9 @@ settings:
       mode: Optional[str]  # Prompt Provider Mode (for prompt templates)
       call: Optional[str] = None  # command call for shell execution
       args: Optional[List[str]] = None  # arguments for shell execution
-      stdout_strip_prefix: Optional[str] = None  # strip prefix string from the response
-      stdout_slice_start: Optional[int] = None  # slice stdout from character number
-      stdout_slice_end: Optional[int] = None  # slice stdout to character number
+      strip_output_prefix: Optional[str] = None  # strip prefix string from the step output
+      slice_output_start: Optional[int] = None  # slice step output from character number
+      slice_output_end: Optional[int] = None  # slice step output to character number
     ```
   Example:
     ```yaml

@@ -402,6 +402,14 @@ def run_template(template_id, **kwargs):
             else:
                 raise click.ClickException(f"Step {step.type} type is not supported.")
 
+            if step.strip_output_prefix or step.slice_output_start or step.slice_output_end:
+                if is_verbose():
+                    if step.strip_output_prefix:
+                        console_print(f"[dim]Strip output prefix: {step.strip_output_prefix}[/dim]")
+                    if step.slice_output_start or step.slice_output_end:
+                        console_print(f"[dim]Slice output text{f' from {step.slice_output_start}' if step.slice_output_start else ''}{f' to {step.slice_output_end}' if step.slice_output_end else ''}[/dim]")
+                step_output = step.strip_and_slice_output(step_output)
+
             # Store last output
             last_output = step_output
 
