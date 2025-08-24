@@ -40,6 +40,9 @@ class ValidateStepOutput(BaseModel):
 class BaseStepModel(BaseModel):
     model_config = ConfigDict(extra='forbid')
     name: str
+    strip_output_prefix: Optional[str] = None
+    slice_output_start: Optional[int] = None
+    slice_output_end: Optional[int] = None
     output_variable: Optional[str | None] = None
     output_file: Optional[str | None] = None
     output_file_mode: Optional[Literal["write", "append"]] = None
@@ -47,6 +50,13 @@ class BaseStepModel(BaseModel):
     when: Optional[str | None] = None
     validate_: Optional[ValidateStepOutput | list[ValidateStepOutput]] = Field(alias="validate", default=None)
 
+    def strip_and_slice_output(self, text: str) -> str:
+        """Strip prefix text and/or Slice the output"""
+        if self.strip_output_prefix and text.startswith(self.strip_output_prefix):
+            text = text[len(self.strip_output_prefix):]
+        if self.slice_output_start or self.slice_output_end:
+            text = text[self.slice_output_start:self.slice_output_end]
+        return text
 
 class LLMStep(BaseStepModel):
     type: Literal["llm"]
