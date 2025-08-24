@@ -21,3 +21,4 @@ class TemplatesRepoManifest(BaseModel):
     schema_version: Literal["1.0"]
     templates: List[TemplateRepoItem]
     templates_path: str
+    templates_download_path: str
