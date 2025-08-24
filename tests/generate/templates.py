@@ -21,7 +21,7 @@ def generate_template(prich_path: Path = Path("./test"), template_id: str=None, 
         author=faker.name(),
         name=tpl_name,
         description=tpl_description,
-        tags=[faker.word(ext_word_list=tpl_description.replace(",", "").replace(".", "").split(" ")).lower()],
+        tags=[faker.word(ext_word_list=tpl_description.replace(",", "").replace(".", "").replace("\n", " ").split(" ")).lower()],
         variables=[
             VariableDefinition(
                 name="name",
