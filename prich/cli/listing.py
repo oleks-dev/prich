@@ -113,7 +113,6 @@ def list_github_templates(tags, json_only):
     table.add_column("Version", style="yellow")
     table.add_column("Description", style="white")
     table.add_column("Author", style="cyan")
-    table.add_column("Archive Checksum", style="dim", overflow="fold")
     table.add_column("Folder Checksum", style="dim", overflow="fold")
 
     for template in templates:
@@ -124,7 +123,6 @@ def list_github_templates(tags, json_only):
             template.version or "-",
             template.description or "-",
             template.author or "-",
-            (template.archive_checksum or "")[:7] + "…" if template.archive_checksum else "",
             (template.folder_checksum or "")[:7] + "…" if template.folder_checksum else ""
         )
 
