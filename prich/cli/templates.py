@@ -10,6 +10,7 @@ import click
 from prich.core.loaders import get_loaded_templates, get_loaded_config, get_loaded_template
 from prich.core.utils import console_print, is_valid_template_id, get_prich_dir, get_prich_templates_dir, shorten_path
 from prich.cli.venv_utils import install_template_python_dependencies
+from prich.cli.template_utils import directory_hash
 from prich.models.template import TemplateModel, VariableDefinition, LLMStep, PromptFields
 
 def _download_zip(url: str) -> Path:
@@ -97,18 +98,28 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
                 raise click.ClickException(f"Remote Template ID {path} is not valid.")
             check_if_dest_present(path, templates_dir / path, global_install, force)
 
-            with console.status("Fetching templates manifest..."):
-                templates_manifest = get_remote_prich_templates_manifest()
+            try:
+                with console.status("Fetching templates manifest..."):
+                    templates_manifest = get_remote_prich_templates_manifest()
+            except Exception as e:
+                raise click.ClickException(f"Failed to fetch remote templates repository manifest: {str(e)}")
             if not path in [x.id for x in templates_manifest.templates]:
                 raise click.ClickException(f"Remote Template ID {path} not found in the repository {templates_manifest.repository}.")
             template_to_install = [x for x in templates_manifest.templates if x.id == path][0]
             tmp_path = Path(tempfile.mkdtemp())
-            with console.status("Downloading..."):
-                for file_to_download in template_to_install.files:
-                    remote_templates_repo_path = "https://raw.githubusercontent.com/oleks-dev/prich-templates/refs/heads/main/templates/"
-                    download_to_file = tmp_path / file_to_download
-                    _download_file(f"{remote_templates_repo_path}{file_to_download}", download_to_file)
-            # TODO: drop folder name from manifest files
+            try:
+                with console.status("Downloading..."):
+                    for file_to_download in template_to_install.files:
+                        remote_templates_repo_path = templates_manifest.templates_download_path
+                        download_to_file = tmp_path / file_to_download
+                        _download_file(f"{remote_templates_repo_path}/{template_to_install.id}/{file_to_download}", download_to_file)
+            except Exception as e:
+                raise click.ClickException(f"Failed to download remote template files: {str(e)}")
+            downloaded_template_hash = directory_hash(tmp_path)
+            if downloaded_template_hash != template_to_install.folder_checksum:
+                console_print(f"[yellow]Downloaded template folder checksum is not matching with mentioned in the manifest![/yellow]")
+                console_print(f"[yellow]From the manifest: {template_to_install.folder_checksum}[/yellow]")
+                console_print(f"[yellow]Downloaded files : {downloaded_template_hash}[/yellow]")
             path = str(tmp_path)
 
         remove_source = True
