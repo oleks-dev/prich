@@ -7,7 +7,7 @@ from prich.cli.config import list_providers, show_config, edit_config
 from prich.core.engine import run_template
 from prich.core.state import _loaded_templates
 from prich.models.template import TemplateModel, PromptFields, VariableDefinition, PythonStep, CommandStep, LLMStep, \
-    RenderStep
+    RenderStep, ValidateStepOutput
 from tests.fixtures.config import basic_config
 from tests.fixtures.paths import mock_paths
 from tests.fixtures.templates import template
@@ -15,10 +15,11 @@ from tests.fixtures.templates import template
 
 get_run_template_CASES = [
     {"id": "valid_one_llm_step", "template":
-        TemplateModel(
-            id="test-tpl",
-            name="Test TPL",
-            steps=[
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps":[
                 LLMStep(
                     name="Ask",
                     type="llm",
@@ -28,15 +29,17 @@ get_run_template_CASES = [
                     )
                 )
             ]
-        ),
+        # ),
+        },
       "expected_exception": None,
       "expected_exception_message": None,
     },
     {"id": "valid_llm_step_and_python_cmd_and_render", "template":
-        TemplateModel(
-            id="test-tpl",
-            name="Test TPL",
-            steps=[
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
                 PythonStep(
                     name="Preprocess python",
                     type="python",
@@ -66,19 +69,22 @@ get_run_template_CASES = [
                     prompt=PromptFields(
                         system="system",
                         user="user"
-                    )
+                    ),
+                    output_file="test_llm_response.txt"
                 ),
             ],
-            folder="."
-        ),
+            "folder": "."
+        # ),
+        },
       "expected_exception": None,
       "expected_exception_message": None,
     },
     {"id": "no_template_folder_set", "template":
-        TemplateModel(
-            id="test-tpl",
-            name="Test TPL",
-            steps=[
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
                 CommandStep(
                     name="Preprocess command",
                     type="command",
@@ -86,15 +92,17 @@ get_run_template_CASES = [
                     args=["test"]
                 ),
             ],
-        ),
+        # ),
+        },
       "expected_exception": click.ClickException,
       "expected_exception_message": "Template folder was not detected properly",
     },
     {"id": "no_python_script_found", "template":
-        TemplateModel(
-            id="test-tpl",
-            name="Test TPL",
-            steps=[
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
                 PythonStep(
                     name="Preprocess python",
                     type="python",
@@ -102,16 +110,18 @@ get_run_template_CASES = [
                     args=["test"]
                 ),
             ],
-            folder="."
-        ),
+            "folder": "."
+        # ),
+        },
       "expected_exception": click.ClickException,
       "expected_exception_message": "Python script not found",
     },
     {"id": "non_python_script_found", "template":
-        TemplateModel(
-            id="test-tpl",
-            name="Test TPL",
-            steps=[
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
                 PythonStep(
                     name="Preprocess python",
                     type="python",
@@ -119,16 +129,18 @@ get_run_template_CASES = [
                     args=["test"]
                 ),
             ],
-            folder="."
-        ),
+            "folder": "."
+        # ),
+        },
       "expected_exception": click.ClickException,
       "expected_exception_message": "Python script file should end with .py",
     },
     {"id": "cmd_exec_error", "template":
-        TemplateModel(
-            id="test-tpl",
-            name="Test TPL",
-            steps=[
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
                 CommandStep(
                     name="Preprocess command",
                     type="command",
@@ -136,16 +148,18 @@ get_run_template_CASES = [
                     args=["test"]
                 ),
             ],
-            folder="."
-        ),
+            "folder": "."
+        # ),
+        },
       "expected_exception": click.ClickException,
       "expected_exception_message": "Execution error in ",
     },
     {"id": "no_cmd_found", "template":
-        TemplateModel(
-            id="test-tpl",
-            name="Test TPL",
-            steps=[
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
                 CommandStep(
                     name="Preprocess command",
                     type="command",
@@ -153,17 +167,19 @@ get_run_template_CASES = [
                     args=["test"]
                 ),
             ],
-            folder="."
-        ),
+            "folder": "."
+        # ),
+        },
       "expected_exception": click.ClickException,
       "expected_exception_message": "No such file or directory",
     },
     {"id": "no_python_isolated_venv_found", "template":
-        TemplateModel(
-            id="test-tpl",
-            name="Test TPL",
-            venv="isolated",
-            steps=[
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "venv": "isolated",
+            "steps": [
                 PythonStep(
                     name="Preprocess python",
                     type="python",
@@ -171,16 +187,18 @@ get_run_template_CASES = [
                     args=["test"]
                 ),
             ],
-            folder="."
-        ),
+            "folder": "."
+        # ),
+        },
       "expected_exception": click.ClickException,
       "expected_exception_message": "Isolated venv python not found",
     },
     {"id": "valid_one_llm_step_w_vars", "template":
-        TemplateModel(
-            id="test-tpl",
-            name="Test TPL",
-            steps=[
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
                 LLMStep(
                     name="Ask",
                     type="llm",
@@ -190,7 +208,7 @@ get_run_template_CASES = [
                     )
                 )
             ],
-            variables=[
+            "variables": [
                 VariableDefinition(
                     name="test_var1",
                     type="str",
@@ -228,23 +246,268 @@ get_run_template_CASES = [
                     default=[1, 2],
                 ),
             ]
-        ),
+        # ),
+        },
       "expected_exception": None,
       "expected_exception_message": None,
     },
     {"id": "no_steps", "template":
-        TemplateModel(
-            id="test-tpl",
-            name="Test TPL",
-            steps=[]
-        ),
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": []
+        # ),
+        },
       "expected_exception": click.ClickException,
       "expected_exception_message": "No steps found in template test-tpl.",
+     },
+    {"id": "run_cmd_and_validate_error", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["test"],
+                    validate=ValidateStepOutput(
+                        match="^est",
+                        not_match="test",
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     "expected_exception": click.ClickException,
+     "expected_exception_message": "Validation failed for step output",
+     },
+    {"id": "run_cmd_and_validate_warn", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["test"],
+                    validate=ValidateStepOutput(
+                        match="^est",
+                        not_match="test",
+                        on_fail="warn"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     },
+    {"id": "run_cmd_and_validate_skip", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["test"],
+                    validate=ValidateStepOutput(
+                        match="^est",
+                        not_match="test",
+                        on_fail="skip"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     },
+    {"id": "run_cmd_and_validate_continue", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["test"],
+                    validate=ValidateStepOutput(
+                        match="^est",
+                        not_match="test",
+                        on_fail="continue"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     },
+    {"id": "run_cmd_and_validate_passed", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["test"],
+                    validate=ValidateStepOutput(
+                        match="^test",
+                        not_match="echo",
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     },
+    {"id": "run_cmd_and_strip_prefix", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["test"],
+                    strip_output_prefix="te",
+                    validate=ValidateStepOutput(
+                        match="^st",
+                        not_match="echo",
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     },
+    {"id": "run_cmd_and_slice", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["test"],
+                    slice_output_start=1,
+                    slice_output_end=-1,
+                    validate=ValidateStepOutput(
+                        match="^es$",
+                        not_match="echo",
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     },
+    {"id": "run_cmd_and_slice_start", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["test"],
+                    slice_output_start=1,
+                    validate=ValidateStepOutput(
+                        match="^est$",
+                        not_match="echo",
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     },
+    {"id": "run_cmd_and_slice_end", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["test"],
+                    slice_output_end=-1,
+                    validate=ValidateStepOutput(
+                        match="^tes$",
+                        not_match="echo",
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     },
+    {"id": "run_cmd_and_save_output", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["test"],
+                    output_variable="test_var",
+                    output_file="haudfhiu!@#±%#@$^%^(*0=/////"
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     "expected_exception": click.ClickException,
+     "expected_exception_message": "Failed to save output to file",
      },
 ]
 @pytest.mark.parametrize("case", get_run_template_CASES, ids=[c["id"] for c in get_run_template_CASES])
 def test_run_template(case, monkeypatch, basic_config):
-    test_template = case.get("template")
+    test_template = TemplateModel(
+            id= "test-tpl",
+            name= "Test TPL",
+            steps= [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["test"],
+                    output_variable="test_var"
+                ),
+            ],
+        )
+        # },
+
+    for k,v in case.get("template").items():
+        test_template.__setattr__(k, v)
     if test_template.folder == ".":
         test_template.folder = str(Path(__file__).parent.resolve())
     _loaded_templates.clear()

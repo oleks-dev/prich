@@ -7,7 +7,7 @@ from pathlib import Path
 from prich.models.file_scope import FileScope
 
 from prich.models.template import TemplateModel, VariableDefinition, PythonStep, LLMStep, PromptFields, CommandStep, \
-    StepValidation
+    ValidateStepOutput
 from tests.generate.templates import generate_template, templates
 
 
@@ -84,7 +84,7 @@ def template(tmp_path):
                 output_variable="llm_response",
                 output_file="test_llm_response.txt",
                 when="1==1",
-                validation=StepValidation(
+                validate=ValidateStepOutput(
                     match=".+",
                     not_match="^not match"
                 )
@@ -128,7 +128,7 @@ def shared_venv_template(tmp_path):
                 args=["test"],
                 output_file="echo_output.txt",
                 output_variable="test_output_echo",
-                validation=StepValidation(match=".+", not_match="^not")
+                validate=ValidateStepOutput(match=".+", not_match="^not")
             ),
             PythonStep(
                 name="Preprocess python",
@@ -186,5 +186,15 @@ def temp_template_dir():
     template_dir.mkdir()
     (template_dir / "test_template.yaml").write_text(TEMPLATE_YAML)
     yield template_dir
+
+    shutil.rmtree(temp_dir)
+
+@pytest.fixture
+def temp_empty_dir():
+    temp_dir = Path(tempfile.mkdtemp())
+    template_dir = temp_dir / "test_emtpy"
+    template_dir.mkdir()
+    yield {"name": "test_emtpy",
+           "folder": template_dir}
 
     shutil.rmtree(temp_dir)

@@ -8,7 +8,7 @@ import pytest
 from pathlib import Path
 
 from prich.models.config import SecurityConfig
-from prich.models.template import PromptFields, StepValidation, PythonStep, CommandStep, VariableDefinition
+from prich.models.template import PromptFields, ValidateStepOutput, PythonStep, CommandStep, VariableDefinition
 from prich.core.loaders import load_config_model
 from prich.core.engine import render_prompt, render_template
 from tests.fixtures.config import basic_config, basic_config_with_prompts, CONFIG_YAML
@@ -352,22 +352,22 @@ get_validate_sep_output_CASES = [
      "expected_result": True,
      },
     {"id": "empty_stepvalidation",
-     "step_validation": StepValidation(),
+     "step_validation": ValidateStepOutput(),
      "value": "test",
      "expected_result": True,
      },
     {"id": "match",
-     "step_validation": StepValidation(match=".+"),
+     "step_validation": ValidateStepOutput(match=".+"),
      "value": "test",
      "expected_result": True,
      },
     {"id": "not_match_startfrom",
-     "step_validation": StepValidation(not_match="^te"),
+     "step_validation": ValidateStepOutput(not_match="^te"),
      "value": "test123",
      "expected_result": False,
      },
     {"id": "match_startfrom",
-     "step_validation": StepValidation(match="^te"),
+     "step_validation": ValidateStepOutput(match="^te"),
      "value": "test123",
      "expected_result": True,
      },
