@@ -37,26 +37,70 @@ class ValidateStepOutput(BaseModel):
     on_fail: Optional[Literal["error", "warn", "skip", "continue"]] = "error"
     message: Optional[str] = None
 
+
+class ExtractVarModel(BaseModel):
+    regex: str
+    variable: str
+    multiple: Optional[bool] = False  # default: single match
+
+
 class BaseStepModel(BaseModel):
     model_config = ConfigDict(extra='forbid')
+
     name: str
+
+    # output shaping
     strip_output_prefix: Optional[str] = None
     slice_output_start: Optional[int] = None
     slice_output_end: Optional[int] = None
+
+    # regex transforms
+    output_regex: Optional[str] = None                    # transforms main output
+    extract_vars: Optional[list[ExtractVarModel]] = None  # enrichment
+
+    # persistence
     output_variable: Optional[str | None] = None
     output_file: Optional[str | None] = None
     output_file_mode: Optional[Literal["write", "append"]] = None
     output_console: Optional[bool | None] = None
+
+    # execution control
     when: Optional[str | None] = None
     validate_: Optional[ValidateStepOutput | list[ValidateStepOutput]] = Field(alias="validate", default=None)
 
-    def strip_and_slice_output(self, text: str) -> str:
-        """Strip prefix text and/or Slice the output"""
-        if self.strip_output_prefix and text.startswith(self.strip_output_prefix):
-            text = text[len(self.strip_output_prefix):]
+    def postprocess_output(self, output: str, variables: dict):
+        import re
+        out = output
+
+        # extract side variables
+        if self.extract_vars:
+            for spec in self.extract_vars:
+                pattern = re.compile(spec.regex)
+                if spec.multiple:
+                    matches = pattern.findall(output)
+                    if matches:
+                        # if regex has groups, findall returns tuples
+                        values = [m if isinstance(m, str) else m[0] for m in matches]
+                        variables[spec.variable] = values
+                else:
+                    m = pattern.search(output)
+                    if m:
+                        variables[spec.variable] = m.group(1) if m.groups() else m.group(0)
+
+        # transform step output
+        if self.strip_output_prefix and output.startswith(self.strip_output_prefix):
+            out = output[len(self.strip_output_prefix):]
+
         if self.slice_output_start or self.slice_output_end:
-            text = text[self.slice_output_start:self.slice_output_end]
-        return text
+            out = output[self.slice_output_start:self.slice_output_end]
+
+        if self.output_regex:
+            m = re.search(self.output_regex, out)
+            if m:
+                out = m.group(1) if m.groups() else m.group(0)
+
+        return out
+
 
 class LLMStep(BaseStepModel):
     type: Literal["llm"]
