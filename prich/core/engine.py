@@ -167,9 +167,9 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
         console_print(f"[dim]Execute {step.type} [green]{' '.join(cmd)}[/green][/dim]")
         if not is_quiet() and not is_only_final_output():
             with console.status("Processing..."):
-                result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+                result = subprocess.run(cmd, capture_output=True, text=True, check=False)
         else:
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
         raise click.ClickException(f"Execution error in {method}: {e.stderr}")
