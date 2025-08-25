@@ -151,8 +151,6 @@ get_run_template_CASES = [
             "folder": "."
         # ),
         },
-      "expected_exception": click.ClickException,
-      "expected_exception_message": "Execution error in ",
     },
     {"id": "no_cmd_found", "template":
         # TemplateModel(

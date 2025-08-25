@@ -3,6 +3,7 @@ from pathlib import Path
 import click
 from pydantic import BaseModel, Field, model_validator, ConfigDict
 from typing import List, Optional, Literal, Annotated, Union
+from prich.models.output_shaping import BaseOutputShapingModel
 from prich.constants import RESERVED_RUN_TEMPLATE_CLI_OPTIONS
 from prich.models.file_scope import FileScope
 from prich.core.utils import is_valid_variable_name, is_cli_option_name
@@ -44,18 +45,12 @@ class ExtractVarModel(BaseModel):
     multiple: Optional[bool] = False  # default: single match
 
 
-class BaseStepModel(BaseModel):
+class BaseStepModel(BaseOutputShapingModel):
     model_config = ConfigDict(extra='forbid')
 
     name: str
 
-    # output shaping
-    strip_output_prefix: Optional[str] = None
-    slice_output_start: Optional[int] = None
-    slice_output_end: Optional[int] = None
-
     # regex transforms
-    output_regex: Optional[str] = None                    # transforms main output
     extract_vars: Optional[list[ExtractVarModel]] = None  # enrichment
 
     # persistence
@@ -68,9 +63,8 @@ class BaseStepModel(BaseModel):
     when: Optional[str | None] = None
     validate_: Optional[ValidateStepOutput | list[ValidateStepOutput]] = Field(alias="validate", default=None)
 
-    def postprocess_output(self, output: str, variables: dict):
+    def postprocess_extract_vars(self, output: str, variables: dict):
         import re
-        out = output
 
         # extract side variables
         if self.extract_vars:
@@ -86,20 +80,6 @@ class BaseStepModel(BaseModel):
                     m = pattern.search(output)
                     if m:
                         variables[spec.variable] = m.group(1) if m.groups() else m.group(0)
-
-        # transform step output
-        if self.strip_output_prefix and output.startswith(self.strip_output_prefix):
-            out = output[len(self.strip_output_prefix):]
-
-        if self.slice_output_start or self.slice_output_end:
-            out = output[self.slice_output_start:self.slice_output_end]
-
-        if self.output_regex:
-            m = re.search(self.output_regex, out)
-            if m:
-                out = m.group(1) if m.groups() else m.group(0)
-
-        return out
 
 
 class LLMStep(BaseStepModel):
