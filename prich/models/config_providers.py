@@ -1,10 +1,12 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import Field, ConfigDict
 from typing import Literal, Optional, List, Tuple
+from prich.models.output_shaping import BaseOutputShapingModel
 
 
-class BaseProviderModel(BaseModel):
+class BaseProviderModel(BaseOutputShapingModel):
     model_config = ConfigDict(extra='forbid')
     name: str | None = Field(default=None, exclude=True)  # will be injected
+
     mode: Optional[str] = None
 
     def model_post_init(self, __context):

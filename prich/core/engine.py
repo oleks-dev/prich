@@ -170,7 +170,7 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
                 result = subprocess.run(cmd, capture_output=True, text=True, check=False)
         else:
             result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-        return result.stdout.strip()
+        return result.stdout
     except subprocess.CalledProcessError as e:
         raise click.ClickException(f"Execution error in {method}: {e.stderr}")
     except Exception as e:
@@ -338,7 +338,7 @@ def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: C
                 system=prompt_fields.system if prompt_fields else None,
                 user=prompt_fields.user if prompt_fields else None
             )
-        step_output = response.strip()
+        step_output = selected_provider.postprocess_output(response)
         if (is_verbose() or step.output_console) and not llm_provider.show_response and not is_quiet():
             console_print(step_output, markup=False)
     except Exception as e:
@@ -405,7 +405,8 @@ def run_template(template_id, **kwargs):
             if is_verbose():
                 if step.extract_vars or step.output_regex or step.strip_output_prefix or step.slice_output_start or step.slice_output_end:
                     console_print(f"[dim]Output: '{step_output}'[/dim]")
-            step_output = step.postprocess_output(output=step_output, variables=variables)
+            step.postprocess_extract_vars(output=step_output, variables=variables)
+            step_output = step.postprocess_output(output=step_output)
             if is_verbose():
                 if step.extract_vars:
                     for spec in step.extract_vars:
