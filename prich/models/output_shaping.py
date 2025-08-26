@@ -31,5 +31,7 @@ class BaseOutputShapingModel(BaseModel):
             m = re.search(self.output_regex, out)
             if m:
                 out = m.group(1) if m.groups() else m.group(0)
+            else:
+                return ""
 
         return out

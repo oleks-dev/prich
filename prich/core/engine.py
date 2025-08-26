@@ -86,9 +86,9 @@ def get_jinja_env(name: str, conditional_expression_only: bool = False):
                 "length": len,
                 "int": int,
                 "float": float,
+                "replace": lambda _old, _new, _count=None: str.replace(_old, _new, _count),
                 "bool": lambda x: bool(x),
             })
-            jinja_env[env_name] = env
         else:
             env = Environment(
                 loader=FileSystemLoader(Path.cwd()),
@@ -96,7 +96,7 @@ def get_jinja_env(name: str, conditional_expression_only: bool = False):
             )
             env.filters['include_file'] = include_file
             env.filters['include_file_with_line_numbers'] = include_file_with_line_numbers
-            jinja_env[env_name] = env
+        jinja_env[env_name] = env
     return jinja_env[env_name]
 
 def should_run_step(when_expr: str, variables: dict) -> bool:

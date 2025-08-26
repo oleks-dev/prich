@@ -76,10 +76,14 @@ class BaseStepModel(BaseOutputShapingModel):
                         # if regex has groups, findall returns tuples
                         values = [m if isinstance(m, str) else m[0] for m in matches]
                         variables[spec.variable] = values
+                    else:
+                        variables[spec.variable] = []
                 else:
                     m = pattern.search(output)
                     if m:
                         variables[spec.variable] = m.group(1) if m.groups() else m.group(0)
+                    else:
+                        variables[spec.variable] = ""
 
 
 class LLMStep(BaseStepModel):
