@@ -27,20 +27,12 @@ def expand_vars(args: List[str], internal_vars: Dict[str, str] = None):
 
     # Default to empty dict if no internal variables provided
     internal_vars = internal_vars or {}
-    
-    def replace_internal_var(match):
-        """Replace {{VAR}} with the value from internal_vars or keep unchanged if not found."""
-        var_name = match.group(1)
-        return internal_vars.get(var_name, match.group(0))  # Keep original if not found
-        
-    # Patterns for internal ({{VAR}}) variables
-    internal_pattern = r'\{\{\s*([^}\s]+)\s*\}\}'
-    
+
     expanded_args = []
     for arg in args:
         if type(arg) == str:
             # First expand internal variables
-            arg = re.sub(internal_pattern, replace_internal_var, arg)
+            arg = render_template(arg, variables=internal_vars)
             # Then expand environment variables ($VAR or ${VAR})
             arg = replace_env_vars(arg)
         expanded_args.append(arg)
@@ -176,6 +168,7 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
     except Exception as e:
         raise click.ClickException(f"Unexpected error in {method}: {str(e)}")
 
+# TODO: rename to render jinja template?
 def render_template(template_text: str, variables: dict = Dict[str, str]) -> str:
     import datetime
     import os
@@ -197,7 +190,7 @@ def render_template(template_text: str, variables: dict = Dict[str, str]) -> str
     try:
         rendered_text = get_jinja_env("template").from_string(template_text).render(**variables).strip()
     except Exception as e:
-        raise click.ClickException(f"Render step error: {str(e)}")
+        raise click.ClickException(f"Render jinja error: {str(e)}")
     return rendered_text
 
 def render_prompt(config: ConfigModel, fields: PromptFields, variables: Dict[str, str], mode: str) -> str:
