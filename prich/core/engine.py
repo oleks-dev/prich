@@ -79,6 +79,7 @@ def get_jinja_env(name: str, conditional_expression_only: bool = False):
                 "int": int,
                 "float": float,
                 "replace": lambda _old, _new, _count=None: str.replace(_old, _new, _count),
+                "split": lambda _sep, _max_split: str.split(_sep, _max_split),
                 "bool": lambda x: bool(x),
             })
         else:
@@ -188,7 +189,7 @@ def render_template(template_text: str, variables: dict = Dict[str, str]) -> str
     }
     variables["builtin"] = builtin
     try:
-        rendered_text = get_jinja_env("template").from_string(template_text).render(**variables).strip()
+        rendered_text = get_jinja_env("params", conditional_expression_only=True).from_string(template_text).render(**variables).strip()
     except Exception as e:
         raise click.ClickException(f"Render jinja error: {str(e)}")
     return rendered_text
