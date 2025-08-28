@@ -25,16 +25,16 @@ class OpenAIProvider(LLMProvider, LazyOptionalProvider):
             configuration['api_key'] = replace_env_vars(configuration['api_key'], False)
         self.client = OpenAI(**configuration)
 
-    def send_prompt(self, prompt: str = None, system: str = None, user: str = None) -> str:
+    def send_prompt(self, prompt: str = None, instructions: str = None, input_: str = None) -> str:
         self._ensure_client()
         try:
             if prompt:
                 messages = json.loads(prompt)
             else:
                 messages = []
-                if system:
-                    messages.append({"role": "system", "content": system})
-                messages.append({"role": "user", "content": user})
+                if instructions:
+                    messages.append({"role": "system", "content": instructions})
+                messages.append({"role": "user", "content": input_})
             options = self.provider.options if self.provider.options is not None else {}
             options['messages'] = messages
             response = self.client.chat.completions.create(**options)

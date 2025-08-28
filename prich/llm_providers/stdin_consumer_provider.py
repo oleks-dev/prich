@@ -14,8 +14,8 @@ class STDINConsumerProvider(LLMProvider):
         import re
         return re.sub(r'\x1b\[[0-9;]*m', '', text)
 
-    def send_prompt(self, prompt: str = None, system: str = None, user: str = None) -> str:
-        if system or user:
+    def send_prompt(self, prompt: str = None, instructions: str = None, input_: str = None) -> str:
+        if instructions or input_:
             raise click.ClickException("stdin consumer provider requires provider mode")
         cmd = [self.provider.call]
         if self.provider.args:

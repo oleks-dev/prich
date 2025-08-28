@@ -7,6 +7,6 @@ class LLMProvider(ABC):
     show_response: bool
 
     @abstractmethod
-    def send_prompt(self, prompt: str = None, system: str = None, user: str = None) -> str:
+    def send_prompt(self, prompt: str = None, instructions: str = None, input_: str = None) -> str:
         """Send a prompt to the LLM and return the response. Use prompt with full model prompt template and system/user when model supports field templates."""
         pass

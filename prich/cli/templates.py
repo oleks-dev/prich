@@ -11,7 +11,7 @@ from prich.core.loaders import get_loaded_templates, get_loaded_config, get_load
 from prich.core.utils import console_print, is_valid_template_id, get_prich_dir, get_prich_templates_dir, shorten_path
 from prich.cli.venv_utils import install_template_python_dependencies
 from prich.cli.template_utils import directory_hash
-from prich.models.template import TemplateModel, VariableDefinition, LLMStep, PromptFields
+from prich.models.template import TemplateModel, VariableDefinition, LLMStep
 
 def _download_zip(url: str) -> Path:
     """ Download zip file into temporary file and return path to it """
@@ -115,7 +115,7 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
                         _download_file(f"{remote_templates_repo_path}/{template_to_install.id}/{file_to_download}", download_to_file)
             except Exception as e:
                 raise click.ClickException(f"Failed to download remote template files: {str(e)}")
-            downloaded_template_hash = directory_hash(tmp_path)
+            downloaded_template_hash, files = directory_hash(tmp_path)
             if downloaded_template_hash != template_to_install.folder_checksum:
                 console_print(f"[yellow]Downloaded template folder checksum is not matching with mentioned in the manifest![/yellow]")
                 console_print(f"[yellow]From the manifest: {template_to_install.folder_checksum}[/yellow]")
@@ -268,10 +268,8 @@ def create_template(template_id: str, global_only: bool, edit: bool):
             LLMStep(
                 name="Ask to generate text",
                 type="llm",
-                prompt=PromptFields(
-                    system="You are {{ role }}",
-                    user="Generate text about {{ topic }}"
-                )
+                instructions="You are {{ role }}",
+                input="Generate text about {{ topic }}"
             )
         ],
         variables=[

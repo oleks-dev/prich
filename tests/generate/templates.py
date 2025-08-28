@@ -3,7 +3,7 @@ from pathlib import Path
 from faker import Faker
 from prich.models.file_scope import FileScope
 
-from prich.models.template import TemplateModel, VariableDefinition, PythonStep, LLMStep, PromptFields
+from prich.models.template import TemplateModel, VariableDefinition, PythonStep, LLMStep
 
 faker = Faker()
 
@@ -42,10 +42,8 @@ def generate_template(prich_path: Path = Path("./test"), template_id: str=None, 
             LLMStep(
                 name="LLM Step",
                 type="llm",
-                prompt=PromptFields(
-                    system=f"You are {{ name }}, {faker.text(80)}",
-                    user=f"Analyse `{{ test_output }}`, {faker.text(40)}"
-                )
+                instructions=f"You are {{ name }}, {faker.text(80)}",
+                input=f"Analyse `{{ test_output }}`, {faker.text(40)}"
             )
         ],
         source=FileScope.LOCAL if not global_location else FileScope.GLOBAL,

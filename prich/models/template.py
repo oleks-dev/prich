@@ -24,13 +24,6 @@ class VariableDefinition(BaseModel):
 
 # Template Pipeline Steps
 
-class PromptFields(BaseModel):
-    model_config = ConfigDict(extra='forbid')
-    system: Optional[str] = None
-    user: Optional[str] = None
-    prompt: Optional[str] = None
-
-
 class ValidateStepOutput(BaseModel):
     model_config = ConfigDict(extra='forbid')
     match: Optional[str] = None
@@ -88,8 +81,18 @@ class BaseStepModel(BaseOutputShapingModel):
 
 class LLMStep(BaseStepModel):
     type: Literal["llm"]
-    prompt: PromptFields
+
+    # overload provider mentioned in the config
     provider: Optional[str] = None
+
+    # prompt
+    instructions: Optional[str] = None
+    input: Optional[str] = None
+
+    # These fields are injected at runtime
+    rendered_instructions: Optional[str] = Field(default=None, exclude=True)
+    rendered_input: Optional[str] = Field(default=None, exclude=True)
+    rendered_prompt: Optional[str] = Field(default=None, exclude=True)
 
 
 class PythonStep(BaseStepModel):

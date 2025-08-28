@@ -11,39 +11,39 @@ providers:
     mode: "flat"
 provider_modes:
   - name: plain
-    prompt: '{{ prompt }}'
+    prompt: '{{ input }}'
   - name: flat
     prompt: |-
-      {% if system %}### System:
-      {{ system }}
+      {% if instructions %}### System:
+      {{ instructions }}
 
       {% endif %}### User:
-      {{ user }}
+      {{ input }}
 
       ### Assistant:
   - name: mistral-instruct
     prompt: |-
       <s>[INST]
-      {% if system %}{{ system }}
+      {% if instructions %}{{ instructions }}
 
-      {% endif %}{{ user }}
+      {% endif %}{{ input }}
       [/INST]
   - name: llama2-chat
     prompt: |-
       <s>[INST]
-      {% if system %}{{ system }}
+      {% if instructions %}{{ instructions }}
 
-      {% endif %}{{ user }}
+      {% endif %}{{ input }}
       [/INST]
   - name: anthropic
     prompt: |-
-      Human: {% if system %}{{ system }}
+      Human: {% if instructions %}{{ instructions }}
 
-      {% endif %}{{ user }}
+      {% endif %}{{ input }}
 
       Assistant:
   - name: chatml
-    prompt: '[{% if system %}{"role": "system", "content": "{{ system }}"},{% endif %}{"role": "user", "content": "{{ user }}"}]'
+    prompt: '[{% if instructions %}{"role": "system", "content": "{{ instructions }}"},{% endif %}{"role": "user", "content": "{{ input }}"}]'
 settings:
   editor: "vim"
   default_provider: "show_prompt"
@@ -61,14 +61,14 @@ providers:
     provider_type: echo
 provider_modes:
   - name: plain
-    prompt: '{{ prompt }}'
+    prompt: '{{ input }}'
   - name: flat
     prompt: |-
-      {% if system %}### System:
-      {{ system }}
+      {% if instructions %}### System:
+      {{ instructions }}
 
       {% endif %}### User:
-      {{ user }}
+      {{ input }}
 
       ### Assistant:
 settings: 
@@ -89,39 +89,39 @@ providers:
     provider_type: echo
 provider_modes:
   - name: plain
-    prompt: '{{ prompt }}'
+    prompt: '{{ input }}'
   - name: flat
     prompt: |-
-      {% if system %}### System:
-      {{ system }}
+      {% if instructions %}### System:
+      {{ instructions }}
 
       {% endif %}### User:
-      {{ user }}
+      {{ input }}
 
       ### Assistant:
   - name: mistral-instruct
     prompt: |-
       <s>[INST]
-      {% if system %}{{ system }}
+      {% if instructions %}{{ instructions }}
 
-      {% endif %}{{ user }}
+      {% endif %}{{ input }}
       [/INST]
   - name: llama2-chat
     prompt: |-
       <s>[INST]
-      {% if system %}{{ system }}
+      {% if instructions %}{{ instructions }}
 
-      {% endif %}{{ user }}
+      {% endif %}{{ input }}
       [/INST]
   - name: anthropic
     prompt: |-
-      Human: {% if system %}{{ system }}
+      Human: {% if instructions %}{{ instructions }}
 
-      {% endif %}{{ user }}
+      {% endif %}{{ input }}
 
       Assistant:
   - name: chatml
-    prompt: '[{% if system %}{"role": "system", "content": "{{ system }}"},{% endif %}{"role": "user", "content": "{{ user }}"}]'
+    prompt: '[{% if instructions %}{"role": "system", "content": "{{ instructions }}"},{% endif %}{"role": "user", "content": "{{ input }}"}]'
 settings: 
     default_provider: "show_prompt"
     editor: "vi"

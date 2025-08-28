@@ -50,7 +50,7 @@ def is_piped() -> bool:
 def console_print(message: str = "", end: str = "\n", markup = None, flush: bool = None):
     """ Print to console wrapper """
     if not is_quiet() and not is_only_final_output():
-        console.print(message, end=end, markup=markup)
+        console.print(message, end=end, markup=markup, crop=False, no_wrap=True)
 
 def is_valid_template_id(template_id) -> bool:
     """ Validate Name Pattern: lowercase letters, numbers, hyphen, optional underscores, and no other characters"""

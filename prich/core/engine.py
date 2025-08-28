@@ -5,7 +5,7 @@ from typing import Dict, List
 from click import ClickException
 from prich.constants import RESERVED_RUN_TEMPLATE_CLI_OPTIONS
 from prich.models.config import ConfigModel
-from prich.models.template import TemplateModel, PromptFields, PipelineStep, LLMStep, PythonStep, RenderStep, \
+from prich.models.template import TemplateModel, PipelineStep, LLMStep, PythonStep, RenderStep, \
     CommandStep, ValidateStepOutput
 from prich.core.utils import console_print, replace_env_vars, shorten_path, is_quiet, is_only_final_output, \
     is_verbose, get_prich_dir, is_just_filename
@@ -23,8 +23,6 @@ def expand_vars(args: List[str], internal_vars: Dict[str, str] = None):
     Returns:
         list: New list with variables expanded.
     """
-    import re
-
     # Default to empty dict if no internal variables provided
     internal_vars = internal_vars or {}
 
@@ -194,30 +192,23 @@ def render_template(template_text: str, variables: dict = Dict[str, str]) -> str
         raise click.ClickException(f"Render jinja error: {str(e)}")
     return rendered_text
 
-def render_prompt(config: ConfigModel, fields: PromptFields, variables: Dict[str, str], mode: str) -> str:
+def render_prompt(config: ConfigModel, llm_step: LLMStep, variables: Dict[str, str], mode: str):
     """ Render Prompt using provider mode prompt template (used for raw prompt construction) """
-    if not fields.prompt and not fields.user:
-        raise ClickException("There should be Prompt or User field at least.")
+    if not llm_step.input:
+        raise ClickException("There should be at least an 'input' field.")
     mode_prompt = [x for x in config.model_dump().get("provider_modes") if x.get("name")==mode]
     if len(mode_prompt) == 0:
-        raise click.ClickException(f"Prompt mode {mode} is not supported.")
-    prompt_fields = render_template(mode_prompt[0].get("prompt"), fields.model_dump())
-    prompt = render_template(prompt_fields, variables)
-    return prompt
+        raise click.ClickException(f"Prompt mode {mode} is not found in the config.")
+    prompt_fields = render_template(mode_prompt[0].get("prompt"), {"instructions": llm_step.instructions, "input": llm_step.input})
+    llm_step.rendered_prompt = render_template(prompt_fields, variables)
 
-# TODO: Cross check if the change here makes sense with system and prompt
-def render_prompt_fields(fields: PromptFields, variables: Dict[str, str]) -> PromptFields:
+def render_prompt_fields(llm_step: LLMStep, variables: Dict[str, str]):
     """ Render Prompt fields (used when provider supports prompt fields templates like system/user """
-    if not fields.prompt and not fields.user or (fields.prompt and fields.system):
-        raise ClickException("There should be Prompt or User or System and User fields.")
-    rendered_fields = PromptFields()
-    if fields.system:
-        rendered_fields.system = render_template(fields.system, variables)
-    if fields.user:
-        rendered_fields.user = render_template(fields.user, variables)
-    if fields.prompt:
-        rendered_fields.prompt = render_template(fields.prompt, variables)
-    return rendered_fields
+    if not llm_step.input:
+        raise ClickException("There should be at least an 'input' field.")
+    if llm_step.instructions:
+        llm_step.rendered_instructions = render_template(llm_step.instructions, variables)
+    llm_step.rendered_input = render_template(llm_step.input, variables)
 
 
 def get_variable_type(variable_type: str) -> click.types:
@@ -268,8 +259,8 @@ def create_dynamic_command(config, template: TemplateModel) -> click.Command:
 def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: ConfigModel, variables: dict) -> str:
     from prich.llm_providers.get_llm_provider import get_llm_provider
 
-    if not step.prompt and (not step.prompt.system and not step.prompt.user):
-        raise click.ClickException("Prompt template must define 'system' and/or 'user' fields")
+    if not step.input:
+        raise click.ClickException("llm step must define at least 'input' field.")
     # Use Provider from arg overload
     if provider:
         selected_provider_name = provider
@@ -284,13 +275,11 @@ def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: C
         selected_provider_name = config.settings.default_provider
     selected_provider = config.providers[selected_provider_name]
 
-    prompt = None
-    prompt_fields = None
     if selected_provider.mode:
-        prompt = render_prompt(config, step.prompt, variables, selected_provider.mode)
+        render_prompt(config, step, variables, selected_provider.mode)
     else:
-        prompt_fields = render_prompt_fields(step.prompt, variables)
-    if not prompt and not prompt_fields:
+        render_prompt_fields(step, variables)
+    if not step.rendered_prompt and not step.rendered_input:
         raise click.ClickException(f"Prompt is empty in step {step.name}.")
 
     llm_provider = get_llm_provider(selected_provider_name, selected_provider)
@@ -300,15 +289,15 @@ def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: C
 
     # prompt lines
     prompt_lines = []
-    if prompt:
-        prompt_lines.append(prompt)
+    if step.rendered_prompt:
+        prompt_lines.append(step.rendered_prompt)
     else:
-        if prompt_fields.system:
-            prompt_lines.append(prompt_fields.system)
-        if prompt_fields.user:
-            prompt_lines.append(prompt_fields.user)
-        if prompt_fields.prompt:
-            prompt_lines.append(prompt_fields.prompt)
+        if step.rendered_instructions:
+            prompt_lines.append(step.rendered_instructions)
+        if step.rendered_input:
+            prompt_lines.append(step.rendered_input)
+        if step.rendered_prompt:
+            prompt_lines.append(step.rendered_prompt)
     prompt_full = '\n'.join(prompt_lines)
 
     console_print(f"[dim]Sending prompt to LLM ([green]{llm_provider.name}[/green]), {len(prompt_full)} chars[/dim]")
@@ -322,15 +311,15 @@ def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: C
             console = Console()
             with console.status("Thinking..."):
                 response = llm_provider.send_prompt(
-                    prompt=prompt,
-                    system=prompt_fields.system if prompt_fields else None,
-                    user=prompt_fields.user if prompt_fields else None
+                    prompt=step.rendered_prompt,
+                    instructions=step.rendered_instructions,
+                    input_=step.rendered_input
                 )
         else:
             response = llm_provider.send_prompt(
-                prompt=prompt,
-                system=prompt_fields.system if prompt_fields else None,
-                user=prompt_fields.user if prompt_fields else None
+                prompt=step.rendered_prompt,
+                instructions=step.rendered_instructions,
+                input_=step.rendered_input
             )
         step_output = selected_provider.postprocess_output(response)
         if (is_verbose() or step.output_console) and not llm_provider.show_response and not is_quiet():
@@ -387,7 +376,7 @@ def run_template(template_id, **kwargs):
             elif type(step) == RenderStep:
                 if is_verbose():
                     console_print("[dim]Render template:[/dim]")
-                    console_print(step.template)
+                    console_print(step.template, markup=False)
                     console_print()
                     console_print("[dim]Result:[/dim]")
                 step_output = render_template(step.template, variables)
@@ -433,7 +422,7 @@ def run_template(template_id, **kwargs):
                     raise click.ClickException(f"Failed to save output to file {save_to_file}: {e}")
             # Print step output to console
             if ((step.output_console or is_verbose()) and (type(step) != LLMStep)) and not is_only_final_output() and not is_quiet():
-                console_print(step_output)
+                console_print(step_output, markup=False)
             # Validate
             if step.validate_:
                 if type(step.validate_) == ValidateStepOutput:
