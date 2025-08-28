@@ -6,7 +6,7 @@ from pathlib import Path
 
 from prich.models.file_scope import FileScope
 
-from prich.models.template import TemplateModel, VariableDefinition, PythonStep, LLMStep, PromptFields, CommandStep, \
+from prich.models.template import TemplateModel, VariableDefinition, PythonStep, LLMStep, CommandStep, \
     ValidateStepOutput
 from tests.generate.templates import generate_template, templates
 
@@ -77,10 +77,8 @@ def template(tmp_path):
             LLMStep(
                 name="llm step",
                 type="llm",
-                prompt=PromptFields(
-                    system="Hi {{ name }}",
-                    user="Analyse `{{ test_output }}`?"
-                ),
+                instructions="Hi {{ name }}",
+                input="Analyse `{{ test_output }}`?",
                 output_variable="llm_response",
                 output_file="test_llm_response.txt",
                 when="1==1",
@@ -140,10 +138,8 @@ def shared_venv_template(tmp_path):
             LLMStep(
                 name="LLM Step",
                 type="llm",
-                prompt=PromptFields(
-                    system="You are {{ name }}",
-                    user="Analyse `{{ test_output }}`"
-                )
+                instructions="You are {{ name }}",
+                input="Analyse `{{ test_output }}`"
             )
         ],
         source=FileScope.LOCAL,
@@ -163,9 +159,8 @@ variables: []
 steps:
   - name: "LLM step"
     type: llm
-    prompt:
-      system: "System prompt"
-      user: "User prompt"
+    instructions: "System prompt"
+    input: "User prompt"
 """
 
 INVALID_TEMPLATE_YAML = """
@@ -175,8 +170,7 @@ variables: []
 steps:
   - name: "LLM_step"
     type: llm
-    prompt: 
-      system: "Missing name"
+    instructions: "Missing name"
 """
 
 @pytest.fixture

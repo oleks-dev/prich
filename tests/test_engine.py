@@ -8,7 +8,7 @@ import pytest
 from pathlib import Path
 
 from prich.models.config import SecurityConfig
-from prich.models.template import PromptFields, ValidateStepOutput, PythonStep, CommandStep, VariableDefinition
+from prich.models.template import ValidateStepOutput, PythonStep, CommandStep, VariableDefinition, LLMStep
 from prich.core.loaders import load_config_model
 from prich.core.engine import render_prompt, render_template
 from tests.fixtures.config import basic_config, basic_config_with_prompts, CONFIG_YAML
@@ -20,100 +20,108 @@ variables = {
     "assistant": "System Assistant"
 }
 
-@pytest.mark.parametrize("provider_mode, prompt, expected", [
+@pytest.mark.parametrize("provider_mode, llm_step, expected", [
     ("chatml",
-     PromptFields(
-        system="User name is {{ name }}.",
-        user="Hello, {{ assistant }}"),
+     LLMStep(type="llm", name="test",
+             instructions="User name is {{ name }}.",
+             input="Hello, {{ assistant }}"),
      f"""[{{"role": "system", "content": "User name is {variables['name']}."}},{{"role": "user", "content": "Hello, {variables['assistant']}"}}]"""),
 
     ("chatml",
-     PromptFields(
-        system="User name is {{ name }}.",
-        user="Hello, {{ assistant }}",
-        prompt="Ignored prompt"),
+     LLMStep(type="llm", name="test",
+             instructions="User name is {{ name }}.",
+             input="Hello, {{ assistant }}",
+             # TODO: check (was prompt)
+             # prompt="Ignored prompt"
+             ),
      f"""[{{"role": "system", "content": "User name is {variables['name']}."}},{{"role": "user", "content": "Hello, {variables['assistant']}"}}]"""),
 
     ("chatml",
-     PromptFields(
-        user="Hello, {{ assistant }}"),
+     LLMStep(type="llm", name="test",
+             input="Hello, {{ assistant }}"),
      f"""[{{"role": "user", "content": "Hello, {variables['assistant']}"}}]"""),
 
     ("flat",
-     PromptFields(
-         user="Hello, {{ assistant }}"),
+     LLMStep(type="llm", name="test",
+             input="Hello, {{ assistant }}"),
      f"### User:\nHello, {variables['assistant']}\n\n### Assistant:"
      ),
 
     ("flat",
-     PromptFields(
-        system="User name is {{ name }}.",
-        user="Hello, {{ assistant }}"),
+     LLMStep(type="llm", name="test",
+             instructions="User name is {{ name }}.",
+             input="Hello, {{ assistant }}"),
      f"### System:\nUser name is {variables['name']}.\n\n### User:\nHello, {variables['assistant']}\n\n### Assistant:"
      ),
 
     ("flat",
-     PromptFields(
-         user="Hello, {{ assistant }}"),
+     LLMStep(type="llm", name="test",
+             input="Hello, {{ assistant }}"),
      f"### User:\nHello, {variables['assistant']}\n\n### Assistant:"
      ),
 
     ("plain",
-     PromptFields(
-         prompt="Hello, {{ assistant }}"),
+     LLMStep(type="llm", name="test",
+             # TODO: check (was prompt)
+             input="Hello, {{ assistant }}"),
      f"Hello, {variables['assistant']}"
      ),
 
     ("mistral-instruct",
-     PromptFields(
-         system="User name is {{ name }}.",
-         user="Hello, {{ assistant }}"),
+     LLMStep(type="llm", name="test",
+             instructions="User name is {{ name }}.",
+             input="Hello, {{ assistant }}"),
      f"<s>[INST]\nUser name is {variables['name']}.\n\nHello, {variables['assistant']}\n[/INST]"
      ),
 
     ("mistral-instruct",
-     PromptFields(
-         user="Hello, {{ assistant }}"),
+     LLMStep(type="llm", name="test",
+             input="Hello, {{ assistant }}"),
      f"<s>[INST]\nHello, {variables['assistant']}\n[/INST]"
      ),
 
     ("anthropic",
-     PromptFields(
-         system="User name is {{ name }}.",
-         user="Hello, {{ assistant }}"),
+     LLMStep(type="llm", name="test",
+             instructions="User name is {{ name }}.",
+             input="Hello, {{ assistant }}"),
      f"Human: User name is {variables['name']}.\n\nHello, {variables['assistant']}\n\nAssistant:"
      ),
 
     ("anthropic",
-     PromptFields(
-         user="Hello, {{ assistant }}"),
+     LLMStep(type="llm", name="test",
+             input="Hello, {{ assistant }}"),
      f"Human: Hello, {variables['assistant']}\n\nAssistant:"
      ),
 
 ])
-def test_render_prompt(provider_mode, prompt, expected, basic_config_with_prompts):
-    actual = render_prompt(basic_config_with_prompts, prompt, variables=variables, mode=provider_mode)
-    assert actual == expected
+def test_render_prompt(provider_mode, llm_step, expected, basic_config_with_prompts):
+    render_prompt(basic_config_with_prompts, llm_step, variables=variables, mode=provider_mode)
+    assert llm_step.rendered_prompt == expected
 
 @pytest.mark.parametrize("chat_mode, prompt", [
     ("chatml",
-     PromptFields(system="User name is {{ name }}"),
+     LLMStep(type="llm", name="test",
+             instructions="User name is {{ name }}"),
      ),
 
     ("flat",
-     PromptFields(system="User name is {{ name }}"),
+     LLMStep(type="llm", name="test",
+             instructions="User name is {{ name }}"),
      ),
 
     ("plain",
-     PromptFields(system="User name is {{ name }}"),
+     LLMStep(type="llm", name="test",
+             instructions="User name is {{ name }}"),
      ),
 
     ("mistral-instruct",
-     PromptFields(system="User name is {{ name }}"),
+     LLMStep(type="llm", name="test",
+             instructions="User name is {{ name }}"),
      ),
 
     ("anthropic",
-     PromptFields(system="User name is {{ name }}"),
+     LLMStep(type="llm", name="test",
+             instructions="User name is {{ name }}"),
      )
 
 ])
@@ -139,18 +147,23 @@ def test_render_template_prompt_basic():
         config_path.write_text(CONFIG_YAML)
         config_model, _ = load_config_model(config_path)
 
-    fields = PromptFields(system="Hello {{ name }}", user="Your input is {{ value }}")
+    llm_step = LLMStep(type="llm", name="test",
+                     instructions="Hello {{ name }}",
+                     input="Your input is {{ value }}"
+    )
     variables = {"name": "Test", "value": "XYZ"}
-    rendered = render_prompt(config_model, fields, variables, mode="flat")
-    assert "Hello Test" in rendered
-    assert "Your input is XYZ" in rendered
+    render_prompt(config_model, llm_step, variables, mode="flat")
+    assert "Hello Test" in llm_step.rendered_prompt
+    assert "Your input is XYZ" in llm_step.rendered_prompt
 
 
 get_expand_vars_CASES = [
     {"id": "nested_vars_should_not_work",
      "args": ["--file={{{{HOME}}_DIR}}", "{{{{HOME}}}}"],
      "internal_vars": {"HOME_DIR": "./home/", "HOME": "home"},
-     "expected_expanded_args": ["--file={{{{HOME}}_DIR}}", "{{{{HOME}}}}"]},
+     "expected_exception": click.ClickException,
+     "expected_exception_message": "Render jinja error"
+     },
     {"id": "skip_non_str_var",
      "args": [Path("./home"), "--file={{HOME_DIR}}"],
      "internal_vars": {"HOME_DIR": "./home/"},
@@ -439,16 +452,43 @@ def test_render_prompt_fields():
     from prich.core.engine import render_prompt_fields
 
     with pytest.raises(click.ClickException) as e:
-        render_prompt_fields(PromptFields(system="{{ system }}"), {"system": "system"})
-    assert "There should be Prompt or User or System and User fields." in str(e.value)
+        render_prompt_fields(
+            LLMStep(type="llm", name="test",
+                    instructions="{{ system }}"
+            ),
+            {"system": "system"}
+        )
+    assert "There should be at least an 'input' field." in str(e.value)
 
-    with pytest.raises(click.ClickException) as e:
-        render_prompt_fields(PromptFields(system="{{ system }}", prompt="{{ prompt }}"), {"system": "system", "prompt": "prompt"})
-    assert "There should be Prompt or User or System and User fields." in str(e.value)
+    # with pytest.raises(click.ClickException) as e:
+    #     render_prompt_fields(
+    #         LLMStep(type="llm", name="test",
+    #             instructions="{{ system }}",
+    #             # TODO: was prompt
+    #             input="{{ prompt }}"
+    #         ),
+    #         {"system": "system", "prompt": "prompt"})
+    # assert "There should be Prompt or User or System and User fields." in str(e.value)
 
-    assert render_prompt_fields(PromptFields(system="{{ system }}", user="{{ user }}"), {"system": "system", "user": "user"}) == PromptFields(system="system", user="user")
-    assert render_prompt_fields(PromptFields(user="{{ user }}"), {"user": "user"}) == PromptFields(user="user")
-    assert render_prompt_fields(PromptFields(prompt="{{ prompt }}"), {"prompt": "prompt"}) == PromptFields(prompt="prompt")
+    llm_step = LLMStep(type="llm", name="test",
+                       instructions="{{ system }}",
+                       input="{{ user }}")
+    render_prompt_fields(llm_step, {"system": "system", "user": "user"})
+    assert llm_step.rendered_instructions == "system"
+    assert llm_step.rendered_input == "user"
+    assert llm_step.rendered_prompt is None
+
+    llm_step = LLMStep(type="llm", name="test",
+                       input="{{ user }}")
+    render_prompt_fields(llm_step, {"user": "user"})
+    assert llm_step.rendered_instructions is None
+    assert llm_step.rendered_input == "user"
+    assert llm_step.rendered_prompt is None
+
+    # llm_step = LLMStep(type="llm", name="test",
+    #                    prompt="{{ prompt }}")
+    # render_prompt_fields(llm_step, {"prompt": "prompt"})
+    # assert llm_step.rendered_input == "prompt"
 
 def test_get_variable_type():
     from prich.core.engine import get_variable_type

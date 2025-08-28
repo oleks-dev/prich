@@ -45,7 +45,7 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
                 f"Install it with: `ollama pull {self.provider.model}`"
             )
 
-    def send_prompt(self, prompt: str = None, system: str = None, user: str = None) -> str:
+    def send_prompt(self, prompt: str = None, instructions: str = None, input_: str = None) -> str:
         self._ensure_client()
         text = []
         try:
@@ -53,14 +53,14 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
                 if type(prompt) != str:
                     prompt = json.dumps(prompt)
             else:
-                prompt = user
+                prompt = input_
             payload = {
                 "model": self.provider.model,
                 "prompt": prompt,
                 "options": self.provider.options or {}
             }
-            if system:
-                payload['system'] = system
+            if instructions:
+                payload['system'] = instructions
             if not is_only_final_output() and not is_quiet() and self.provider.stream is not None:
                 payload["stream"] = self.provider.stream
             else:

@@ -41,15 +41,14 @@ Each step defines an action for the template pipeline workflow executed in order
     ```yaml
       - name: "Ask to explain code"
         type: llm
-        prompt:
-          system: |
-            Assistant is a senior engineer who provides detailed code explanation.
-          user: |
-            Explain what this{% if lang %} {{ lang }}{% endif %} code does:
-            File: {{ file }}
-            ```{% if lang %}{{ lang.lower() }}{% endif %}
-            {{ file | include_file }}
-            ```
+        instructions: |
+          Assistant is a senior engineer who provides detailed code explanation.
+        input: |
+          Explain what this{% if lang %} {{ lang }}{% endif %} code does:
+          File: {{ file }}
+          ```{% if lang %}{{ lang.lower() }}{% endif %}
+          {{ file | include_file }}
+          ```
     ```
 
 * `python` - execute python script from the templates folder using shared or isolated python venv
@@ -99,15 +98,14 @@ tags: ["code"]
 steps:
   - name: "Ask to explain code"
     type: llm
-    prompt:
-      system: |
-        Assistant is a senior engineer who provides detailed code explanation.
-      user: |
-        Explain what this{% if lang %} {{ lang }}{% endif %} code does:
-        File: {{ file }}
-        ```{% if lang %}{{ lang.lower() }}{% endif %}
-        {{ file | include_file }}
-        ```
+    instructions: |
+      Assistant is a senior engineer who provides detailed code explanation.
+    input: |
+      Explain what this{% if lang %} {{ lang }}{% endif %} code does:
+      File: {{ file }}
+      ```{% if lang %}{{ lang.lower() }}{% endif %}
+      {{ file | include_file }}
+      ```
 usage_examples:
   - "explain-code --file mycode.py"
   - "explain-code --file ./mycode.py --lang python"

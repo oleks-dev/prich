@@ -6,7 +6,7 @@ from click.testing import CliRunner
 from prich.cli.config import list_providers, show_config, edit_config
 from prich.core.engine import run_template
 from prich.core.state import _loaded_templates
-from prich.models.template import TemplateModel, PromptFields, VariableDefinition, PythonStep, CommandStep, LLMStep, \
+from prich.models.template import TemplateModel, VariableDefinition, PythonStep, CommandStep, LLMStep, \
     RenderStep, ValidateStepOutput
 from tests.fixtures.config import basic_config
 from tests.fixtures.paths import mock_paths
@@ -23,10 +23,8 @@ get_run_template_CASES = [
                 LLMStep(
                     name="Ask",
                     type="llm",
-                    prompt=PromptFields(
-                        system="system",
-                        user="user"
-                    )
+                    instructions="system",
+                    input="user"
                 )
             ]
         # ),
@@ -66,10 +64,8 @@ get_run_template_CASES = [
                 LLMStep(
                     name="Ask",
                     type="llm",
-                    prompt=PromptFields(
-                        system="system",
-                        user="user"
-                    ),
+                    instructions="system",
+                    input="user",
                     output_file="test_llm_response.txt"
                 ),
             ],
@@ -200,10 +196,8 @@ get_run_template_CASES = [
                 LLMStep(
                     name="Ask",
                     type="llm",
-                    prompt=PromptFields(
-                        system="system: test_var1='{{ test_var1 }}'; test_var2='{{ test_var2 }}'; test_var3='{{ test_var3 }}'; test_var4='{{ test_var4 }}'; test_var5='{% for test_var5_item in test_var5 %}{{ test_var5_item }}{% endfor %}'; test_var6='{% for test_var6_item in test_var6 %}{{ test_var6_item }}{% endfor %}';",
-                        user="user: test_var1='{{ test_var1 }}'; test_var2='{{ test_var2 }}'; test_var3='{{ test_var3 }}'; test_var4='{{ test_var4 }}'; test_var5='{% for test_var5_item in test_var5 %}{{ test_var5_item }}{% endfor %}'; test_var6='{% for test_var6_item in test_var6 %}{{ test_var6_item }}{% endfor %}';",
-                    )
+                    instructions="system: test_var1='{{ test_var1 }}'; test_var2='{{ test_var2 }}'; test_var3='{{ test_var3 }}'; test_var4='{{ test_var4 }}'; test_var5='{% for test_var5_item in test_var5 %}{{ test_var5_item }}{% endfor %}'; test_var6='{% for test_var6_item in test_var6 %}{{ test_var6_item }}{% endfor %}';",
+                    input="user: test_var1='{{ test_var1 }}'; test_var2='{{ test_var2 }}'; test_var3='{{ test_var3 }}'; test_var4='{{ test_var4 }}'; test_var5='{% for test_var5_item in test_var5 %}{{ test_var5_item }}{% endfor %}'; test_var6='{% for test_var6_item in test_var6 %}{{ test_var6_item }}{% endfor %}';",
                 )
             ],
             "variables": [
@@ -610,9 +604,7 @@ def test_invalid_template_missing_required_variable(monkeypatch, basic_config, t
           LLMStep(
               name="llm_step",
               type="llm",
-              prompt=PromptFields(
-                  user="Hello {{ must_be_set }}"
-              )
+              input="Hello {{ must_be_set }}"
           )
         ],
         source="local",

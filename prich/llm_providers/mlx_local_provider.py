@@ -47,8 +47,8 @@ class MLXLocalProvider(LLMProvider, LazyOptionalProvider):
 
         self.client = True
 
-    def send_prompt(self, prompt: str = None, system: str = None, user: str = None) -> str:
-        if system or user:
+    def send_prompt(self, prompt: str = None, instructions: str = None, input_: str = None) -> str:
+        if instructions or input_:
             raise click.ClickException("mxl_local provider requires provider mode")
         self._ensure_client()
         text = []

@@ -57,11 +57,11 @@ def test_stdin_consumer(case):
         user = case["prompt"].get("user")
     if case.get("expected_exception"):
         with pytest.raises(case.get("expected_exception")) as e:
-            stdin_consumer.send_prompt(prompt=prompt, system=system, user=user)
+            stdin_consumer.send_prompt(prompt=prompt, instructions=system, input_=user)
         if case.get("expected_exception_messages"):
             for message in case.get("expected_exception_messages"):
                 assert message in str(e)
     else:
-        result = stdin_consumer.send_prompt(prompt=prompt, system=system, user=user)
+        result = stdin_consumer.send_prompt(prompt=prompt, instructions=system, input_=user)
         if case.get("expected_output"):
             assert case.get("expected_output") == result
