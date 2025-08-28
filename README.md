@@ -273,15 +273,14 @@ tags: ["code"]
 steps:
   - name: "Ask to explain code"
     type: llm
-    prompt:
-      system: |
-        Assistant is a senior engineer who provides detailed code explanation.
-      user: |
-        Explain what this{% if lang %} {{ lang }}{% endif %} code does:
-        File: {{ file }}
-        ```{% if lang %}{{ lang.lower() }}{% endif %}
-        {{ file | include_file }}
-        ```
+    instructions: |
+      Assistant is a senior engineer who provides detailed code explanation.
+    input: |
+      Explain what this{% if lang %} {{ lang }}{% endif %} code does:
+      File: {{ file }}
+      ```{% if lang %}{{ lang.lower() }}{% endif %}
+      {{ file | include_file }}
+      ```
 usage_examples:
   - "explain-code --file mycode.py"
   - "explain-code --file ./mycode.py --lang python"
@@ -346,14 +345,13 @@ steps:
 
   - name: "Ask to summarize the diff"
     type: llm
-    prompt:
-      system: |
-        Assistant is a senior engineer who makes a git diff summarization{% if review %} and detailed review{% endif %} in natural language.
-      user: |
-        Summarize {% if review %} and review {% endif %}the following:
-        ```text
-        {{ git_diff }}
-        ```
+    instructions: |
+      Assistant is a senior engineer who makes a git diff summarization{% if review %} and detailed review{% endif %} in natural language.
+    input: |
+      Summarize {% if review %} and review {% endif %}the following:
+      ```text
+      {{ git_diff }}
+      ```
 usage_examples:
   - "summarize-git-diff"
   - "summarize-git-diff --review"
@@ -555,66 +553,21 @@ settings:
 
 ### Provider Mode `mode`  
 Use to specify how the prompt would be constructed for the LLM, you can modify or add your own as needed in the `config.yaml` - `provider_modes`.
-There are three fields available that are used in the template prompts. It could be `prompt` for plain string or `system` and `user` for instructions and query, or just `user` for a query.
+There are three fields available that are used in the template prompts. It could be `instructions` for instructions and `input` for user query, or just `input`.
 
 * `plain`
 ```text
-{prompt}
+{{ input }}
 ```
 * `flat`
 ```text
 ### System:
-{system}
+{{ instructions }}
 
 ### User:
-{user}
+{{ input }}
 
 ### Assistant:
-```
-```text
-### User:
-{user}
-
-### Assistant:
-```
-* `chatml`
-```json
-[
-  {"role": "system", "content": system},
-  {"role": "user", "content": user}
-]
-```
-```json
-[
-  {"role": "user", "content": user}
-]
-```
-
-* `mistral-instruct` and `llama2-chat`
-```text
-<s>[INST]
-{system}
-
-{user}
-[/INST]
-```
-```text
-<s>[INST]
-{user}
-[/INST]
-```
-* `anthropic`
-```text
-Human: {system}
-
-{user}
-
-Assistant:
-```
-```text
-Human: {user}
-
-Assistant:
 ```
 
 ## Contributing
