@@ -44,12 +44,12 @@ def init(global_init: bool, force: bool):
             )
         },
         provider_modes=[
-            ProviderModeModel(name="plain", prompt="{{ prompt }}"),
-            ProviderModeModel(name="flat", prompt="""{% if system %}### System:\n{{ system }}\n\n{% endif %}### User:\n{{ user }}\n\n### Assistant:"""),
-            ProviderModeModel(name="mistral-instruct", prompt="""<s>[INST]\n{% if system %}{{ system }}\n\n{% endif %}{{ user }}\n[/INST]"""),
-            ProviderModeModel(name="llama2-chat", prompt="""<s>[INST]\n{% if system %}{{ system }}\n\n{% endif %}{{ user }}\n[/INST]"""),
-            ProviderModeModel(name="anthropic", prompt="""Human: {% if system %}{{ system }}\n\n{% endif %}{{ user }}\n\nAssistant:"""),
-            ProviderModeModel(name="chatml", prompt="""[{% if system %}{"role": "system", "content": "{{ system }}" },{% endif %}{"role": "user", "content": "{{ user }}" }]""")
+            ProviderModeModel(name="plain", prompt="{{ input }}"),
+            ProviderModeModel(name="flat", prompt="""{% if instructions %}### System:\n{{ instructions }}\n\n{% endif %}### User:\n{{ input }}\n\n### Assistant:"""),
+            # ProviderModeModel(name="mistral-instruct", prompt="""<s>[INST]\n{% if instructions %}{{ instructions }}\n\n{% endif %}{{ input }}\n[/INST]"""),
+            # ProviderModeModel(name="llama2-chat", prompt="""<s>[INST]\n{% if instructions %}{{ instructions }}\n\n{% endif %}{{ input }}\n[/INST]"""),
+            # ProviderModeModel(name="anthropic", prompt="""Human: {% if instructions %}{{ instructions }}\n\n{% endif %}{{ input }}\n\nAssistant:"""),
+            # ProviderModeModel(name="chatml", prompt="""[{% if instructions %}{"role": "system", "content": "{{ instructions }}" },{% endif %}{"role": "user", "content": "{{ input }}" }]""")
         ]
     )
 
