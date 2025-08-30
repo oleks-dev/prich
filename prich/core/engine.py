@@ -201,7 +201,7 @@ def render_template(template_text: str, variables: dict = Dict[str, str]) -> str
     }
     variables["builtin"] = builtin
     try:
-        rendered_text = get_jinja_env("params", conditional_expression_only=True).from_string(template_text).render(**variables).strip()
+        rendered_text = get_jinja_env("params").from_string(template_text).render(**variables).strip()
     except Exception as e:
         raise click.ClickException(f"Render jinja error: {str(e)}")
     return rendered_text

@@ -44,7 +44,7 @@ def init(global_init: bool, force: bool):
             )
         },
         provider_modes=[
-            ProviderModeModel(name="plain", prompt="{{ input }}"),
+            ProviderModeModel(name="plain", prompt="{% if instructions %}{{ instructions }}\n{% endif %}{{ input }}"),
             ProviderModeModel(name="flat", prompt="""{% if instructions %}### System:\n{{ instructions }}\n\n{% endif %}### User:\n{{ input }}\n\n### Assistant:"""),
             # ProviderModeModel(name="mistral-instruct", prompt="""<s>[INST]\n{% if instructions %}{{ instructions }}\n\n{% endif %}{{ input }}\n[/INST]"""),
             # ProviderModeModel(name="llama2-chat", prompt="""<s>[INST]\n{% if instructions %}{{ instructions }}\n\n{% endif %}{{ input }}\n[/INST]"""),

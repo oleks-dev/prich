@@ -28,12 +28,12 @@
 - **Secure venv Management**: Default (`.prich/venv/`) and custom Python venvs (e.g., `.prich/templates/code_review/scripts/venv`) isolate dependencies.
 - **Simple CLI**: Commands like `prich run` and `prich install` streamline workflows.
 
-> **Supported LLMs**: Ollama API, OpenAI API, MLX LM, STDIN
+> **Supported LLMs**: Ollama API, OpenAI API, MLX LM, STDIN (different cli tools like q chat, mlx_lm.generate, etc.)
 
 ## Quick Start
-1. Install `prich` tool (see `Installation`)
+1. Install `prich` tool `pipx install git+https://github.com/oleks-dev/prich` (see `Installation`)
 2. Initialize config (use global for the start): `prich init --global`
-3. Create simple example template (`prich create <template_id>`): `prich create my-template`
+3. Create simple example template (`prich create <template_id> --global`): `prich create my-template -g`
 4. Run template (`prich run <template_id>`): `prich run my-template`
 > Note: By default prich will set up and use echo provider which just outputs the rendered template  
 > To use it with LLM see `Configure .prich/config.yaml` and follow it to add your LLM provider  
@@ -540,16 +540,32 @@ settings:
       slice_output_start: Optional[int] = None  # slice step output from character number
       slice_output_end: Optional[int] = None  # slice step output to character number
     ```
-  Example:
+  Examples:
+  - Amazon Q Chat CLI  
     ```yaml
       qchat:
         provider_type: stdin_consumer
-        mode: flat
+        mode: plain
         call: q
         args:
           - chat
           - --no-interactive
+        strip_output_prefix: "> "
     ```
+  - MLX LM Generate CLI
+    ```yaml
+      mlx-mistral-7b-cli:
+        provider_type: stdin_consumer
+        mode: plain
+        call: "mlx_lm.generate"
+        args:
+          - "--model"
+          - "/Users/guest/.cache/huggingface/hub/models--mlx-community--Mistral-7B-Instruct-v0.3-4bit/snapshots/a4b8f870474b0eb527f466a03fbc187830d271f5"
+          - "--prompt"
+          - "-"
+        output_regex: "^==========\\n((?:.|\\n)+)\\n\\=\\=\\=\\=\\=\\=\\=\\=\\=\\=(?:.|\\n)+$"
+    ```
+
 
 ### Provider Mode `mode`  
 Use to specify how the prompt would be constructed for the LLM, you can modify or add your own as needed in the `config.yaml` - `provider_modes`.
