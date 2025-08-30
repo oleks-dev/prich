@@ -358,7 +358,7 @@ def test_should_run_step(case):
             assert actual == case.get("expected_result")
 
 
-get_validate_sep_output_CASES = [
+get_validate_step_output_CASES = [
     {"id": "empty",
      "step_validation": None,
      "value": "",
@@ -385,14 +385,14 @@ get_validate_sep_output_CASES = [
      "expected_result": True,
      },
 ]
-@pytest.mark.parametrize("case", get_validate_sep_output_CASES, ids=[c["id"] for c in get_validate_sep_output_CASES])
-def test_validate_sep_output(case):
+@pytest.mark.parametrize("case", get_validate_step_output_CASES, ids=[c["id"] for c in get_validate_step_output_CASES])
+def test_validate_step_output(case):
     from prich.core.engine import validate_step_output
     if case.get("expected_exception"):
         with pytest.raises(case.get("expected_exception")):
-            validate_step_output(case.get("step_validation"), case.get("value", {}))
+            validate_step_output(case.get("step_validation"), case.get("value", {}), {})
     else:
-        actual = validate_step_output(case.get("step_validation"), case.get("value", {}))
+        actual = validate_step_output(case.get("step_validation"), case.get("value", {}), {})
         if case.get("expected_result") is not None:
             assert actual == case.get("expected_result")
 
@@ -404,7 +404,7 @@ get_run_command_step_CASES = [
      "expected_exception": click.ClickException,
      "expected_exception_message": "Python script not found: test/templates/test-template/scripts/test.py"
      },
-    {"id": "python_step_file_not_found",
+    {"id": "python_step_file_not_found_isolated_venv",
      "template": generate_template(template_id="test-template", isolated_venv=True),
      "step": PythonStep(name="test", type="python", call="test.py"),
      "mock_output": CompletedProcess(args=["python", "test.py"], returncode=0, stdout="hello"),
@@ -416,12 +416,14 @@ get_run_command_step_CASES = [
      "step": CommandStep(name="test", type="command", call="echo", args=["hello"]),
      "mock_output": CompletedProcess(args=["echo", "hello"], returncode=0, stdout="hello"),
      "expected_result": "hello",
+     "expected_exitcode": 0,
      },
     {"id": "command_step_exitcode1",
      "template": generate_template(template_id="test-template"),
      "step": CommandStep(name="test", type="command", call="echo", args=["hello"]),
      "mock_output": CompletedProcess(args=["echo", "hello"], returncode=1, stdout="hello"),
      "expected_result": "hello",
+     "expected_exitcode": 1,
      },
     {"id": "command_step_cmd_not_exist",
      "template": generate_template(template_id="test-template"),
@@ -435,7 +437,7 @@ def test_run_command_step(case, monkeypatch):
     from prich.core.engine import run_command_step
 
     if case.get("mock_output"):
-        monkeypatch.setattr("subprocess.run", lambda cmd, capture_output, text, check: case.get("mock_output", None))
+        monkeypatch.setattr("subprocess.run", lambda cmd, stdout, stderr, text, check: case.get("mock_output", None))
 
     if case.get("expected_exception"):
         with pytest.raises(case.get("expected_exception")) as e:
@@ -443,9 +445,11 @@ def test_run_command_step(case, monkeypatch):
         if case.get("expected_exception_message"):
             assert str(e.value) in case.get("expected_exception_message")
     else:
-        actual = run_command_step(case.get("template"), case.get("step"), case.get("variables", {}))
+        actual, actual_exitcode = run_command_step(case.get("template"), case.get("step"), case.get("variables", {}))
         if case.get("expected_result") is not None:
             assert actual == case.get("expected_result")
+        if case.get("expected_exitcode") is not None:
+            assert actual_exitcode == case.get("expected_exitcode")
 
 
 def test_render_prompt_fields():

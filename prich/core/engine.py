@@ -1,6 +1,6 @@
 import click
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from click import ClickException
 from prich.constants import RESERVED_RUN_TEMPLATE_CLI_OPTIONS
@@ -12,7 +12,7 @@ from prich.core.utils import console_print, replace_env_vars, shorten_path, is_q
 
 jinja_env = {}
 
-def expand_vars(args: List[str], internal_vars: Dict[str, str] = None):
+def expand_vars(args: List[str], internal_vars: Dict[str, str] = None) -> list:
     """
     Expand internal variables ({{VAR}}, {{ VAR }}) and environment variables ($VAR or ${VAR}) in a list of arguments.
     
@@ -34,7 +34,7 @@ def expand_vars(args: List[str], internal_vars: Dict[str, str] = None):
             # Then expand environment variables ($VAR or ${VAR})
             arg = replace_env_vars(arg)
         expanded_args.append(arg)
-    
+
     return expanded_args
 
 
@@ -90,7 +90,7 @@ def get_jinja_env(name: str, conditional_expression_only: bool = False):
         jinja_env[env_name] = env
     return jinja_env[env_name]
 
-def should_run_step(when_expr: str, variables: dict) -> bool:
+def should_run_step(when_expr: str, variables: Dict[str, any]) -> bool:
     try:
         if when_expr in [None, ""]:
             return True
@@ -102,16 +102,29 @@ def should_run_step(when_expr: str, variables: dict) -> bool:
     except Exception as e:
         raise ValueError(f"Invalid `when` expression: {when_expr} - {str(e)}")
 
-def validate_step_output(validate_step: ValidateStepOutput, value: str)-> bool:
+def validate_step_output(validate_step: ValidateStepOutput, value: str, variables: Dict[str, any]) -> bool:
     import re
-    matched = re.search(validate_step.match, value) if validate_step and validate_step.match else True
-    not_matched = not re.search(validate_step.not_match, value) if validate_step and validate_step.not_match else True
+    matched = re.search(
+        expand_vars([validate_step.match], variables)[0],
+        value
+    ) if validate_step and validate_step.match else True
+    not_matched = not re.search(
+        expand_vars([validate_step.not_match], variables)[0],
+        value
+    ) if validate_step and validate_step.not_match else True
 
     if matched and not_matched:
         return True  # validation passed
     return False
 
-def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, variables: Dict[str, str]) -> str:
+def validate_step_exit_code(validate_step: ValidateStepOutput, exit_code: int, variables: Dict[str, any]) -> bool:
+    if validate_step.match_exit_code is not None and str(exit_code) != str(expand_vars([validate_step.match_exit_code], variables)[0]):
+        return False
+    if validate_step.not_match_exit_code is not None and str(exit_code) == str(expand_vars([validate_step.not_match_exit_code], variables)[0]):
+        return False
+    return True
+
+def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, variables: Dict[str, any]) -> Tuple[str, int]:
     import subprocess
     from rich.console import Console
     console = Console()
@@ -158,12 +171,10 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
         console_print(f"[dim]Execute {step.type} [green]{' '.join(cmd)}[/green][/dim]")
         if not is_quiet() and not is_only_final_output():
             with console.status("Processing..."):
-                result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+                result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
         else:
-            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-        return result.stdout
-    except subprocess.CalledProcessError as e:
-        raise click.ClickException(f"Execution error in {method}: {e.stderr}")
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+        return result.stdout, result.returncode
     except Exception as e:
         raise click.ClickException(f"Unexpected error in {method}: {str(e)}")
 
@@ -349,6 +360,7 @@ def run_template(template_id, **kwargs):
             raise click.ClickException(f"Missing required variable {var.name}")
 
     if template.steps:
+        step_return_exit_code = None  # Used only for subprocess execute commands
         step_idx = 0
         last_output = ""
         for step in template.steps:
@@ -372,7 +384,7 @@ def run_template(template_id, **kwargs):
 
             output_var = step.output_variable
             if type(step) in [PythonStep, CommandStep]:
-                step_output = run_command_step(template, step, variables)
+                step_output, step_return_exit_code = run_command_step(template, step, variables)
             elif type(step) == RenderStep:
                 if is_verbose():
                     console_print("[dim]Render template:[/dim]")
@@ -430,7 +442,14 @@ def run_template(template_id, **kwargs):
                 idx = 0
                 for validate in step.validate_:
                     idx += 1
-                    validated = validate_step_output(validate, step_output)
+                    if type(step) in [PythonStep, CommandStep] and (validate.match_exit_code is not None or validate.not_match_exit_code is not None):
+                        validated = validate_step_exit_code(validate, step_return_exit_code, variables)
+                        if validated:
+                            validated = validate_step_output(validate, step_output, variables)
+                    elif validate.match_exit_code is not None or validate.not_match_exit_code is not None:
+                        raise click.ClickException("Step validation using 'match_exitcode' and/or 'not_match_exitcode' supported only in 'python' and 'command' step types.")
+                    else:
+                        validated = validate_step_output(validate, step_output, variables)
                     if not validated:
                         action = validate.on_fail
                         failure_msg = validate.message or "Validation failed for step output"

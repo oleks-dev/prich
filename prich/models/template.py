@@ -26,8 +26,16 @@ class VariableDefinition(BaseModel):
 
 class ValidateStepOutput(BaseModel):
     model_config = ConfigDict(extra='forbid')
+
+    # Output validations
     match: Optional[str] = None
     not_match: Optional[str] = None
+
+    # Validations for command executions
+    match_exit_code: Optional[str | int] = None
+    not_match_exit_code: Optional[str | int] = None
+
+    # Action
     on_fail: Optional[Literal["error", "warn", "skip", "continue"]] = "error"
     message: Optional[str] = None
 
