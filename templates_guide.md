@@ -78,9 +78,11 @@ Each step defines an action for the template pipeline workflow executed in order
     ```
 
 **Step `validate`**:  
-Could be dict or a list of validations
-* `match`: regex to match output
-* `not_match`: regex not match output
+Could be a dict or list of validations
+* `match`: regex to match output (jinja vars could be used)
+* `not_match`: regex not match output (jinja vars could be used)
+* `match_exit_code`: (for execution commands) match exit code number (jinja vars could be used when supplied as string)
+* `not_match_exit_code`: (for execution commands) not match exit code number (jinja vars could be used when supplied as string)
 * `on_fail`: `error`/`warn`/`skip`/`continue` default is `error`
 * `message`: text message to show on failure
 
