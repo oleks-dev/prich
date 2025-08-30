@@ -26,9 +26,11 @@ class STDINConsumerProvider(LLMProvider):
                 input=prompt,
                 capture_output=True,
                 text=True,
-                check=True
+                check=False
             )
         except Exception as e:
             raise click.ClickException(f"STDIN consumer provider error: {str(e)}")
+        if response.returncode != 0:
+            raise click.ClickException(f"stdout:\n{response.stdout}\n\nstderr:\n{response.stderr}\n\nError during STDIN consumer provider execution, exit code {response.returncode}.")
         clean_output = self.clear_ansi(response.stdout)
         return clean_output

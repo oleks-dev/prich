@@ -254,7 +254,7 @@ get_run_template_CASES = [
       "expected_exception": click.ClickException,
       "expected_exception_message": "No steps found in template test-tpl.",
      },
-    {"id": "run_cmd_and_validate_error", "template":
+    {"id": "run_python_and_validate_error", "template":
         # TemplateModel(
         {
             "id": "test-tpl",
@@ -268,6 +268,132 @@ get_run_template_CASES = [
                     validate=ValidateStepOutput(
                         match="^est",
                         not_match="test",
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     "expected_exception": click.ClickException,
+     "expected_exception_message": "Validation failed for step output",
+     },
+    {"id": "run_cmd_and_validate_error_and_exitcode", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                CommandStep(
+                    name="Preprocess python",
+                    type="command",
+                    call="ls",
+                    args=["------ttgtgtg"],
+                    validate=ValidateStepOutput(
+                        not_match="test",
+                        match_exit_code=1,
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     },
+    {"id": "run_cmd_and_validate_error_and_exitcode_str", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                CommandStep(
+                    name="Preprocess python",
+                    type="command",
+                    call="ls",
+                    args=["------ttgtgtg"],
+                    validate=ValidateStepOutput(
+                        not_match="test",
+                        match_exit_code="{{test_error_code}}",
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "variables": [
+                VariableDefinition(
+                    name="test_error_code",
+                    type="int",
+                    default=1
+                )
+            ],
+            "folder": "."
+        # ),
+        },
+     },
+    {"id": "run_cmd_and_validate_error_and_fail_exitcode", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                CommandStep(
+                    name="Preprocess python",
+                    type="command",
+                    call="echo1",
+                    args=["test"],
+                    validate=ValidateStepOutput(
+                        match="No such file or directory: 'echo1'",
+                        not_match="test",
+                        match_exit_code=1,
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     "expected_exception": click.ClickException,
+     "expected_exception_message": "No such file or directory: 'echo1'",
+     },
+    {"id": "run_cmd_and_validate_fail_exitcode_format", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                CommandStep(
+                    name="Preprocess python",
+                    type="command",
+                    call="echo",
+                    args=["test"],
+                    validate=ValidateStepOutput(
+                        match="No such file or directory: 'echo1'",
+                        not_match="test",
+                        match_exit_code="hello",
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     "expected_exception": click.ClickException,
+     "expected_exception_message": "invalid literal for int()",
+     },
+    {"id": "run_cmd_and_validate_error_and_exitcode", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["test"],
+                    validate=ValidateStepOutput(
+                        match="^est",
+                        not_match="test",
+                        match_exit_code=0,
                         on_fail="error"
                     )
                 ),
