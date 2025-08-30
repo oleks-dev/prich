@@ -354,6 +354,31 @@ get_run_template_CASES = [
      "expected_exception": click.ClickException,
      "expected_exception_message": "No such file or directory: 'echo1'",
      },
+    {"id": "run_cmd_and_validate_fail_exitcode_format", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                CommandStep(
+                    name="Preprocess python",
+                    type="command",
+                    call="echo",
+                    args=["test"],
+                    validate=ValidateStepOutput(
+                        match="No such file or directory: 'echo1'",
+                        not_match="test",
+                        match_exit_code="hello",
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     "expected_exception": click.ClickException,
+     "expected_exception_message": "invalid literal for int()",
+     },
     {"id": "run_cmd_and_validate_error_and_exitcode", "template":
         # TemplateModel(
         {

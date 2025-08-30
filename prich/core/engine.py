@@ -118,10 +118,13 @@ def validate_step_output(validate_step: ValidateStepOutput, value: str, variable
     return False
 
 def validate_step_exit_code(validate_step: ValidateStepOutput, exit_code: int, variables: Dict[str, any]) -> bool:
-    if validate_step.match_exit_code is not None and str(exit_code) != str(expand_vars([validate_step.match_exit_code], variables)[0]):
-        return False
-    if validate_step.not_match_exit_code is not None and str(exit_code) == str(expand_vars([validate_step.not_match_exit_code], variables)[0]):
-        return False
+    try:
+        if validate_step.match_exit_code is not None and exit_code != int(expand_vars([validate_step.match_exit_code], variables)[0]):
+            return False
+        if validate_step.not_match_exit_code is not None and exit_code == int(expand_vars([validate_step.not_match_exit_code], variables)[0]):
+            return False
+    except Exception as e:
+        raise click.ClickException(f"Failed to validate step exit code: {str(e)}")
     return True
 
 def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, variables: Dict[str, any]) -> Tuple[str, int]:
