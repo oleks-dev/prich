@@ -23,6 +23,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          pip install .
           pip install mkdocs
           pip install mkdocs-material
           pip install mkdocs-click
