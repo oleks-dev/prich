@@ -19,7 +19,9 @@
 - **Simple and Hackable**: Intuitive CLI and YAML configs make it easy to craft dynamic prompts, with support for Python, shell, or any scripting language.
 - **Portable**: Isolated virtual environments (default and custom venvs) ensure dependency safety and portability; or use standard commands like git, cat, etc.
 
-#### [See prich templates repository for examples](https://github.com/oleks-dev/prich-templates/blob/main/templates/README.md)
+#### [Documentation Site](https://oleks-dev.github.io/prich)  
+
+#### [See prich templates repository for examples](https://github.com/oleks-dev/prich-templates/blob/main/templates/README.md)  
 
 ## Key Features
 - **Modular Prompts**: Define prompts with Jinja2 templates and per-template YAML configs.
@@ -83,103 +85,12 @@ Overall, the changes are a significant improvement to the document, providing va
 ```
 
 ## Installation
-### **Set up prich**:
-    
-Until prich is published on PyPI, you can install it directly from GitHub:  
- 
-**Recommended: Use `pipx`**
-```bash
-pipx install git+https://github.com/oleks-dev/prich
-```
 
-> This installs prich in an isolated environment, ideal for CLI tools.  
-> Make sure pipx is installed (`pip install pipx && pipx ensurepath`).
-
-**Alternative: Use `uv`**
-```bash
-uv venv prich-env
-source prich-env/bin/activate
-uv pip install git+https://github.com/oleks-dev/prich
-```
-
-**Manual**
-```bash
-git clone https://github.com/oleks-dev/prich.git
-cd prich
-python -m venv .venv
-source .venv/bin/activate
-pip install .
-```
-
-**Help**  
-To display possible commands 
-```bash
-prich --help
-```
-
-### **Initialize prich**:
-**prich** uses nodejs-like home/local folder configurations for flexible usage of the configs and templates per project.  
-
-   - Local folder based
-       ```bash
-       prich init
-       ```
-       > Creates `.prich/` with a default preprocessing venv (`.prich/venv/`) and config file.  
-
-   - Global user folder based
-       ```bash
-       prich init -g
-       ```
-     
-       > Creates `~/.prich/` with a default preprocessing venv (`~/.prich/venv/`) and config file.
+[Install prich](docs/how-to/install.md)
 
 ## Install Templates
 
-There are several ways to install templates. You can install them from remote repository or from local zip archive or template folder.
-For local option download or clone a template package (e.g., csv_analysis_template/) as a folder or a zip file and install it:
-
-### Install template from remote GitHub Template Repository
-Templates are stored in this [github prich-templates repository](https://www.github.com/oleks-dev/prich-templates)
-
-- **List Available Remote Templates for Installation**
-
-    ```bash
-    prich list --remote
-    ```
-
-    ```bash
-    prich list --remote --tag code --tag review
-    ```
-
-- **Install Template from *prich-templates* Repository**
-
-    ```bash
-    prich install <template_id> --remote
-    ```
-
-    ```bash
-    prich install <template_id> --remote --global
-    ```
-
-
-### Install from a local template zip file:
-
-```bash
-prich install <template-zip-file>.zip
-```
-
-### Install from a local template folder:
-
-```bash
-prich install <template-folder>
-```
-
-```bash
-prich install ./code-review
-```
-
-This copies files, sets up venvs, and installs dependencies - if python is used there.
-
+[Install templates](docs/how-to/install-templates.md)
 
 ## Usage
 
@@ -256,9 +167,9 @@ Use shared templates to ensure consistent LLM outputs, whether for code reviews 
 Developers, data analysts, marketers, or support teams can use prich for their prompts, with templates tailored to each domain.
 
 
-## Template Creation Guide
+## Template Reference
 
-See [templates_guide.md](templates_guide.md)
+[Template content](docs/reference/template/content.md)
 
 ## Example Templates
 
