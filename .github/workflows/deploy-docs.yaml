@@ -26,6 +26,7 @@ jobs:
           pip install mkdocs
           pip install mkdocs-material
           pip install mkdocs-click
+          pip install mkdocstrings[python]
           # add any other plugins/extensions you use
 
       - name: Build and deploy
