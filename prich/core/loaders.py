@@ -1,6 +1,8 @@
+import os
+
 import click
 from pathlib import Path
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple, List, Iterable
 from prich.core.file_scope import classify_path
 from prich.core.state import _loaded_templates, _loaded_config, _loaded_config_paths
 from prich.core.utils import console_print, shorten_path, get_prich_dir
@@ -147,3 +149,41 @@ def get_loaded_templates(tags: List[str] = None) -> List[TemplateModel]:
     if tags:
         return [t for t in _loaded_templates.values() if t.has_any_tag(tags)]
     return list(_loaded_templates.values())
+
+def get_env_vars() -> dict[str, str]:
+    """
+    Load environment variables from current os.environ + given env files,
+    optionally filtered by allowed_environment_variables.
+    """
+    from dotenv import dotenv_values
+    from prich.core.state import _loaded_env_vars
+
+    if _loaded_env_vars is not None:
+        return _loaded_env_vars
+
+    # Start with a copy of current environment
+    merged = dict(os.environ)
+
+    config, _ = get_loaded_config()
+    env_files = config.settings.env_file if config.settings else None
+    allowed_environment_variables = config.security.allowed_environment_variables if config.security else None
+
+    if type(env_files) == str:
+        env_files = [env_files]
+
+    # Merge env files in order, last one wins
+    if env_files is not None:
+        for env_file in env_files:
+            path = Path(env_file)
+            if path.exists():
+                file_vars = dotenv_values(path)
+                merged.update({k: v for k, v in file_vars.items() if v is not None})
+
+    # Apply filtering if needed
+    if allowed_environment_variables is not None:
+        allowed_set = set(allowed_environment_variables)
+        merged = {k: v for k, v in merged.items() if k in allowed_set}
+
+    _loaded_env_vars = merged
+
+    return merged
