@@ -13,7 +13,7 @@ from prich.version import VERSION
 @click.version_option(VERSION, prog_name="prich")
 def cli():
     """prich: CLI for reusable rich LLM prompts with script pipelines."""
-    console_print(f"[bold][cyan]prich v{VERSION}[/cyan][/bold] - CLI for reusable rich LLM prompts with script pipelines")
+    # console_print(f"prich v{VERSION} - CLI for reusable rich LLM prompts with script pipelines")
 
 cli.add_command(run_group)
 cli.add_command(template_install)

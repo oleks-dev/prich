@@ -23,7 +23,11 @@ def init(global_init: bool, force: bool):
 
     default_venv = prich_dir / "venv"
     if force:
-        shutil.rmtree(default_venv, ignore_errors=True)
+        # for safety, ensure that we remove only related folder
+        if ".prich" in str(default_venv):
+            shutil.rmtree(default_venv, ignore_errors=True)
+        else:
+            raise click.ClickException(".prich folder is not part of venv folder path")
     if not default_venv.exists():
         builder = venv.EnvBuilder(with_pip=True)
         builder.create(default_venv)

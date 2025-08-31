@@ -76,6 +76,7 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
 
     if from_remote:
         if path.startswith("http://") or path.startswith("https://"):
+            # Install from remote archive file
             if not path.endswith(".zip"):
                 raise click.ClickException(f"Remote URL should point to a zip file.")
             from_url = path
@@ -94,6 +95,7 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
             path = str(tmp_zip_file)
 
         else:
+            # Install from remote repo by id
             if not is_valid_template_id(path):
                 raise click.ClickException(f"Remote Template ID {path} is not valid.")
             check_if_dest_present(path, templates_dir / path, global_install, force)
@@ -125,6 +127,7 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
         remove_source = True
 
     if path.endswith(".zip"):
+        # Install from archive
         try:
             with console.status(f"Extracting..."):
                 src_dir = _extract_zip(Path(path))
@@ -134,6 +137,7 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
         remove_source = True
 
     else:
+        # Install from folder
         try:
             src_dir = Path(path).resolve()
         except Exception as e:
