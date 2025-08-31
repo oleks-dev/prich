@@ -168,7 +168,7 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
 
     # Inputs / Variables List
     expanded_args = expand_vars(step.args, variables)
-    [cmd.append(arg) for arg in expanded_args]
+    [cmd.append(arg) for arg in expanded_args if arg is not None and arg != ""]
 
     try:
         if is_verbose():
