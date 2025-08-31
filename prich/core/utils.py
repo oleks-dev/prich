@@ -83,29 +83,21 @@ def get_prich_templates_dir(global_only: bool = None) -> Path:
     """ Return current prich templates folder path based on global_only param or should_use_global_only() """
     return get_prich_dir(global_only) / "templates"
 
-def replace_env_vars(text: str, secure: bool = True) -> str:
+def replace_env_vars(text: str, env_vars: dict[str, str]) -> str:
     """
     Replace $VAR or ${VAR} in a text string with environment variable values.
 
     Args:
         text (str): Input string containing $VAR or ${VAR} placeholders.
-        secure (bool): Check if env variable is listed in the allowed env variables
+        env_vars (dict): Environments variables to use
 
     Returns:
         str: String with environment variables expanded, or original text if no variables found.
     """
-    from prich.core.loaders import get_loaded_config
-
     def replace_match(match):
         """Replace $VAR or ${VAR} with the value from os.environ or empty string if not found."""
         var_name = match.group(1) if match.group(1) else match.group(2)
-        config, _ = get_loaded_config()
-        if secure and config.security and config.security.allowed_environment_variables:
-            if var_name in config.security.allowed_environment_variables:
-                return os.getenv(var_name, "")
-        elif not secure:
-            return os.getenv(var_name, "")
-        raise click.ClickException(f"Environment variable {var_name} is not listed in allowed environment variables. Add it to config.security.allowed_environment_variables for usage.")
+        return env_vars.get(var_name, "")
 
     if text is None or type(text) != str:
         return text

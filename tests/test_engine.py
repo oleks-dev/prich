@@ -176,12 +176,13 @@ get_expand_vars_CASES = [
      "args": ["--file={{HOME_DIR}}", "{{HOME}}"],
      "internal_vars": {"HOME_DIR": "./home dir/", "HOME": "home test"},
      "expected_expanded_args": ["--file=./home dir/", "home test"]},
-    {"id": "not_listed_env_var_usage",
-     "args": ["$HOME", "${HOME}"],
-     "internal_vars": {},
-     "expected_exception": click.ClickException,
-     "expected_exception_message": "Environment variable HOME is not listed in allowed environment variables. Add it to config.security.allowed_environment_variables for usage."
-    },
+# TODO: this should be added into load env vars
+#     {"id": "not_listed_env_var_usage",
+#      "args": ["$HOME", "${HOME}"],
+#      "internal_vars": {},
+#      "expected_exception": click.ClickException,
+#      "expected_exception_message": "Environment variable HOME is not listed in allowed environment variables. Add it to config.security.allowed_environment_variables for usage."
+#     },
     {"id": "correct_with_env",
      "args": ["--file=$T_HOME_1", "${THOME2}{{HOME_DIR}}"],
      "extra_env_vars": {"T_HOME_1": "./home1/", "THOME2": "home2"},
@@ -437,7 +438,7 @@ def test_run_command_step(case, monkeypatch):
     from prich.core.engine import run_command_step
 
     if case.get("mock_output"):
-        monkeypatch.setattr("subprocess.run", lambda cmd, stdout, stderr, text, check: case.get("mock_output", None))
+        monkeypatch.setattr("subprocess.run", lambda cmd, stdout, stderr, text, check, env: case.get("mock_output", None))
 
     if case.get("expected_exception"):
         with pytest.raises(case.get("expected_exception")) as e:

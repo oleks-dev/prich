@@ -30,6 +30,7 @@ class SettingsConfig(BaseModel):
     default_provider: str
     provider_assignments: Optional[Dict[str, str]] = None
     editor: Optional[str] = None
+    env_file: Optional[str | List[str]] = None
 
 
 class ProviderModeModel(BaseModel):

@@ -9,6 +9,7 @@ from prich.models.template import TemplateModel, PipelineStep, LLMStep, PythonSt
     CommandStep, ValidateStepOutput
 from prich.core.utils import console_print, replace_env_vars, shorten_path, is_quiet, is_only_final_output, \
     is_verbose, get_prich_dir, is_just_filename
+from prich.core.loaders import get_env_vars
 
 jinja_env = {}
 
@@ -32,7 +33,7 @@ def expand_vars(args: List[str], internal_vars: Dict[str, str] = None) -> list:
             # First expand internal variables
             arg = render_template(arg, variables=internal_vars)
             # Then expand environment variables ($VAR or ${VAR})
-            arg = replace_env_vars(arg)
+            arg = replace_env_vars(arg, env_vars=get_env_vars())
         expanded_args.append(arg)
 
     return expanded_args
@@ -175,9 +176,9 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
             console_print(f"[dim]Execute {step.type} [green]{' '.join(cmd)}[/green][/dim]")
         if not is_quiet() and not is_only_final_output():
             with console.status("Processing..."):
-                result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+                result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False, env=get_env_vars())
         else:
-            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False, env=get_env_vars())
         return result.stdout, result.returncode
     except Exception as e:
         raise click.ClickException(f"Unexpected error in {method}: {str(e)}")
@@ -363,9 +364,9 @@ def run_template(template_id, **kwargs):
         cli_option = var.cli_option
         if cli_option:
             option_name = cli_option.lstrip("-").replace("-", "_")
-            variables[var.name] = replace_env_vars(kwargs.get(option_name, var.default))
+            variables[var.name] = replace_env_vars(kwargs.get(option_name, var.default), get_env_vars())
         else:
-            variables[var.name] = replace_env_vars(kwargs.get(var.name, var.default))
+            variables[var.name] = replace_env_vars(kwargs.get(var.name, var.default), get_env_vars())
         if var.required and variables.get(var.name) is None:
             raise click.ClickException(f"Missing required variable {var.name}")
 
