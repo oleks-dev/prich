@@ -31,6 +31,13 @@ def should_use_local_only() -> bool:
 
 def is_verbose() -> bool:
     """ Is Verbose mode enabled? """
+    try:
+        is_verbose_options = ["verbose"]
+        for verbose_ in is_verbose_options:
+            if click.get_current_context().params.get(verbose_):
+                return True
+    except:
+        pass
     return any(flag in sys.argv for flag in ("-v", "--verbose"))
 
 def is_quiet() -> bool:

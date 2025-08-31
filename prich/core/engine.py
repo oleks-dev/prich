@@ -171,7 +171,8 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
     [cmd.append(arg) for arg in expanded_args]
 
     try:
-        console_print(f"[dim]Execute {step.type} [green]{' '.join(cmd)}[/green][/dim]")
+        if is_verbose():
+            console_print(f"[dim]Execute {step.type} [green]{' '.join(cmd)}[/green][/dim]")
         if not is_quiet() and not is_only_final_output():
             with console.status("Processing..."):
                 result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
@@ -263,9 +264,11 @@ def create_dynamic_command(config, template: TemplateModel) -> click.Command:
 
     @click.pass_context
     def dynamic_command(ctx, **kwargs):
-        console_print(f"[dim]Template: [green]{template.name}[/green] ({template.version}), {template.source.value}, args: {', '.join([f'{k}={v}' for k,v in kwargs.items() if v])}[/dim]")
         if is_verbose():
+            console_print(f"[dim]Template: [green]{template.name}[/green] ({template.version}), {template.source.value}, args: {', '.join([f'{k}={v}' for k,v in kwargs.items() if v])}[/dim]")
             console_print(f"[dim]{template.description}[/dim]")
+        else:
+            console_print(f"[dim][green]{template.name}[/green] ({template.version}), {template.source.value}[/dim]")
         run_template(template.id, **kwargs)
 
     return click.Command(name=template.id, callback=dynamic_command, params=options, help=f"{template.description if template.description else ''}", epilog=f"{template.name} (ver: {template.version}, {template.source.value})")
@@ -287,7 +290,11 @@ def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: C
     # Use default provider from config
     else:
         selected_provider_name = config.settings.default_provider
-    selected_provider = config.providers[selected_provider_name]
+    selected_provider = config.providers.get(selected_provider_name)
+    if not selected_provider:
+        raise click.ClickException(f"Provider {selected_provider_name} configuration not found. Check your config.yaml file.")
+    if is_verbose():
+        console_print(f"Selected LLM provider: {selected_provider_name}")
 
     if selected_provider.mode:
         render_prompt(config, step, variables, selected_provider.mode)
@@ -314,8 +321,8 @@ def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: C
             prompt_lines.append(step.rendered_prompt)
     prompt_full = '\n'.join(prompt_lines)
 
-    console_print(f"[dim]Sending prompt to LLM ([green]{llm_provider.name}[/green]), {len(prompt_full)} chars[/dim]")
     if is_verbose():
+        console_print(f"[dim]Sending prompt to LLM ([green]{llm_provider.name}[/green]), {len(prompt_full)} chars[/dim]")
         console_print(prompt_full, markup=False)
         console_print()
         console_print("[dim]LLM Response:[/dim]")
@@ -375,9 +382,9 @@ def run_template(template_id, **kwargs):
 
             step_brief = f"\nStep #{step_idx}: {step.name}"
             should_run = should_run_step(step.when, variables)
-            when_expression = f" (\"when\" expression \"{step.when}\" is {should_run})" if step.when else ""
             if (not should_run and is_verbose()) or should_run:
-                console_print(f"[dim]{step_brief}{' - Skipped' if not should_run else ''}{when_expression}[/dim]")
+                when_expression = f" (\"when\" expression \"{step.when}\" is {should_run})" if step.when else ""
+                console_print(f"[dim]{step_brief}{' - Skipped' if not should_run else ''}{when_expression if is_verbose() else ''}[/dim]")
             if not should_run:
                 continue
 
@@ -409,12 +416,14 @@ def run_template(template_id, **kwargs):
                 if step.extract_vars:
                     for spec in step.extract_vars:
                         console_print(f"[dim]Inject \"{spec.regex}\" {f'({len(variables.get(spec.variable))} matches) ' if spec.multiple else ''}→ {spec.variable}: {f'{variables.get(spec.variable)}' if type(variables.get(spec.variable) == str) else variables.get(spec.variable)}[/dim]")
-                if step.output_regex:
-                    console_print(f"[dim]Apply regex: \"{step.output_regex}\"[/dim]")
+                if step.strip_output is not None:
+                    console_print(f"[dim]Strip output spaces: {step.strip_output}[/dim]")
                 if step.strip_output_prefix:
                     console_print(f"[dim]Strip output prefix: \"{step.strip_output_prefix}\"[/dim]")
                 if step.slice_output_start or step.slice_output_end:
                     console_print(f"[dim]Slice output text{f' from {step.slice_output_start}' if step.slice_output_start else ''}{f' to {step.slice_output_end}' if step.slice_output_end else ''}[/dim]")
+                if step.output_regex:
+                    console_print(f"[dim]Apply regex: \"{step.output_regex}\"[/dim]")
 
             # Store last output
             last_output = step_output
@@ -431,7 +440,8 @@ def run_template(template_id, **kwargs):
                 try:
                     write_mode = step.output_file_mode[:1] if step.output_file_mode else 'w'
                     with open(save_to_file, write_mode) as step_output_file:
-                        console_print(f"[dim]{'Save' if write_mode == 'w' else 'Append'} output to file: {save_to_file}[/dim]")
+                        if is_verbose():
+                            console_print(f"[dim]{'Save' if write_mode == 'w' else 'Append'} output to file: {save_to_file}[/dim]")
                         step_output_file.write(step_output)
                 except Exception as e:
                     raise click.ClickException(f"Failed to save output to file {save_to_file}: {e}")
@@ -471,7 +481,8 @@ def run_template(template_id, **kwargs):
                     else:
                         if is_verbose() and len(step.validate_) > 1:
                             console_print(f"[dim]Validation #{idx} [green]passed[/green].[/dim]")
-                console_print(f"[dim][green]Validation{'s' if len(step.validate_) > 1 else ''} completed.[/green][/dim]")
+                if is_verbose():
+                    console_print(f"[dim][green]Validation{'s' if len(step.validate_) > 1 else ''} completed.[/green][/dim]")
         # Save last step output if output file option added
         if output_file:
             with open(output_file, 'w') as final_output_file:
