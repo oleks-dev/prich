@@ -69,18 +69,6 @@ def get_jinja_env(name: str, conditional_expression_only: bool = False):
         if conditional_expression_only:
             env = Environment(undefined=StrictUndefined)
             env.filters.clear()
-            # Add a safe whitelist
-            env.filters.update({
-                "lower": str.lower,
-                "upper": str.upper,
-                "strip": str.strip,
-                "length": len,
-                "int": int,
-                "float": float,
-                "replace": lambda _old, _new, _count=None: str.replace(_old, _new, _count),
-                "split": lambda _sep, _max_split: str.split(_sep, _max_split),
-                "bool": lambda x: bool(x),
-            })
         else:
             env = Environment(
                 loader=FileSystemLoader(Path.cwd()),
@@ -88,6 +76,17 @@ def get_jinja_env(name: str, conditional_expression_only: bool = False):
             )
             env.filters['include_file'] = include_file
             env.filters['include_file_with_line_numbers'] = include_file_with_line_numbers
+        env.filters.update({
+            "lower": str.lower,
+            "upper": str.upper,
+            "strip": str.strip,
+            "length": len,
+            "int": int,
+            "float": float,
+            "replace": lambda _old, _new, _count=None: str.replace(_old, _new, _count),
+            "split": lambda _sep, _max_split: str.split(_sep, _max_split),
+            "bool": lambda x: bool(x),
+        })
         jinja_env[env_name] = env
     return jinja_env[env_name]
 
