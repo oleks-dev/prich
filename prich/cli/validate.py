@@ -1,8 +1,10 @@
+import os
 from pathlib import Path
 import click
+from prich.models.template import CommandStep, PythonStep
 from prich.core.file_scope import classify_path
-from prich.core.loaders import find_template_files, load_template_model
-from prich.core.utils import console_print, shorten_path
+from prich.core.loaders import find_template_files, load_template_model, get_env_vars
+from prich.core.utils import console_print, shorten_path, get_prich_dir, is_just_filename
 
 
 @click.command(name="validate")
@@ -53,6 +55,35 @@ def validate_templates(template_id: str, validate_file: Path, global_only: bool,
         try:
             template = load_template_model(template_file)
             console_print(f"- {template.id} [dim]({template.source.value}) {shorten_path(str(template_file))}[/dim]: [green]is valid[/green]")
+            if template.venv in ["isolated", "shared"]:
+                venv_folder = (Path(template.folder) / "scripts") if template.venv == "isolated" else get_prich_dir() / "venv"
+                if not venv_folder.exists():
+                    console_print(f"  [red]Failed to find {template.venv} venv at {shorten_path(str(venv_folder))}. Install it by running 'prich venv-install {template.id}'.[/red]")
+                    failures_found = True
+            idx = 0
+            for step in template.steps:
+                idx += 1
+                if type(step) in [CommandStep, PythonStep]:
+                    call_file = Path(step.call)
+                    if not call_file.exists() and not (Path(template.folder) / "scripts" / call_file).exists() and type(step) == CommandStep:
+                        env_vars = get_env_vars()
+                        if env_vars.get("PATH"):
+                            paths = env_vars.get("PATH").split(":")
+                            if paths and is_just_filename(step.call):
+                                for path in paths:
+                                    if (path / Path(step.call)).exists():
+                                        call_file = path / Path(step.call)
+                                        break
+                    if call_file.exists() and not os.access(call_file, os.X_OK) and type(step) == CommandStep:
+                        console_print(f"  [red]The call command {shorten_path(str(call_file))} file is not executable in step #{idx} {step.name}[/red]")
+                        failures_found = True
+                    elif not call_file.exists() and not (Path(template.folder) / "scripts" / call_file).exists():
+                        if is_just_filename(call_file):
+                            full_path = str(Path(template.folder) / "scripts" / call_file)
+                        else:
+                            full_path = str(call_file)
+                        console_print(f"  [red]Failed to find call {step.type} file {shorten_path(full_path)} for step #{idx} {step.name}")
+
         except click.ClickException as e:
             failures_found = True
             template_source = classify_path(template_file)
