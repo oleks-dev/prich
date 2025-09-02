@@ -27,24 +27,28 @@ get_venv_install_CASES = [
     {"id": "install_local_isolated_venv",
      "args": ["template-local"],
      "venv": "isolated",
+     "requirements.txt": "requests==2.32.3",
      "expected_exit_code": 0,
      "expected_exception_message": "Installing isolated venv... done",
     },
     {"id": "install_global_isolated_venv",
      "args": ["template-global"],
      "venv": "isolated",
+     "requirements.txt": "requests==2.32.3",
      "expected_exit_code": 0,
      "expected_exception_message": "Installing isolated venv... done",
     },
     {"id": "install_local_shared_venv",
      "args": ["template-local"],
      "venv": "shared",
+     "requirements.txt": "requests==2.32.3",
      "expected_exit_code": 0,
      "expected_exception_message": "Installing shared venv... done",
     },
     {"id": "install_global_shared_venv",
      "args": ["template-global"],
      "venv": "shared",
+     "requirements.txt": "requests==2.32.3",
      "expected_exit_code": 0,
      "expected_exception_message": "Installing shared venv... done",
     },
@@ -135,7 +139,17 @@ def test_venv_install(mock_paths, template, case):
         template_global.venv = case.get("venv")
     template_local.save(FileScope.LOCAL)
     template_global.save(FileScope.GLOBAL)
-
+    if case.get("requirements.txt"):
+        local_scripts_folder = Path(template_local.folder) / "scripts"
+        local_scripts_folder.mkdir(exist_ok=True)
+        requirements_txt = local_scripts_folder / "requirements.txt"
+        with open(requirements_txt, "w") as requirements_txt_file:
+            requirements_txt_file.write(case.get("requirements.txt"))
+        global_scripts_folder = Path(template_global.folder) / "scripts"
+        global_scripts_folder.mkdir(exist_ok=True)
+        requirements_txt = global_scripts_folder / "requirements.txt"
+        with open(requirements_txt, "w") as requirements_txt_file:
+            requirements_txt_file.write(case.get("requirements.txt"))
     if case.get("multiple"):
         inputs = case.get("multiple")
     else:

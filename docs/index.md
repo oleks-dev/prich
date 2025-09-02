@@ -29,8 +29,8 @@ pipx install git+https://github.com/oleks-dev/prich
 # Initialize config (global)
 prich init --global
 
-# Create & run your first template
-prich create my-template
+# Create & run your first template (this will create a very simple one step template)
+prich create my-template --global
 prich run my-template
 ```
 

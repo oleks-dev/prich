@@ -7,7 +7,7 @@ from prich.cli.config import list_providers, show_config, edit_config
 from prich.core.engine import run_template
 from prich.core.state import _loaded_templates
 from prich.models.template import TemplateModel, VariableDefinition, PythonStep, CommandStep, LLMStep, \
-    RenderStep, ValidateStepOutput
+    RenderStep, ValidateStepOutput, ExtractVarModel
 from tests.fixtures.config import basic_config
 from tests.fixtures.paths import mock_paths
 from tests.fixtures.templates import template
@@ -506,6 +506,112 @@ get_run_template_CASES = [
                     strip_output_prefix="te",
                     validate=ValidateStepOutput(
                         match="^st",
+                        not_match="echo",
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     },
+    {"id": "run_cmd_and_strip_output", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=[" test "],
+                    strip_output=True,
+                    validate=ValidateStepOutput(
+                        match="^test",
+                        not_match="echo",
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     },
+    {"id": "run_cmd_and_output_regex_group1", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=[" test "],
+                    output_regex="(es)",
+                    validate=ValidateStepOutput(
+                        match="^es",
+                        not_match="echo",
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     },
+    {"id": "run_cmd_and_output_regex_group0", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=[" test "],
+                    output_regex="es",
+                    validate=ValidateStepOutput(
+                        match="^es",
+                        not_match="echo",
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     },
+    {"id": "run_cmd_and_output_extract_vars", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["test test test"],
+                    extract_vars=[ExtractVarModel(
+                        regex="(test) ",
+                        variable="test"
+                    ), ExtractVarModel(
+                        regex="notfound",
+                        variable="not_found_test"
+                    ), ExtractVarModel(
+                        regex="(test)",
+                        variable="test_list",
+                        multiple=True
+                    ), ExtractVarModel(
+                        regex="notfound",
+                        variable="notfound_list",
+                        multiple=True
+                    )],
+                    validate=ValidateStepOutput(
+                        match="test test test",
                         not_match="echo",
                         on_fail="error"
                     )
