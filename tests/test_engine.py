@@ -9,8 +9,8 @@ from pathlib import Path
 
 from prich.models.config import SecurityConfig
 from prich.models.template import ValidateStepOutput, PythonStep, CommandStep, VariableDefinition, LLMStep
-from prich.core.loaders import load_config_model
-from prich.core.engine import render_prompt, render_template
+from prich.core.loaders import load_config_model, get_env_vars
+from prich.core.template_utils import render_prompt, render_template_text
 from tests.fixtures.config import basic_config, basic_config_with_prompts, CONFIG_YAML
 from tests.fixtures.templates import template
 from tests.generate.templates import generate_template
@@ -137,7 +137,7 @@ def test_render_prompt_exception(chat_mode, prompt, basic_config_with_prompts):
     (None, "")
 ])
 def test_render_template(template_string, expected):
-    actual = render_template(template_string, variables=variables)
+    actual = render_template_text(template_string, variables=variables)
     assert expected == actual
 
 
@@ -205,11 +205,11 @@ def test_expand_vars(monkeypatch, basic_config, case):
 
     if case.get("expected_exception"):
         with pytest.raises(case.get("expected_exception")) as e:
-            expand_vars(case.get("args"), case.get("internal_vars"))
+            expand_vars(case.get("args"), variables=case.get("internal_vars"), env_vars=get_env_vars())
         if case.get("expected_exception_message"):
             assert case.get("expected_exception_message") in str(e.value)
     else:
-        actual = expand_vars(case.get("args"), case.get("internal_vars"))
+        actual = expand_vars(case.get("args"), variables=case.get("internal_vars"), env_vars=get_env_vars())
         assert actual == case.get("expected_expanded_args")
 
 get_get_jinja_env_CASES = [
@@ -264,7 +264,7 @@ get_get_jinja_env_CASES = [
 ]
 @pytest.mark.parametrize("case", get_get_jinja_env_CASES, ids=[c["id"] for c in get_get_jinja_env_CASES])
 def test_get_jinja_env(tmp_path, case):
-    from prich.core.engine import get_jinja_env
+    from prich.core.template_utils import get_jinja_env
     jinja_env = get_jinja_env("test_env", case.get("conditional_expression_only"))
     assert jinja_env, "Jinja env is not initialized"
     if case.get("expected_exception"):
@@ -435,7 +435,7 @@ get_run_command_step_CASES = [
 ]
 @pytest.mark.parametrize("case", get_run_command_step_CASES, ids=[c["id"] for c in get_run_command_step_CASES])
 def test_run_command_step(case, monkeypatch):
-    from prich.core.engine import run_command_step
+    from prich.core.steps.step_run_command import run_command_step
 
     if case.get("mock_output"):
         monkeypatch.setattr("subprocess.run", lambda cmd, stdout, stderr, text, check, env: case.get("mock_output", None))
@@ -454,7 +454,7 @@ def test_run_command_step(case, monkeypatch):
 
 
 def test_render_prompt_fields():
-    from prich.core.engine import render_prompt_fields
+    from prich.core.template_utils import render_prompt_fields
 
     with pytest.raises(click.ClickException) as e:
         render_prompt_fields(
@@ -496,7 +496,7 @@ def test_render_prompt_fields():
     # assert llm_step.rendered_input == "prompt"
 
 def test_get_variable_type():
-    from prich.core.engine import get_variable_type
+    from prich.cli.dynamic_command_group import get_variable_type
     assert get_variable_type("str") == click.STRING
     assert get_variable_type("int") == click.INT
     assert get_variable_type("bool") == click.BOOL
@@ -504,7 +504,7 @@ def test_get_variable_type():
 
 
 def test_create_dynamic_command(basic_config, template):
-    from prich.core.engine import create_dynamic_command
+    from prich.cli.dynamic_command_group import create_dynamic_command
     template.variables.append(VariableDefinition(
         name="filelist",
         type="list[str]",

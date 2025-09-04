@@ -7,8 +7,9 @@ from prich.models.template import TemplateModel
 _loaded_config: Optional[ConfigModel] = None
 _loaded_config_paths: list[Path] = []
 _loaded_env_vars: Optional[dict[str, str]] = None
+_jinja_env = {}
 
 # Shared loaded templates cache
 _loaded_templates: dict[str, TemplateModel] = {}
 
-__all__ = ["_loaded_config", "_loaded_config_paths", "_loaded_templates", "_loaded_env_vars"]
+__all__ = ["_loaded_config", "_loaded_config_paths", "_loaded_templates", "_loaded_env_vars", "_jinja_env"]

@@ -3,6 +3,7 @@ import os
 import click
 from pathlib import Path
 from typing import Dict, Optional, Tuple, List, Iterable
+from prich.constants import PRICH_DIR_NAME
 from prich.core.file_scope import classify_path
 from prich.core.state import _loaded_templates, _loaded_config, _loaded_config_paths
 from prich.core.utils import console_print, shorten_path, get_prich_dir
@@ -94,7 +95,7 @@ def load_template_model(yaml_file: Path) -> TemplateModel | None:
 def find_template_files(base_dir: Path) -> List[Path]:
     """Find template YAML files"""
     template_files = []
-    template_dir = base_dir / ".prich/templates"
+    template_dir = base_dir / PRICH_DIR_NAME / "templates"
     if template_dir.exists():
         for subdir in template_dir.iterdir():
             if subdir.is_dir():

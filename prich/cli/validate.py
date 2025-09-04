@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import click
+from prich.constants import PRICH_DIR_NAME
 from prich.models.template import CommandStep, PythonStep
 from prich.core.file_scope import classify_path
 from prich.core.loaders import find_template_files, load_template_model, get_env_vars
@@ -19,7 +20,7 @@ def validate_templates(template_id: str, validate_file: Path, global_only: bool,
         raise click.ClickException("Use only one local or global option, use: 'prich validate -g' or 'prich validate -l'")
 
     if validate_file and (global_only or local_only or template_id):
-        raise click.ClickException("When YAML file is selected it doesn't combine with local, global, or id options, use: 'prich validate --file ./.prich/templates/test-template/test-template.yaml'")
+        raise click.ClickException(f"When YAML file is selected it doesn't combine with local, global, or id options, use: 'prich validate --file ./{PRICH_DIR_NAME}/templates/test-template/test-template.yaml'")
 
     if validate_file and not validate_file.exists():
         raise click.ClickException(f"Failed to find {validate_file} template file.")

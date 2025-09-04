@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+from prich.constants import PRICH_DIR_NAME
 from prich.models.file_scope import FileScope
 
 
@@ -36,9 +37,9 @@ def _is_under(path: Path, root: Path) -> bool:
 # TODO: See if such support is really needed, could become hard to relate what is where
 # def find_nearest_local_root(start: Path, home: Path) -> Path | None:
 #     cur = start.resolve()
-#     global = home / ".prich"
+#     global = home / PRICH_DIR_NAME
 #     for p in [cur, *cur.parents]:
-#         candidate = p / ".prich"
+#         candidate = p / PRICH_DIR_NAME
 #         if candidate.exists() and candidate != global:
 #             return candidate
 #     return None
@@ -60,8 +61,8 @@ def classify_path(
     cwd = cwd or Path.cwd()
     home = home or Path.home()
 
-    local_root = cwd / ".prich"
-    global_root = home / ".prich"
+    local_root = cwd / PRICH_DIR_NAME
+    global_root = home / PRICH_DIR_NAME
 
     if follow_symlinks:
         p = _normalize(file, cwd=cwd)

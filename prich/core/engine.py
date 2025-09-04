@@ -1,115 +1,27 @@
 import click
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict
 
-from click import ClickException
-from prich.constants import RESERVED_RUN_TEMPLATE_CLI_OPTIONS
-from prich.models.config import ConfigModel
-from prich.models.template import TemplateModel, PipelineStep, LLMStep, PythonStep, RenderStep, \
+from prich.core.template_utils import should_run_step
+from prich.core.steps.step_render_template import render_template
+from prich.core.steps.step_run_command import run_command_step
+from prich.core.steps.step_sent_to_llm import send_to_llm
+
+from prich.models.template import LLMStep, PythonStep, RenderStep, \
     CommandStep, ValidateStepOutput
-from prich.core.utils import console_print, replace_env_vars, shorten_path, is_quiet, is_only_final_output, \
-    is_verbose, get_prich_dir, is_just_filename
+from prich.core.utils import console_print, is_quiet, is_only_final_output, \
+    is_verbose
 from prich.core.loaders import get_env_vars
-
-jinja_env = {}
-
-def expand_vars(args: List[str], internal_vars: Dict[str, str] = None) -> list:
-    """
-    Expand internal variables ({{VAR}}, {{ VAR }}) and environment variables ($VAR or ${VAR}) in a list of arguments.
-    
-    Args:
-        args (list): List of argument strings, e.g., ["tool", "--path={{HOME_DIR}}", "--file=$FILE"].
-        internal_vars (dict, optional): Dictionary of internal variable names to values, e.g., {"HOME_DIR": "/home/user"}.
-    
-    Returns:
-        list: New list with variables expanded.
-    """
-    # Default to empty dict if no internal variables provided
-    internal_vars = internal_vars or {}
-
-    expanded_args = []
-    for arg in args:
-        if type(arg) == str:
-            # First expand internal variables
-            arg = render_template(arg, variables=internal_vars)
-            # Then expand environment variables ($VAR or ${VAR})
-            arg = replace_env_vars(arg, env_vars=get_env_vars())
-        expanded_args.append(arg)
-
-    return expanded_args
-
-
-def get_jinja_env(name: str, conditional_expression_only: bool = False):
-    from jinja2 import Environment, StrictUndefined, FileSystemLoader
-
-    def _read_file_contents(filename):
-        try:
-            cwd = Path.cwd()
-            file_path = (cwd / filename).resolve()
-            if cwd not in file_path.parents and cwd != file_path:
-                raise click.ClickException(f"File is outside the current working directory")
-            with file_path.open("r", encoding="utf-8") as f:
-                return f.read()
-        except FileNotFoundError:
-            raise click.ClickException(f"File {filename} not found")
-        except UnicodeDecodeError:
-            return click.ClickException(f"Error: File '{filename}' is not a valid text file")
-        except Exception as e:
-            raise click.ClickException(f"Error reading file '{filename}': {e}")
-
-    def include_file(filename):
-        return _read_file_contents(filename)
-
-    def include_file_with_line_numbers(filename):
-        lines = _read_file_contents(filename).split('\n')
-        return '\n'.join([f"{i+1} {line}" for i, line in enumerate(lines)])
-
-    env_name = f"{name}{'_cond' if conditional_expression_only else ''}"
-    if not jinja_env.get(env_name):
-        if conditional_expression_only:
-            env = Environment(undefined=StrictUndefined)
-            env.filters.clear()
-        else:
-            env = Environment(
-                loader=FileSystemLoader(Path.cwd()),
-                undefined=StrictUndefined
-            )
-            env.filters['include_file'] = include_file
-            env.filters['include_file_with_line_numbers'] = include_file_with_line_numbers
-        env.filters.update({
-            "lower": str.lower,
-            "upper": str.upper,
-            "strip": str.strip,
-            "length": len,
-            "int": int,
-            "float": float,
-            "replace": lambda _old, _new, _count=None: str.replace(_old, _new, _count),
-            "split": lambda _sep, _max_split: str.split(_sep, _max_split),
-            "bool": lambda x: bool(x),
-        })
-        jinja_env[env_name] = env
-    return jinja_env[env_name]
-
-def should_run_step(when_expr: str, variables: Dict[str, any]) -> bool:
-    try:
-        if when_expr in [None, ""]:
-            return True
-        if when_expr.startswith("{{") and when_expr.endswith("}}"):
-            when_expr = when_expr[2:-2].strip()
-        template = get_jinja_env("when", conditional_expression_only=True).from_string(f"{{{{ {when_expr} }}}}")
-        rendered = template.render(variables).strip().lower()
-        return rendered in ("true", "1", "yes")
-    except Exception as e:
-        raise ValueError(f"Invalid `when` expression: {when_expr} - {str(e)}")
+from prich.core.variable_utils import replace_env_vars, expand_vars
 
 def validate_step_output(validate_step: ValidateStepOutput, value: str, variables: Dict[str, any]) -> bool:
     import re
     matched = re.search(
-        expand_vars([validate_step.match], variables)[0],
+        expand_vars([validate_step.match], variables=variables, env_vars=get_env_vars())[0],
         value
     ) if validate_step and validate_step.match else True
     not_matched = not re.search(
-        expand_vars([validate_step.not_match], variables)[0],
+        expand_vars([validate_step.not_match], variables=variables, env_vars=get_env_vars())[0],
         value
     ) if validate_step and validate_step.not_match else True
 
@@ -119,235 +31,13 @@ def validate_step_output(validate_step: ValidateStepOutput, value: str, variable
 
 def validate_step_exit_code(validate_step: ValidateStepOutput, exit_code: int, variables: Dict[str, any]) -> bool:
     try:
-        if validate_step.match_exit_code is not None and exit_code != int(expand_vars([validate_step.match_exit_code], variables)[0]):
+        if validate_step.match_exit_code is not None and exit_code != int(expand_vars([validate_step.match_exit_code], variables=variables, env_vars=get_env_vars())[0]):
             return False
-        if validate_step.not_match_exit_code is not None and exit_code == int(expand_vars([validate_step.not_match_exit_code], variables)[0]):
+        if validate_step.not_match_exit_code is not None and exit_code == int(expand_vars([validate_step.not_match_exit_code], variables=variables, env_vars=get_env_vars())[0]):
             return False
     except Exception as e:
         raise click.ClickException(f"Failed to validate step exit code: {str(e)}")
     return True
-
-def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, variables: Dict[str, any]) -> Tuple[str, int]:
-    import subprocess
-    from rich.console import Console
-    console = Console()
-
-    method = step.call
-    try:
-        template_dir = Path(template.folder)
-    except Exception as e:
-        raise click.ClickException(f"Template folder was not detected properly: {e}")
-
-    if type(step) == PythonStep and step.type == "python":
-        method_path = template_dir / "scripts" / method
-        if not method_path.exists():
-            raise click.ClickException(f"Python script not found: {method_path}")
-        if not method.endswith(".py"):
-            raise click.ClickException(f"Python script file should end with .py: {method_path}")
-
-        if template.venv in ["shared", "isolated"]:
-            if template.venv == "shared":
-                venv_path = get_prich_dir() / "venv"
-            else:
-                venv_path = template_dir / "scripts" / "venv"
-            python_path = venv_path / "bin" / "python"
-            if not python_path.exists():
-                raise click.ClickException(f"{template.venv.capitalize()} venv python not found: {python_path}")
-            cmd = [str(python_path), str(method_path)]
-        elif template.venv is None:
-            cmd = ["python", str(method_path)]
-        else:
-            raise click.ClickException(f"Python script venv {template.venv} is not supported.")
-    elif type(step) == CommandStep and step.type == "command":
-        if is_just_filename(method) and (template_dir / "scripts" / method).exists():
-            cmd = [str(template_dir / "scripts" / method)]
-        else:
-            cmd = [method]
-    else:
-        raise click.ClickException(f"Template command step type {step.type} is not supported.")
-
-    # Inputs / Variables List
-    expanded_args = expand_vars(step.args, variables)
-    [cmd.append(arg) for arg in expanded_args if arg is not None and arg != ""]
-
-    try:
-        if is_verbose():
-            console_print(f"[dim]Execute {step.type} [green]{' '.join(cmd)}[/green][/dim]")
-        if not is_quiet() and not is_only_final_output():
-            with console.status("Processing..."):
-                result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False, env=get_env_vars())
-        else:
-            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False, env=get_env_vars())
-        return result.stdout, result.returncode
-    except Exception as e:
-        raise click.ClickException(f"Unexpected error in {method}: {str(e)}")
-
-# TODO: rename to render jinja template?
-def render_template(template_text: str, variables: dict = Dict[str, str]) -> str:
-    import datetime
-    import os
-    import getpass
-    import platform
-
-    if not template_text:
-        return ""
-
-    builtin = {
-        "now": datetime.datetime.now(),
-        "now_utc": datetime.datetime.now(datetime.UTC),
-        "today": datetime.datetime.today().date(),
-        "cwd": os.getcwd(),
-        "user": getpass.getuser(),
-        "hostname": platform.node(),
-    }
-    variables["builtin"] = builtin
-    try:
-        rendered_text = get_jinja_env("params").from_string(template_text).render(**variables).strip()
-    except Exception as e:
-        raise click.ClickException(f"Render jinja error: {str(e)}")
-    return rendered_text
-
-def render_prompt(config: ConfigModel, llm_step: LLMStep, variables: Dict[str, str], mode: str):
-    """ Render Prompt using provider mode prompt template (used for raw prompt construction) """
-    if not llm_step.input:
-        raise ClickException("There should be at least an 'input' field.")
-    mode_prompt = [x for x in config.model_dump().get("provider_modes") if x.get("name")==mode]
-    if len(mode_prompt) == 0:
-        raise click.ClickException(f"Prompt mode {mode} is not found in the config.")
-    prompt_fields = render_template(mode_prompt[0].get("prompt"), {"instructions": llm_step.instructions, "input": llm_step.input})
-    llm_step.rendered_prompt = render_template(prompt_fields, variables)
-
-def render_prompt_fields(llm_step: LLMStep, variables: Dict[str, str]):
-    """ Render Prompt fields (used when provider supports prompt fields templates like system/user """
-    if not llm_step.input:
-        raise ClickException("There should be at least an 'input' field.")
-    if llm_step.instructions:
-        llm_step.rendered_instructions = render_template(llm_step.instructions, variables)
-    llm_step.rendered_input = render_template(llm_step.input, variables)
-
-
-def get_variable_type(variable_type: str) -> click.types:
-    TYPE_MAPPING = {"str": click.STRING, "int": click.INT, "bool": click.BOOL, "path": click.Path}
-    return TYPE_MAPPING.get(variable_type.lower(), None)
-
-def create_dynamic_command(config, template: TemplateModel) -> click.Command:
-    options = []
-    for arg in template.variables if template.variables else []:
-        arg_name = arg.name
-        arg_type = get_variable_type(arg.type)
-        help_text = arg.description or f"{arg_name} option"
-        cli_option = arg.cli_option or f"--{arg_name}"
-        if cli_option in RESERVED_RUN_TEMPLATE_CLI_OPTIONS:
-            raise click.ClickException(f"{arg_name} cli option uses a reserved option name: {cli_option}")
-
-        if arg_type == click.BOOL:
-            options.append(click.Option([cli_option], is_flag=True, default=arg.default or False, show_default=True, help=help_text))
-        elif arg_type:
-            options.append(click.Option([cli_option], type=arg_type, default=arg.default, required=arg.required, show_default=True, help=help_text))
-        elif arg.type.startswith("list["):
-            list_type = get_variable_type(arg.type.split('[')[1][:-1])
-            if not list_type:
-                raise click.ClickException(f"Failed to parse list type for {arg.name}")
-            options.append(click.Option([cli_option], type=list_type, multiple=True, default=arg.default, required=arg.required, show_default=True, help=help_text))
-        else:
-            raise click.ClickException(f"Unsupported variable type: {arg.type}")
-
-    options.extend([
-        click.Option(["-g", "--global", "global_only"], is_flag=True, default=False, help="Use global config and template"),
-        click.Option(["-l", "--local", "local_only"], is_flag=True, default=False, help="Use local config and template"),
-        click.Option(["-o", "--output"], type=click.Path(), default=None, show_default=True, help="Save LLM output to file"),
-        click.Option(["-p", "--provider"], type=click.Choice(config.providers.keys()), show_default=True, help="Override LLM provider"),
-        click.Option(["-v", "--verbose"], is_flag=True, default=False, help="Verbose mode"),
-        click.Option(["-q", "--quiet"], is_flag=True, default=False, help="Suppress all output"),
-        click.Option(["-f", "--only-final-output"], is_flag=True, default=False, help="Suppress output and show only the last step output")
-    ])
-
-    @click.pass_context
-    def dynamic_command(ctx, **kwargs):
-        if is_verbose():
-            console_print(f"[dim]Template: [green]{template.name}[/green] ({template.version}), {template.source.value}, args: {', '.join([f'{k}={v}' for k,v in kwargs.items() if v])}[/dim]")
-            console_print(f"[dim]{template.description}[/dim]")
-        else:
-            console_print(f"[dim][green]{template.name}[/green] ({template.version}), {template.source.value}[/dim]")
-        run_template(template.id, **kwargs)
-
-    return click.Command(name=template.id, callback=dynamic_command, params=options, help=f"{template.description if template.description else ''}", epilog=f"{template.name} (ver: {template.version}, {template.source.value})")
-
-def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: ConfigModel, variables: dict) -> str:
-    from prich.llm_providers.get_llm_provider import get_llm_provider
-
-    if not step.input:
-        raise click.ClickException("llm step must define at least 'input' field.")
-    # Use Provider from arg overload
-    if provider:
-        selected_provider_name = provider
-    # Use LLM Step Provider assignment from template
-    elif step.provider:
-        selected_provider_name = step.provider
-    # Use Provider to template assignment from config settings
-    elif config.settings.provider_assignments and template.id in config.settings.provider_assignments.keys():
-        selected_provider_name = config.settings.provider_assignments[template.id]
-    # Use default provider from config
-    else:
-        selected_provider_name = config.settings.default_provider
-    selected_provider = config.providers.get(selected_provider_name)
-    if not selected_provider:
-        raise click.ClickException(f"Provider {selected_provider_name} configuration not found. Check your config.yaml file.")
-    if is_verbose():
-        console_print(f"Selected LLM provider: {selected_provider_name}")
-
-    if selected_provider.mode:
-        render_prompt(config, step, variables, selected_provider.mode)
-    else:
-        render_prompt_fields(step, variables)
-    if not step.rendered_prompt and not step.rendered_input:
-        raise click.ClickException(f"Prompt is empty in step {step.name}.")
-
-    llm_provider = get_llm_provider(selected_provider_name, selected_provider)
-    if ((not step.output_console and not is_verbose()) or is_quiet()) and llm_provider.show_response:
-        # Override show response when quiet mode
-        llm_provider.show_response = False
-
-    # prompt lines
-    prompt_lines = []
-    if step.rendered_prompt:
-        prompt_lines.append(step.rendered_prompt)
-    else:
-        if step.rendered_instructions:
-            prompt_lines.append(step.rendered_instructions)
-        if step.rendered_input:
-            prompt_lines.append(step.rendered_input)
-        if step.rendered_prompt:
-            prompt_lines.append(step.rendered_prompt)
-    prompt_full = '\n'.join(prompt_lines)
-
-    if is_verbose():
-        console_print(f"[dim]Sending prompt to LLM ([green]{llm_provider.name}[/green]), {len(prompt_full)} chars[/dim]")
-        console_print(prompt_full, markup=False)
-        console_print()
-        console_print("[dim]LLM Response:[/dim]")
-    try:
-        if not is_quiet() and not is_only_final_output() and not llm_provider.show_response:
-            from rich.console import Console
-            console = Console()
-            with console.status("Thinking..."):
-                response = llm_provider.send_prompt(
-                    prompt=step.rendered_prompt,
-                    instructions=step.rendered_instructions,
-                    input_=step.rendered_input
-                )
-        else:
-            response = llm_provider.send_prompt(
-                prompt=step.rendered_prompt,
-                instructions=step.rendered_instructions,
-                input_=step.rendered_input
-            )
-        step_output = selected_provider.postprocess_output(response)
-        if (is_verbose() or step.output_console) and not llm_provider.show_response and not is_quiet():
-            console_print(step_output, markup=False)
-    except Exception as e:
-        raise click.ClickException(f"Failed to get LLM response: {str(e)}")
-    return step_output
 
 def run_template(template_id, **kwargs):
     from prich.core.loaders import get_loaded_config, get_loaded_template
@@ -396,12 +86,7 @@ def run_template(template_id, **kwargs):
             if type(step) in [PythonStep, CommandStep]:
                 step_output, step_return_exit_code = run_command_step(template, step, variables)
             elif type(step) == RenderStep:
-                if is_verbose():
-                    console_print("[dim]Render template:[/dim]")
-                    console_print(step.template, markup=False)
-                    console_print()
-                    console_print("[dim]Result:[/dim]")
-                step_output = render_template(step.template, variables)
+                step_output = render_template(step, variables)
             elif type(step) == LLMStep:
                 step_output = send_to_llm(template, step, provider, config, variables)
             else:

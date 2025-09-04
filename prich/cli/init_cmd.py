@@ -4,13 +4,14 @@ import sys
 import subprocess
 import venv
 import click
+from prich.constants import PRICH_DIR_NAME
 from prich.core.utils import console_print, get_prich_dir
 from prich.models.config_providers import EchoProviderModel
 from prich.models.config import SettingsConfig, ConfigModel, ProviderModeModel
 
 
 @click.command()
-@click.option("-g", "--global", "global_init", is_flag=True, help="Initialize ~/.prich/ (global)")
+@click.option("-g", "--global", "global_init", is_flag=True, help=f"Initialize ~/{PRICH_DIR_NAME}/ (global)")
 @click.option("--force", is_flag=True, help="Overwrite existing config")
 def init(global_init: bool, force: bool):
     """Initialize prich configuration and default venv."""
@@ -24,10 +25,10 @@ def init(global_init: bool, force: bool):
     default_venv = prich_dir / "venv"
     if force:
         # for safety, ensure that we remove only related folder
-        if ".prich" in str(default_venv):
+        if PRICH_DIR_NAME in str(default_venv):
             shutil.rmtree(default_venv, ignore_errors=True)
         else:
-            raise click.ClickException(".prich folder is not part of venv folder path")
+            raise click.ClickException(f"{PRICH_DIR_NAME} folder is not part of venv folder path")
     if not default_venv.exists():
         builder = venv.EnvBuilder(with_pip=True)
         builder.create(default_venv)
@@ -49,7 +50,8 @@ def init(global_init: bool, force: bool):
         },
         provider_modes=[
             ProviderModeModel(name="plain", prompt="{% if instructions %}{{ instructions }}\n{% endif %}{{ input }}"),
-            ProviderModeModel(name="flat", prompt="""{% if instructions %}### System:\n{{ instructions }}\n\n{% endif %}### User:\n{{ input }}\n\n### Assistant:"""),
+            ProviderModeModel(name="flat",
+                              prompt="{% if instructions %}### System:\n{{ instructions }}\n\n{% endif %}### User:\n{{ input }}\n\n### Assistant:"),
             # ProviderModeModel(name="mistral-instruct", prompt="""<s>[INST]\n{% if instructions %}{{ instructions }}\n\n{% endif %}{{ input }}\n[/INST]"""),
             # ProviderModeModel(name="llama2-chat", prompt="""<s>[INST]\n{% if instructions %}{{ instructions }}\n\n{% endif %}{{ input }}\n[/INST]"""),
             # ProviderModeModel(name="anthropic", prompt="""Human: {% if instructions %}{{ instructions }}\n\n{% endif %}{{ input }}\n\nAssistant:"""),

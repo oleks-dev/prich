@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 import click
 
+from prich.constants import PRICH_DIR_NAME
 from prich.core.loaders import get_loaded_templates, get_loaded_config, get_loaded_template
 from prich.core.utils import console_print, is_valid_template_id, get_prich_dir, get_prich_templates_dir, shorten_path
 from prich.cli.venv_utils import install_template_python_dependencies
@@ -63,7 +64,7 @@ def check_if_dest_present(template_id: str, dest_folder: Path, global_install: b
 @click.argument("path")
 @click.option("--force", is_flag=True, help="Overwrite existing templates")
 @click.option("--no-venv", is_flag=True, help="Skip venv setup")
-@click.option("-g", "--global", "global_install", is_flag=True, help="Install to ~/.prich/templates")
+@click.option("-g", "--global", "global_install", is_flag=True, help=f"Install to ~/{PRICH_DIR_NAME}/templates")
 @click.option("-r", "--remote", "from_remote", is_flag=True, help="Install template from prich-templates GitHub repo or zip URL")
 def template_install(path: str, force: bool, no_venv: bool, global_install: bool, from_remote: bool):
     """Install a template from PATH, zip, or prich-templates."""
