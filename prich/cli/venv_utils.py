@@ -5,16 +5,17 @@ from pathlib import Path
 
 import click
 
+from prich.constants import PRICH_DIR_NAME
 from prich.core.utils import shorten_path, console_print
 
 
 def install_python_venv(venv_folder: Path, force: bool = False, venv_type: str = ""):
     if venv_folder.exists() and force:
-        if ".prich" in str(venv_folder):
+        if PRICH_DIR_NAME in str(venv_folder):
             console_print(f"Removing existing {venv_type} venv folder...", end="")
             shutil.rmtree(venv_folder)
         else:
-            raise click.ClickException(".prich folder is not part of venv folder path")
+            raise click.ClickException(f"{PRICH_DIR_NAME} folder is not part of venv folder path")
         console_print(" [green]done![/green]")
     elif venv_folder.exists():
         console_print("Venv folder found.")

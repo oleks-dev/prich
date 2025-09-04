@@ -4,6 +4,7 @@ import re
 import click
 from pathlib import Path
 from rich.console import Console
+from prich.constants import PRICH_DIR_NAME
 
 console = Console()
 
@@ -77,34 +78,11 @@ def is_cli_option_name(option_name) -> bool:
 def get_prich_dir(global_only: bool = None) -> Path:
     """ Return current prich dir path based on global_only param or should_use_global_only() """
     parent_path = Path.home() if global_only or should_use_global_only() else Path.cwd()
-    return parent_path / ".prich"
+    return parent_path / PRICH_DIR_NAME
 
 def get_prich_templates_dir(global_only: bool = None) -> Path:
     """ Return current prich templates folder path based on global_only param or should_use_global_only() """
     return get_prich_dir(global_only) / "templates"
-
-def replace_env_vars(text: str, env_vars: dict[str, str]) -> str:
-    """
-    Replace $VAR or ${VAR} in a text string with environment variable values.
-
-    Args:
-        text (str): Input string containing $VAR or ${VAR} placeholders.
-        env_vars (dict): Environments variables to use
-
-    Returns:
-        str: String with environment variables expanded, or original text if no variables found.
-    """
-    def replace_match(match):
-        """Replace $VAR or ${VAR} with the value from os.environ or empty string if not found."""
-        var_name = match.group(1) if match.group(1) else match.group(2)
-        return env_vars.get(var_name, "")
-
-    if text is None or type(text) != str:
-        return text
-
-    # Pattern for environment variables: $VAR or ${VAR}
-    env_pattern = r'\$(?:\{([^}]+)\}|([a-zA-Z_][a-zA-Z0-9_]*))'
-    return re.sub(env_pattern, replace_match, text)
 
 def shorten_path(path: str | Path) -> str:
     """ Return short path using ~/... or ./... instead of a full absolute path """

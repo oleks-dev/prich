@@ -4,6 +4,7 @@ import click
 from pathlib import Path
 from typing import List, Optional, Literal, Dict, Annotated, Union
 from pydantic import BaseModel, Field, field_validator, TypeAdapter, ConfigDict
+from prich.constants import PRICH_DIR_NAME
 from prich.models.file_scope import FileScope
 from prich.models.config_providers import EchoProviderModel, OpenAIProviderModel, MLXLocalProviderModel, STDINConsumerProviderModel, OllamaProviderModel
 from prich.version import CONFIG_SCHEMA_VERSION
@@ -75,7 +76,7 @@ class ConfigModel(BaseModel):
             base_dir = Path.home()
         else:
             raise click.ClickException("Save config location param value is not supported")
-        prich_dir = base_dir / ".prich"
+        prich_dir = base_dir / PRICH_DIR_NAME
         os.makedirs(prich_dir, exist_ok=True)
         prich_config_file = prich_dir / "config.yaml"
         if prich_config_file.exists():

@@ -4,7 +4,9 @@ from contextlib import nullcontext
 
 import click
 
-from prich.core.utils import replace_env_vars, console, is_quiet, is_only_final_output, console_print
+from prich.constants import PRICH_DIR_NAME
+from prich.core.utils import console, is_quiet, is_only_final_output, console_print
+from prich.core.variable_utils import replace_env_vars
 from prich.models.config_providers import OpenAIProviderModel
 from prich.llm_providers.llm_provider_interface import LLMProvider
 from prich.llm_providers.base_optional_provider import LazyOptionalProvider
@@ -75,6 +77,6 @@ class OpenAIProvider(LLMProvider, LazyOptionalProvider):
             if "rate_limit" in str(e).lower():
                 raise click.ClickException("Rate limit exceeded. Please try again later.")
             elif "authentication" in str(e).lower():
-                raise click.ClickException("Invalid API key. Check .prich/config.yaml.")
+                raise click.ClickException(f"Invalid API key. Check {PRICH_DIR_NAME}/config.yaml.")
             raise click.ClickException(f"OpenAI error: {str(e)}")
 

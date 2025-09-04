@@ -4,7 +4,7 @@ import click
 from pydantic import BaseModel, Field, model_validator, ConfigDict
 from typing import List, Optional, Literal, Annotated, Union
 from prich.models.output_shaping import BaseOutputShapingModel
-from prich.constants import RESERVED_RUN_TEMPLATE_CLI_OPTIONS
+from prich.constants import RESERVED_RUN_TEMPLATE_CLI_OPTIONS, PRICH_DIR_NAME
 from prich.models.file_scope import FileScope
 from prich.core.utils import is_valid_variable_name, is_cli_option_name
 from prich.version import TEMPLATE_SCHEMA_VERSION
@@ -224,9 +224,9 @@ class TemplateModel(BaseModel):
 
         prich_dir = None
         if location == "local" or (not location and self.source == FileScope.LOCAL):
-            prich_dir = Path.cwd() / ".prich"
+            prich_dir = Path.cwd() / PRICH_DIR_NAME
         elif location == "global" or (not location and self.source == FileScope.GLOBAL):
-            prich_dir = Path.home() / ".prich"
+            prich_dir = Path.home() / PRICH_DIR_NAME
         if location or (not location and self.source):
             template_file = prich_dir / "templates" / self.id / f"{self.id}.yaml"
         else:

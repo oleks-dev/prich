@@ -4,3 +4,6 @@ RESERVED_RUN_TEMPLATE_CLI_OPTIONS = [
     "-g", "--global", "-q", "--quiet", "-o", "--output", "-p", "--provider",
     "-f", "--only-final-output", "-v", "--verbose"
 ]
+
+# .prich folder name
+PRICH_DIR_NAME = ".prich"
