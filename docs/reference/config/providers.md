@@ -42,6 +42,7 @@ qwen3-8b:
 ```
 
 Advanced/raw prompt control:  
+> NOTE: Use `raw: true` and `mode: ...` for custom provider prompt mode format:  
 ```yaml
 qwen3-8b-custom:
   provider_type: "ollama"
@@ -59,8 +60,9 @@ qwen3-8b-custom:
 
 ## STDIN consumer (bridge to CLIs) `stdin_consumer`
 
-Send prompts to a command via STDIN and read STDOUT (e.g., q chat).
+Send prompts to a command via STDIN and read STDOUT (e.g., q chat, mlx_lm.generate).
 
+#### Q Chat  
 ```yaml
 qchat:
   provider_type: "stdin_consumer"
@@ -70,4 +72,18 @@ qchat:
   strip_output_prefix: "> "      # optional [str] - strip prefix text from step output
   slice_output_start: 0          # optional [int] - slice step output text starting from N
   slice_output_end: -1           # optional [int] - slice step output text ending at N (negative counts from the back)
+```
+
+#### MLX LM Generate  
+```yaml
+  mlx-mistral-7b-cli:
+    provider_type: stdin_consumer
+    mode: plain
+    call: "mlx_lm.generate"
+    args:
+      - "--model"
+      - "/Users/guest/.cache/huggingface/hub/models--mlx-community--Mistral-7B-Instruct-v0.3-4bit/snapshots/a4b8f870474b0eb527f466a03fbc187830d271f5"
+      - "--prompt"
+      - "-"
+    output_regex: "^==========\\n((?:.|\\n)+)\\n\\=\\=\\=\\=\\=\\=\\=\\=\\=\\=(?:.|\\n)+$"
 ```
