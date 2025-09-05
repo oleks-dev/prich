@@ -5,7 +5,7 @@ from prich.cli.templates import template_install, show_template, create_template
 from prich.cli.listing import list_tags, list_templates
 from prich.cli.config import config_group
 from prich.cli.validate import validate_templates
-from prich.cli.init_cmd import init
+from prich.cli.init_cmd import init, completion
 from prich.core.utils import console_print
 from prich.version import VERSION
 
@@ -19,6 +19,7 @@ cli.add_command(run_group)
 cli.add_command(template_install)
 cli.add_command(config_group)
 cli.add_command(init)
+cli.add_command(completion)
 cli.add_command(list_tags)
 cli.add_command(list_templates)
 cli.add_command(show_template)
