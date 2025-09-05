@@ -169,6 +169,10 @@ Use shared templates to ensure consistent LLM outputs, whether for code reviews 
 - **Cross-Functional Use**:
 Developers, data analysts, marketers, or support teams can use prich for their prompts, with templates tailored to each domain.
 
+## Shell Completion  
+`prich` supports autocompletion for **zsh**, **bash**, and **fish**.
+
+See [How-To Install](docs/how-to/install.md)
 
 ## Template Reference
 
@@ -211,95 +215,6 @@ variables:
     required: false
     default: null
     type: str
-```
-
-```yaml
-id: "summarize-git-diff"
-name: "Summarize git diff"
-schema_version: "1.0"
-version: "1.0"
-author: "prich"
-description: Generate a summary and review of differences between local code and remote or committed states.
-tags: ["code", "git", "diff", "review"]
-steps:
-  - name: "Run git diff working vs last commit"
-    when: "working_vs_last_commit or (not working_vs_last_commit and not working_vs_remote and not committed_vs_remote and not remote_vs_local)"
-    type: command
-    call: "git"
-    args: ["diff", "HEAD"]
-    output_variable: "git_diff"
-
-  - name: "Get current branch"
-    when: "not working_vs_last_commit"
-    type: command
-    call: "git"
-    args: ["rev-parse", "--abbrev-ref", "HEAD"]
-    output_variable: "current_branch"
-
-  - name: "Run git diff working vs remote"
-    when: "working_vs_remote"
-    type: command
-    call: "git"
-    args: ["diff", "origin/{{current_branch}}"]
-    output_variable: "git_diff"
-
-  - name: "Run git diff committed vs remote"
-    when: "committed_vs_remote"
-    type: command
-    call: "git"
-    args: ["diff", "origin/{{current_branch}}..HEAD"]
-    output_variable: "git_diff"
-
-  - name: "Run git diff remote vs local"
-    when: "remote_vs_local"
-    type: command
-    call: "git"
-    args: ["diff", "HEAD..origin/{{current_branch}}"]
-    output_variable: "git_diff"
-
-  - name: "Ask to summarize the diff"
-    type: llm
-    instructions: |
-      Assistant is a senior engineer who makes a git diff summarization{% if review %} and detailed review{% endif %} in natural language.
-    input: |
-      Summarize {% if review %} and review {% endif %}the following:
-      ```text
-      {{ git_diff }}
-      ```
-usage_examples:
-  - "summarize-git-diff"
-  - "summarize-git-diff --review"
-  - "summarize-git-diff --working-vs-last-commit"
-  - "summarize-git-diff --working-vs-last-commit --review"
-  - "summarize-git-diff --working-vs-remote"
-  - "summarize-git-diff --committed-vs-remote"
-  - "summarize-git-diff --remote-vs-local"
-variables:
-  - name: working_vs_last_commit
-    description: "Unstaged working changes"
-    cli_option: --working-vs-last-commit
-    required: false
-    type: bool
-  - name: working_vs_remote
-    description: "All uncommitted + unpushed vs remote"
-    cli_option: --working-vs-remote
-    required: false
-    type: bool
-  - name: committed_vs_remote
-    description: "Only unpushed commits"
-    cli_option: --committed-vs-remote
-    required: false
-    type: bool
-  - name: remote_vs_local
-    description: "Changes on remote not in local"
-    cli_option: --remote-vs-local
-    required: false
-    type: bool
-  - name: review
-    description: "Make deeper review additionally"
-    cli_option: --review
-    required: false
-    type: bool
 ```
 
 ## Validate Templates  

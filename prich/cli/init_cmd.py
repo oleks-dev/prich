@@ -1,7 +1,7 @@
 import os
 import shutil
-import sys
 import subprocess
+import sys
 import venv
 import click
 from prich.constants import PRICH_DIR_NAME
@@ -62,3 +62,28 @@ def init(global_init: bool, force: bool):
     config.save("global" if global_init else "local")
 
     console_print(f"Initialized [cyan]prich[/cyan] at [green]{prich_dir}[/green]")
+
+
+@click.command(hidden=True)
+@click.argument("shell", type=click.Choice(["bash", "zsh", "fish"]))
+def completion(shell: str):
+    """
+    Generate shell completion script for BASH, ZSH, or FISH.
+
+    Example:
+      prich completion zsh > ~/.zfunc/_prich
+    """
+    env = os.environ.copy()
+    env["_PRICH_COMPLETE"] = f"{shell}_source"
+
+    try:
+        # Run this same CLI with modified environment
+        subprocess.run(
+            [sys.argv[0]],        # re-invoke current CLI script
+            env=env,
+            text=True,
+            check=True                  # raise error if prich fails
+        )
+    except subprocess.CalledProcessError as e:
+        click.echo(f"Error generating completion script: {e}", err=True)
+        sys.exit(e.returncode)

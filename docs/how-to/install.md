@@ -41,7 +41,7 @@ pipx install git+https://github.com/oleks-dev/prich --force
 ```
 
 
-### **Initialize prich**:
+### **Initialize prich**
 **prich** uses nodejs-like home/local folder configurations for flexible usage of the configs and templates per project.  
 
    - Local folder based
@@ -56,4 +56,47 @@ pipx install git+https://github.com/oleks-dev/prich --force
        ```
      
        > Creates `~/.prich/` with a default preprocessing shared venv (`~/.prich/venv/`) and config file.
-     
+
+
+### Shell Completion  
+`prich` supports autocompletion for **zsh**, **bash**, and **fish**.
+
+#### Zsh  
+```bash
+# Option 1: One-liner (recommended)
+prich completion zsh > ~/.zfunc/_prich
+echo 'fpath=(~/.zfunc $fpath)' >> ~/.zshrc
+autoload -Uz compinit && compinit
+
+# Option 2: Source manually in ~/.zshrc
+prich completion zsh > ~/.prich-completion.zsh
+echo 'source ~/.prich-completion.zsh' >> ~/.zshrc
+```
+
+#### Bash  
+> **NOTE!**: Requires bash ≥ 4.4 (the system bash on macOS is too old,
+install `brew install bash` if needed).
+
+```bash
+# Option 1: One-liner
+prich completion bash > ~/.prich-completion.bash
+echo 'source ~/.prich-completion.bash' >> ~/.bashrc
+
+# Option 2: Generate directly inside ~/.bashrc
+echo 'eval "$(_PRICH_COMPLETE=bash_source prich)"' >> ~/.bashrc
+```
+
+#### Fish
+```bash
+# Option 1: Copy into fish completions dir
+prich completion fish > ~/.config/fish/completions/prich.fish
+
+# Option 2: Source manually from config.fish
+prich completion fish > ~/.prich-completion.fish
+echo 'source ~/.prich-completion.fish' >> ~/.config/fish/config.fish
+```
+
+After running one of the above, restart your shell and try:  
+```bash
+prich <TAB>
+```
