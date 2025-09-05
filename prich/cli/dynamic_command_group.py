@@ -89,8 +89,6 @@ def create_dynamic_command(config, template: TemplateModel) -> click.Command:
             console_print(
                 f"[dim]Template: [green]{template.name}[/green] ({template.version}), {template.source.value}, args: {', '.join([f'{k}={v}' for k, v in kwargs.items() if v])}[/dim]")
             console_print(f"[dim]{template.description}[/dim]")
-        else:
-            console_print(f"[dim][green]{template.name}[/green] ({template.version}), {template.source.value}[/dim]")
         run_template(template.id, **kwargs)
 
     return click.Command(name=template.id, callback=dynamic_command, params=options,

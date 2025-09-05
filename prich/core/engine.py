@@ -70,7 +70,10 @@ def run_template(template_id, **kwargs):
                 # show final step output when non-verbose execution
                 step.output_console = True
 
-            step_brief = f"\nStep #{step_idx}: {step.name}"
+            if is_verbose():
+                step_brief = f"\n• Step #{step_idx}: {step.name}"
+            else:
+                step_brief = f"• {step.name}"
             should_run = should_run_step(step.when, variables)
             if (not should_run and is_verbose()) or should_run:
                 when_expression = f" (\"when\" expression \"{step.when}\" is {should_run})" if step.when else ""
