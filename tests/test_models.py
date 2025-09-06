@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import click
@@ -8,6 +7,7 @@ from prich.models.file_scope import FileScope
 from prich.models.template import TemplateModel, PythonStep
 from prich.models.template_repo_manifest import TemplatesRepoManifest
 from tests.fixtures.config import basic_config
+from tests.fixtures.paths import mock_paths
 
 def test_model_template_repo_manifest():
     test_repo = {
@@ -362,7 +362,7 @@ get_model_template_save_CASES = [
    },
 ]
 @pytest.mark.parametrize("case", get_model_template_save_CASES, ids=[c["id"] for c in get_model_template_save_CASES])
-def test_model_template_save(monkeypatch, tmp_path, case):
+def test_model_template_save(monkeypatch, mock_paths, case):
     template = TemplateModel(
         id="test-tpl",
         name="Test TPL",
@@ -380,10 +380,8 @@ def test_model_template_save(monkeypatch, tmp_path, case):
     for k, v in case.get("template").items():
         template.__setattr__(k, v)
 
-    global_dir = tmp_path / "home"
-    local_dir = tmp_path / "local"
-    global_dir.mkdir()
-    local_dir.mkdir()
+    global_dir = mock_paths.home_dir
+    local_dir = mock_paths.cwd_dir
     monkeypatch.setattr(Path, "home", lambda: global_dir)
     monkeypatch.setattr(Path, "cwd", lambda: local_dir)
     if case.get("expected_exception"):
@@ -407,11 +405,9 @@ get_model_config_CASES = [
   {"id": "save_global", "location": FileScope.GLOBAL},
 ]
 @pytest.mark.parametrize("case", get_model_config_CASES, ids=[c["id"] for c in get_model_config_CASES])
-def test_model_config(tmp_path, monkeypatch, basic_config, case):
-    global_dir = tmp_path / "home"
-    local_dir = tmp_path / "local"
-    global_dir.mkdir()
-    local_dir.mkdir()
+def test_model_config(mock_paths, monkeypatch, basic_config, case):
+    global_dir = mock_paths.home_dir
+    local_dir = mock_paths.cwd_dir
     monkeypatch.setattr(Path, "home", lambda: global_dir)
     monkeypatch.setattr(Path, "cwd", lambda: local_dir)
 

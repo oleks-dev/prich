@@ -2,6 +2,7 @@ import pytest
 from click.testing import CliRunner
 
 from tests.generate.templates import templates, templates_list_to_dict
+from tests.fixtures.paths import mock_paths
 
 get_list_tags_CASES = [
     {"id": "local", "count": 4, "args": ["-l"],
@@ -16,7 +17,7 @@ get_list_tags_CASES = [
      "expected_output": "Use only one local or global option, use"},
 ]
 @pytest.mark.parametrize("case", get_list_tags_CASES, ids=[c["id"] for c in get_list_tags_CASES])
-def test_list_tags(tmp_path, monkeypatch, case):
+def test_list_tags(mock_paths, monkeypatch, case):
     from prich.cli.listing import list_tags
     from prich.core.state import _loaded_templates
     _loaded_templates.clear()
@@ -35,7 +36,7 @@ def test_list_tags(tmp_path, monkeypatch, case):
     _loaded_templates.update(template_dict)
 
     runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path):
+    with runner.isolated_filesystem(temp_dir=mock_paths.home_dir):
         result = runner.invoke(list_tags, case.get("args"))
         if case.get("expected_output") is not None:
             assert case.get("expected_output") in result.output
@@ -69,7 +70,7 @@ get_list_templates_CASES = [
      "expected_output": "{\n", "check_count": False},
 ]
 @pytest.mark.parametrize("case", get_list_templates_CASES, ids=[c["id"] for c in get_list_templates_CASES])
-def test_list_templates(tmp_path, monkeypatch, case):
+def test_list_templates(mock_paths, monkeypatch, case):
     from prich.cli.listing import list_templates
     from prich.core.state import _loaded_templates
     _loaded_templates.clear()
@@ -78,7 +79,7 @@ def test_list_templates(tmp_path, monkeypatch, case):
     monkeypatch.setattr("prich.core.loaders.load_templates", lambda: template_list)
 
     runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path):
+    with runner.isolated_filesystem(temp_dir=mock_paths.home_dir):
         result = runner.invoke(list_templates, case.get("args"))
         if case.get("expected_output") is not None:
             assert case.get("expected_output") in result.output

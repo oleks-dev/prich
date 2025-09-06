@@ -6,7 +6,7 @@ from typing import Dict, Optional, Tuple, List, Iterable
 from prich.constants import PRICH_DIR_NAME
 from prich.core.file_scope import classify_path
 from prich.core.state import _loaded_templates, _loaded_config, _loaded_config_paths
-from prich.core.utils import console_print, shorten_path, get_prich_dir
+from prich.core.utils import console_print, shorten_path, get_prich_dir, get_cwd_dir, get_home_dir
 from prich.models.utils import recursive_update
 from prich.models.config import ConfigModel
 from prich.models.template import TemplateModel
@@ -119,10 +119,10 @@ def _load_template_models(base_dir: Path) -> List[TemplateModel]:
 def load_templates() -> List[TemplateModel]:
     """Load templates based on the global+local or only local or only global"""
     from prich.core.utils import should_use_global_only, should_use_local_only
-    global_templates = _load_template_models(Path.home())
+    global_templates = _load_template_models(get_home_dir())
     if should_use_global_only():
         return global_templates
-    local_templates = _load_template_models(Path.cwd())
+    local_templates = _load_template_models(get_cwd_dir())
     if should_use_local_only():
         return local_templates
     local_ids = {template.id for template in local_templates if template}

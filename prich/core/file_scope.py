@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+from prich.core.utils import get_cwd_dir, get_home_dir
 from prich.constants import PRICH_DIR_NAME
 from prich.models.file_scope import FileScope
 
@@ -58,8 +59,8 @@ def classify_path(
     - Global live in <home>/.prich
     - Returns EXTERNAL if neither matches.
     """
-    cwd = cwd or Path.cwd()
-    home = home or Path.home()
+    cwd = cwd or get_cwd_dir()
+    home = home or get_home_dir()
 
     local_root = cwd / PRICH_DIR_NAME
     global_root = home / PRICH_DIR_NAME

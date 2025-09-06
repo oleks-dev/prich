@@ -1,3 +1,4 @@
+import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -36,6 +37,8 @@ def mock_paths(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, "cwd", lambda: cwd_dir)
     config.save(FileScope.GLOBAL)
     config.save(FileScope.LOCAL)
+    os.environ['HOME'] = str(home_dir)
+    os.environ['PWD'] = str(cwd_dir)
 
     @dataclass
     class PrichFolder:

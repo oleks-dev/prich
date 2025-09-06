@@ -1,10 +1,10 @@
 import os
 
 import click
-from pathlib import Path
 from typing import List, Optional, Literal, Dict, Annotated, Union
 from pydantic import BaseModel, Field, field_validator, TypeAdapter, ConfigDict
 from prich.constants import PRICH_DIR_NAME
+from prich.core.utils import get_cwd_dir, get_home_dir
 from prich.models.file_scope import FileScope
 from prich.models.config_providers import EchoProviderModel, OpenAIProviderModel, MLXLocalProviderModel, STDINConsumerProviderModel, OllamaProviderModel
 from prich.version import CONFIG_SCHEMA_VERSION
@@ -28,7 +28,7 @@ class SecurityConfig(BaseModel):
 
 class SettingsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    default_provider: str
+    default_provider: Optional[str] = None
     provider_assignments: Optional[Dict[str, str]] = None
     editor: Optional[str] = None
     env_file: Optional[str | List[str]] = None
@@ -44,7 +44,7 @@ class ConfigModel(BaseModel):
     schema_version: Literal["1.0"] = CONFIG_SCHEMA_VERSION
     providers: Dict[str, ProviderConfig]
     provider_modes: List[ProviderModeModel]
-    settings: SettingsConfig
+    settings: Optional[SettingsConfig] = None
     security: Optional[SecurityConfig] = None
 
     @classmethod
@@ -71,9 +71,9 @@ class ConfigModel(BaseModel):
         yaml.add_representer(str, str_presenter, Dumper=yaml.SafeDumper)
 
         if location == FileScope.LOCAL:
-            base_dir = Path.cwd()
+            base_dir = get_cwd_dir()
         elif location == FileScope.GLOBAL:
-            base_dir = Path.home()
+            base_dir = get_home_dir()
         else:
             raise click.ClickException("Save config location param value is not supported")
         prich_dir = base_dir / PRICH_DIR_NAME

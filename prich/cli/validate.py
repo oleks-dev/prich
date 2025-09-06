@@ -5,7 +5,7 @@ from prich.constants import PRICH_DIR_NAME
 from prich.models.template import CommandStep, PythonStep
 from prich.core.file_scope import classify_path
 from prich.core.loaders import find_template_files, load_template_model, get_env_vars
-from prich.core.utils import console_print, shorten_path, get_prich_dir, is_just_filename
+from prich.core.utils import console_print, shorten_path, get_prich_dir, is_just_filename, get_cwd_dir, get_home_dir
 
 
 @click.command(name="validate")
@@ -32,11 +32,11 @@ def validate_templates(template_id: str, validate_file: Path, global_only: bool,
         template_files = [validate_file]
     else:
         # Prepare Template Files Path
-        file_paths = [Path.cwd(), Path.home()]
+        file_paths = [get_cwd_dir(), get_home_dir()]
         if global_only:
-            file_paths.remove(Path.cwd())
+            file_paths.remove(get_cwd_dir())
         if local_only:
-            file_paths.remove(Path.home())
+            file_paths.remove(get_home_dir())
         for base_dir in file_paths:
             template_files.extend(find_template_files(base_dir))
 

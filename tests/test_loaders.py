@@ -7,6 +7,7 @@ import pytest
 
 from tests.fixtures.config import basic_config, CONFIG_YAML
 from tests.fixtures.templates import INVALID_TEMPLATE_YAML
+from tests.fixtures.paths import mock_paths
 from tests.generate.templates import templates, templates_list_to_dict
 from prich.core.state import _loaded_templates, _loaded_config_paths
 from prich.core.loaders import get_loaded_templates, get_loaded_template, get_loaded_config, load_templates, \
@@ -19,11 +20,9 @@ load_templates_CASES = [
     {"id": "global_template_with_only_local", "count": 1, "global_location": True, "local_only": True, "global_only": False, "expected_count": 0},
 ]
 @pytest.mark.parametrize("case", load_templates_CASES, ids=[c["id"] for c in load_templates_CASES])
-def test_load_templates(monkeypatch, tmp_path, case):
-    global_dir = tmp_path / "home"
-    local_dir = tmp_path / "local"
-    global_dir.mkdir()
-    local_dir.mkdir()
+def test_load_templates(monkeypatch, mock_paths, case):
+    global_dir = mock_paths.home_dir
+    local_dir = mock_paths.cwd_dir
     monkeypatch.setattr(Path, "home", lambda: global_dir)
     monkeypatch.setattr(Path, "cwd",  lambda: local_dir)
 
@@ -54,9 +53,6 @@ def test_load_templates(monkeypatch, tmp_path, case):
     monkeypatch.setattr("prich.core.loaders._load_template_models", fake_load)
     actual = load_templates()
     assert len(actual) == case.get("expected_count")
-    global_dir.rmdir()
-    local_dir.rmdir()
-    tmp_path.rmdir()
     if len(actual) > 0:
         assert actual[0].id == template_list[0].id
 
@@ -210,15 +206,13 @@ def test_find_template_files(tmp_path):
     tmp_path.rmdir()
     assert len(actual), 2
 
-def test_find_template_files_no_templates(tmp_path):
+def test_find_template_files_no_templates(mock_paths):
     from prich.core.loaders import find_template_files
-    prich_dir = tmp_path / ".prich"
+    prich_dir = mock_paths.prich.local_dir
     templates_dir = prich_dir / "templates"
     os.makedirs(templates_dir, exist_ok=True)
     actual = find_template_files(prich_dir.parent)
     templates_dir.rmdir()
-    prich_dir.rmdir()
-    tmp_path.rmdir()
     assert len(actual) == 0
 
 def test_find_template_files_no_templates_folder():

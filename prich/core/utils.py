@@ -17,39 +17,45 @@ def should_use_global_only() -> bool:
                 return True
     except:
         pass
-    return any(flag in sys.argv for flag in ("-g", "--global"))
+    return False
 
 def should_use_local_only() -> bool:
     """ Should only local config/templates used? """
     try:
-        local_only_options = ["local_only"]
-        for global_ in local_only_options:
-            if click.get_current_context().params.get(global_):
-                return True
+        if click.get_current_context().params.get("local_only"):
+            return True
     except:
         pass
-    return any(flag in sys.argv for flag in ("-l", "--local"))
+    return False
 
 def is_verbose() -> bool:
     """ Is Verbose mode enabled? """
     try:
-        is_verbose_options = ["verbose"]
-        for verbose_ in is_verbose_options:
-            if click.get_current_context().params.get(verbose_):
-                return True
+        if click.get_current_context().params.get("verbose"):
+            return True
     except:
         pass
-    return any(flag in sys.argv for flag in ("-v", "--verbose"))
+    return False
 
 def is_quiet() -> bool:
     """ Is Quiet mode enabled? """
-    return any(flag in sys.argv for flag in ("-q", "--quiet"))
+    try:
+        if click.get_current_context().params.get("quiet"):
+            return True
+    except:
+        pass
+    return False
 
 def is_only_final_output() -> bool:
     """ Show only output of the last step? """
     if is_piped():
         return True
-    return any(flag in sys.argv for flag in ("-f", "--only-final-output"))
+    try:
+        if click.get_current_context().params.get("only_final_output"):
+            return True
+    except:
+        pass
+    return False
 
 def is_piped() -> bool:
     """ Check if prich executed with a piped command (should work only when not executed from pytest) """
@@ -75,9 +81,29 @@ def is_cli_option_name(option_name) -> bool:
     pattern = r'^--[a-z0-9]+([-_a-z0-9]+)*$'
     return bool(re.match(pattern, option_name))
 
+def get_cwd_dir() -> Path:
+    """Return current directory, prefer $PWD if set (symlink-preserving)."""
+    pwd = os.environ.get("PWD")
+    if pwd:
+        try:
+            return Path(pwd)
+        except Exception:
+            pass
+    return Path.cwd()
+
+def get_home_dir() -> Path:
+    """Return home directory, prefer $HOME if set (common CLI convention)."""
+    home = os.environ.get("HOME")
+    if home:
+        try:
+            return Path(home)
+        except Exception:
+            pass
+    return Path.home()
+
 def get_prich_dir(global_only: bool = None) -> Path:
     """ Return current prich dir path based on global_only param or should_use_global_only() """
-    parent_path = Path.home() if global_only or should_use_global_only() else Path.cwd()
+    parent_path = get_home_dir() if global_only or should_use_global_only() else get_cwd_dir()
     return parent_path / PRICH_DIR_NAME
 
 def get_prich_templates_dir(global_only: bool = None) -> Path:
@@ -87,7 +113,7 @@ def get_prich_templates_dir(global_only: bool = None) -> Path:
 def shorten_path(path: str | Path) -> str:
     """ Return short path using ~/... or ./... instead of a full absolute path """
     home = str(Path.home())
-    cwd = str(Path.cwd())
+    cwd = str(get_cwd_dir())
     if type(path) == Path:
         path = str(path)
     if path.startswith(home):
