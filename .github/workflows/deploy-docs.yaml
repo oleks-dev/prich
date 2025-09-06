@@ -2,6 +2,10 @@ name: Deploy MkDocs
 
 on:
   push:
+    paths:
+      - "docs/**"
+      - "prich/cli/**"
+      - "mkdocs.yaml"
     branches:
       - main   # change if your default branch is not main
 
@@ -19,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'   # or whatever you use
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
