@@ -28,7 +28,7 @@ class SecurityConfig(BaseModel):
 
 class SettingsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    default_provider: str
+    default_provider: Optional[str] = None
     provider_assignments: Optional[Dict[str, str]] = None
     editor: Optional[str] = None
     env_file: Optional[str | List[str]] = None
@@ -44,7 +44,7 @@ class ConfigModel(BaseModel):
     schema_version: Literal["1.0"] = CONFIG_SCHEMA_VERSION
     providers: Dict[str, ProviderConfig]
     provider_modes: List[ProviderModeModel]
-    settings: SettingsConfig
+    settings: Optional[SettingsConfig] = None
     security: Optional[SecurityConfig] = None
 
     @classmethod

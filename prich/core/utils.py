@@ -81,10 +81,24 @@ def is_cli_option_name(option_name) -> bool:
     pattern = r'^--[a-z0-9]+([-_a-z0-9]+)*$'
     return bool(re.match(pattern, option_name))
 
-def get_cwd_dir():
+def get_cwd_dir() -> Path:
+    """Return current directory, prefer $PWD if set (symlink-preserving)."""
+    pwd = os.environ.get("PWD")
+    if pwd:
+        try:
+            return Path(pwd)
+        except Exception:
+            pass
     return Path.cwd()
 
-def get_home_dir():
+def get_home_dir() -> Path:
+    """Return home directory, prefer $HOME if set (common CLI convention)."""
+    home = os.environ.get("HOME")
+    if home:
+        try:
+            return Path(home)
+        except Exception:
+            pass
     return Path.home()
 
 def get_prich_dir(global_only: bool = None) -> Path:

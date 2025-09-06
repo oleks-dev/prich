@@ -13,6 +13,7 @@ from prich.core.loaders import load_config_model, get_env_vars
 from prich.core.template_utils import render_prompt, render_template_text
 from tests.fixtures.config import basic_config, basic_config_with_prompts, CONFIG_YAML
 from tests.fixtures.templates import template
+from tests.fixtures.paths import mock_paths
 from tests.generate.templates import generate_template
 
 variables = {
@@ -263,7 +264,7 @@ get_get_jinja_env_CASES = [
      },
 ]
 @pytest.mark.parametrize("case", get_get_jinja_env_CASES, ids=[c["id"] for c in get_get_jinja_env_CASES])
-def test_get_jinja_env(tmp_path, case):
+def test_get_jinja_env(mock_paths, case):
     from prich.core.template_utils import get_jinja_env
     jinja_env = get_jinja_env("test_env", case.get("conditional_expression_only"))
     assert jinja_env, "Jinja env is not initialized"
@@ -387,8 +388,14 @@ get_validate_step_output_CASES = [
      },
 ]
 @pytest.mark.parametrize("case", get_validate_step_output_CASES, ids=[c["id"] for c in get_validate_step_output_CASES])
-def test_validate_step_output(case):
+def test_validate_step_output(mock_paths, basic_config, case):
     from prich.core.engine import validate_step_output
+
+    local_config = basic_config.model_copy(deep=True)
+    global_config = basic_config.model_copy(deep=True)
+    local_config.save("local")
+    global_config.save("global")
+
     if case.get("expected_exception"):
         with pytest.raises(case.get("expected_exception")):
             validate_step_output(case.get("step_validation"), case.get("value", {}), {})

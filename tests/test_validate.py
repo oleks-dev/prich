@@ -7,6 +7,7 @@ from prich.models.file_scope import FileScope
 from prich.cli.validate import validate_templates
 from tests.fixtures.templates import template
 from tests.fixtures.config import basic_config
+from tests.fixtures.paths import mock_paths
 
 get_validate_template_CASES = [
     {"id": "local_and_global_params", "args": ["-g", "-l"],
@@ -82,11 +83,9 @@ get_validate_template_CASES = [
      ]},
 ]
 @pytest.mark.parametrize("case", get_validate_template_CASES, ids=[c["id"] for c in get_validate_template_CASES])
-def test_validate_template(tmp_path, monkeypatch, case, template, basic_config):
-    global_dir = tmp_path / "home"
-    local_dir = tmp_path / "local"
-    global_dir.mkdir()
-    local_dir.mkdir()
+def test_validate_template(mock_paths, monkeypatch, case, template, basic_config):
+    global_dir = mock_paths.home_dir
+    local_dir = mock_paths.cwd_dir
 
     monkeypatch.setattr(Path, "home", lambda: global_dir)
     monkeypatch.setattr(Path, "cwd", lambda: local_dir)
@@ -125,7 +124,7 @@ def test_validate_template(tmp_path, monkeypatch, case, template, basic_config):
         template_local_wrong.save(FileScope.LOCAL)
 
     runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path):
+    with runner.isolated_filesystem(temp_dir=mock_paths.home_dir):
         result = runner.invoke(validate_templates, case.get("args"))
         if case.get("expected_output") is not None:
             if type(case.get("expected_output")) == str:

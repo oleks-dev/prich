@@ -1,8 +1,10 @@
+import shutil
 from pathlib import Path
 from subprocess import CompletedProcess
 
 import pytest
 from click.testing import CliRunner
+from tests.fixtures.paths import mock_paths
 
 get_init_cmd_CASES = [
     {"id": "init_global", "args_1": ["-g"], "init_folder": "global",
@@ -19,13 +21,11 @@ get_init_cmd_CASES = [
      "expected_output_1": "Initialized prich at ", "expected_output_2": "Initialized prich at "},
 ]
 @pytest.mark.parametrize("case", get_init_cmd_CASES, ids=[c["id"] for c in get_init_cmd_CASES])
-def test_init_cmd(tmp_path, monkeypatch, case):
+def test_init_cmd(mock_paths, monkeypatch, case):
     from prich.cli.init_cmd import init
 
-    global_dir = tmp_path / "home"
-    local_dir = tmp_path / "local"
-    global_dir.mkdir()
-    local_dir.mkdir()
+    global_dir = mock_paths.home_dir
+    local_dir = mock_paths.cwd_dir
     monkeypatch.setattr(Path, "home", lambda: global_dir)
     monkeypatch.setattr(Path, "cwd", lambda: local_dir)
 
@@ -36,8 +36,11 @@ def test_init_cmd(tmp_path, monkeypatch, case):
     else:
         assert False, "Wrong init_folder param specified"
 
+    if str(prich_dir).startswith("/private/var/folders/") and prich_dir.exists():
+        shutil.rmtree(prich_dir)
+
     runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path):
+    with runner.isolated_filesystem(temp_dir=mock_paths.home_dir):
         result = runner.invoke(init, case.get("args_1"))
         if case.get("expected_output_1") is not None:
             assert case.get("expected_output_1") in result.output

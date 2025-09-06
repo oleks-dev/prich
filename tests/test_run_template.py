@@ -799,11 +799,9 @@ get_run_template_cli_CASES = [
      "expected_regex_output": ["^$"]},
 ]
 @pytest.mark.parametrize("case", get_run_template_cli_CASES, ids=[c["id"] for c in get_run_template_cli_CASES])
-def test_run_template_cli(tmp_path, monkeypatch, case, template, basic_config):
-    global_dir = tmp_path / "home"
-    local_dir = tmp_path / "local"
-    global_dir.mkdir()
-    local_dir.mkdir()
+def test_run_template_cli(mock_paths, monkeypatch, case, template, basic_config):
+    global_dir = mock_paths.home_dir
+    local_dir = mock_paths.cwd_dir
 
     monkeypatch.setattr(Path, "home", lambda: global_dir)
     monkeypatch.setattr(Path, "cwd", lambda: local_dir)
@@ -841,7 +839,7 @@ def test_run_template_cli(tmp_path, monkeypatch, case, template, basic_config):
         template_global.save(FileScope.GLOBAL)
 
     runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path):
+    with runner.isolated_filesystem(temp_dir=mock_paths.home_dir):
         result = runner.invoke(run_group, case.get("args"))
         if case.get("expected_output") is not None:
             if type(case.get("expected_output")) == str:
