@@ -36,8 +36,8 @@ class DynamicCommandGroup(click.Group):
         self._commands_loaded = True
 
 
-def get_variable_type(variable_type: str) -> click.types:
-    type_mapping = {"str": click.STRING, "int": click.INT, "bool": click.BOOL, "path": click.Path}
+def get_click_variable_type(variable_type: str) -> click.types:
+    type_mapping = {"str": click.STRING, "int": click.INT, "bool": click.BOOL, "path": click.Path()}
     return type_mapping.get(variable_type.lower(), None)
 
 
@@ -45,7 +45,7 @@ def create_dynamic_command(config, template: TemplateModel) -> click.Command:
     options = []
     for arg in template.variables if template.variables else []:
         arg_name = arg.name
-        arg_type = get_variable_type(arg.type)
+        arg_type = get_click_variable_type(arg.type)
         help_text = arg.description or f"{arg_name} option"
         cli_option = arg.cli_option or f"--{arg_name}"
         if cli_option in RESERVED_RUN_TEMPLATE_CLI_OPTIONS:
@@ -59,7 +59,7 @@ def create_dynamic_command(config, template: TemplateModel) -> click.Command:
                 click.Option([cli_option], type=arg_type, default=arg.default, required=arg.required, show_default=True,
                              help=help_text))
         elif arg.type.startswith("list["):
-            list_type = get_variable_type(arg.type.split('[')[1][:-1])
+            list_type = get_click_variable_type(arg.type.split('[')[1][:-1])
             if not list_type:
                 raise click.ClickException(f"Failed to parse list type for {arg.name}")
             options.append(
