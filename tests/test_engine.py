@@ -496,11 +496,11 @@ def test_render_prompt_fields():
     # assert llm_step.rendered_input == "prompt"
 
 def test_get_variable_type():
-    from prich.cli.dynamic_command_group import get_variable_type
-    assert get_variable_type("str") == click.STRING
-    assert get_variable_type("int") == click.INT
-    assert get_variable_type("bool") == click.BOOL
-    assert get_variable_type("path") == click.Path
+    from prich.cli.dynamic_command_group import get_click_variable_type
+    assert get_click_variable_type("str") == click.STRING
+    assert get_click_variable_type("int") == click.INT
+    assert get_click_variable_type("bool") == click.BOOL
+    assert type(get_click_variable_type("path")) == click.Path
 
 
 def test_create_dynamic_command(basic_config, template):
