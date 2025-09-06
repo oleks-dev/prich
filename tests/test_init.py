@@ -1,4 +1,6 @@
 from pathlib import Path
+from subprocess import CompletedProcess
+
 import pytest
 from click.testing import CliRunner
 
@@ -45,3 +47,15 @@ def test_init_cmd(tmp_path, monkeypatch, case):
         if case.get("expected_output_2") is not None:
             result = runner.invoke(init, case.get("args_2"))
             assert case.get("expected_output_2") in result.output
+
+
+def test_completion_cmd(tmp_path, monkeypatch):
+    from prich.cli.init_cmd import completion
+
+    monkeypatch.setattr("subprocess.run", lambda cmd, env, text, check: CompletedProcess(args=[], returncode=0, stdout="output"))
+
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        runner.invoke(completion, ["bash"])
+        runner.invoke(completion, ["zsh"])
+        runner.invoke(completion, ["fish"])

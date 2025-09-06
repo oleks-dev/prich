@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Dict
 
 import click
@@ -6,6 +5,7 @@ import click
 from prich.models.template import LLMStep
 from prich.models.config import ConfigModel
 from prich.core.state import _jinja_env
+from prich.core.utils import get_cwd_dir
 
 
 def get_jinja_env(name: str, conditional_expression_only: bool = False):
@@ -13,7 +13,7 @@ def get_jinja_env(name: str, conditional_expression_only: bool = False):
 
     def _read_file_contents(filename):
         try:
-            cwd = Path.cwd()
+            cwd = get_cwd_dir()
             file_path = (cwd / filename).resolve()
             if cwd not in file_path.parents and cwd != file_path:
                 raise click.ClickException(f"File is outside the current working directory")
@@ -40,7 +40,7 @@ def get_jinja_env(name: str, conditional_expression_only: bool = False):
             env.filters.clear()
         else:
             env = Environment(
-                loader=FileSystemLoader(Path.cwd()),
+                loader=FileSystemLoader(get_cwd_dir()),
                 undefined=StrictUndefined
             )
             env.filters['include_file'] = include_file

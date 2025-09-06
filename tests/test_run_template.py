@@ -1,8 +1,15 @@
+import os
+import re
+import sys
 import venv
 import click
 import pytest
 from pathlib import Path
 from click.testing import CliRunner
+from prich.cli.run import run_group
+
+from prich.models.file_scope import FileScope
+
 from prich.cli.config import list_providers, show_config, edit_config
 from prich.core.engine import run_template
 from prich.core.state import _loaded_templates
@@ -691,6 +698,30 @@ get_run_template_CASES = [
         # ),
         },
      },
+    {"id": "run_cmd_and_slice_end_verbose", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["test"],
+                    slice_output_end=-1,
+                    validate=ValidateStepOutput(
+                        match="^tes$",
+                        not_match="echo",
+                        on_fail="error"
+                    )
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+     "args": ["-v"]
+     },
     {"id": "run_cmd_and_save_output", "template":
         # TemplateModel(
         {
@@ -743,6 +774,8 @@ def test_run_template(case, monkeypatch, basic_config):
     monkeypatch.setattr("prich.core.loaders.get_loaded_config", lambda: (basic_config, _loaded_config_paths))
     monkeypatch.setattr("prich.core.loaders.load_merged_config", lambda: (basic_config, _loaded_config_paths))
 
+    sys.argv.extend(case.get("args") or [])
+
     if case.get("expected_exception") is not None:
         with pytest.raises(click.ClickException) as e:
             run_template(test_template.id)
@@ -751,6 +784,73 @@ def test_run_template(case, monkeypatch, basic_config):
     else:
         run_template(test_template.id)
 
+
+get_run_template_cli_CASES = [
+    {"id": "run_local_template_id", "add_template": True, "args": ["template-local"],
+     "expected_output": "• llm step"},
+    {"id": "run_local_template_id_verbose", "add_template": True, "args": ["template-local", "--verbose"],
+     "extend_steps": [{"type": "render", "name": "render text", "template": "hello {{name}}"}],
+     "expected_output": ["Template: tpl (1.0), local", "• Step #1:"]},
+    {"id": "run_global_template_id_verbose", "add_template": True, "args": ["template-global", "--verbose"],
+     "expected_output": ["Template: tpl (1.0), global", "• Step #1:"]},
+    {"id": "run_local_template_id_final", "add_template": True, "args": ["template-local", "--only-final-output"],
+     "expected_regex_output": ["^### System(?:.|\\n)+### Assistant:\\n$"]},
+    {"id": "run_local_template_id_quiet", "add_template": True, "args": ["template-local", "--quiet"],
+     "expected_regex_output": ["^$"]},
+]
+@pytest.mark.parametrize("case", get_run_template_cli_CASES, ids=[c["id"] for c in get_run_template_cli_CASES])
+def test_run_template_cli(tmp_path, monkeypatch, case, template, basic_config):
+    global_dir = tmp_path / "home"
+    local_dir = tmp_path / "local"
+    global_dir.mkdir()
+    local_dir.mkdir()
+
+    monkeypatch.setattr(Path, "home", lambda: global_dir)
+    monkeypatch.setattr(Path, "cwd", lambda: local_dir)
+
+    monkeypatch.setattr("prich.core.engine.get_cwd_dir", lambda: local_dir)
+    monkeypatch.setattr("prich.core.engine.get_home_dir", lambda: global_dir)
+
+    local_config = basic_config.model_copy(deep=True)
+    global_config = basic_config.model_copy(deep=True)
+    local_config.save("local")
+    global_config.save("global")
+
+    if case.get("add_template"):
+        template_local = template.model_copy(deep=True)
+        template_global = template.model_copy(deep=True)
+        template_local.id = "template-local"
+        template_global.id = "template-global"
+        if case.get("override_venv"):
+            template_local.venv = case.get("override_venv")
+            template_global.venv = case.get("override_venv")
+        if case.get("extend_steps"):
+            for step in case.get("extend_steps"):
+                if step.get("type") == "python":
+                    template_local.steps.append(PythonStep(**step))
+                    template_global.steps.append(PythonStep(**step))
+                elif step.get("type") == "command":
+                    template_local.steps.append(CommandStep(**step))
+                    template_global.steps.append(CommandStep(**step))
+                elif step.get("type") == "render":
+                    template_local.steps.append(RenderStep(**step))
+                    template_global.steps.append(RenderStep(**step))
+                else:
+                    raise RuntimeError(f"override_steps step type is not supported: {step}")
+        template_local.save(FileScope.LOCAL)
+        template_global.save(FileScope.GLOBAL)
+
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        result = runner.invoke(run_group, case.get("args"))
+        if case.get("expected_output") is not None:
+            if type(case.get("expected_output")) == str:
+                case["expected_output"] = [case.get("expected_output")]
+            for expected_output in case.get("expected_output"):
+                assert expected_output in result.output.replace("\n", "")
+        if case.get("expected_regex_output"):
+            for expected_regex_output in case.get("expected_regex_output"):
+                assert re.search(expected_regex_output, result.output)
 
 def test_run_template_shared_venv(monkeypatch, template, basic_config, mock_paths):
     template.name = 'test_shared_venv_tpl'

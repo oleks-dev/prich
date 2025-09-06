@@ -71,6 +71,12 @@ def template(tmp_path):
                 type="str",
                 default="Assistant",
                 required=False
+            ),
+            VariableDefinition(
+                name="test_output",
+                type="str",
+                default="This is my text",
+                required=False
             )
         ],
         steps=[

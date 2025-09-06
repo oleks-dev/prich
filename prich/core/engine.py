@@ -1,5 +1,4 @@
 import click
-from pathlib import Path
 from typing import Dict
 
 from prich.core.template_utils import should_run_step
@@ -10,7 +9,7 @@ from prich.core.steps.step_sent_to_llm import send_to_llm
 from prich.models.template import LLMStep, PythonStep, RenderStep, \
     CommandStep, ValidateStepOutput
 from prich.core.utils import console_print, is_quiet, is_only_final_output, \
-    is_verbose
+    is_verbose, get_cwd_dir, get_home_dir
 from prich.core.loaders import get_env_vars
 from prich.core.variable_utils import replace_env_vars, expand_vars
 
@@ -120,9 +119,9 @@ def run_template(template_id, **kwargs):
                 variables[output_var] = step_output
             if step.output_file:
                 if step.output_file.startswith('.'):
-                    save_to_file = step.output_file.replace('.', str(Path.cwd()), 1)
+                    save_to_file = step.output_file.replace('.', str(get_cwd_dir()), 1)
                 elif step.output_file.startswith('~'):
-                    save_to_file = step.output_file.replace('~', str(Path.home()), 1)
+                    save_to_file = step.output_file.replace('~', str(get_home_dir()), 1)
                 else:
                     save_to_file = step.output_file
                 try:
