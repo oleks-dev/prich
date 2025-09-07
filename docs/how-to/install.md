@@ -3,13 +3,16 @@
     
 Until prich is published on PyPI, you can install it directly from GitHub.
  
-**Recommended: Use `pipx`**
+**Recommended: Use `pipx`**  
+> Make sure pipx is installed  
+> `pip install pipx && pipx ensurepath`  
+> or  
+> `brew install pipx && pipx ensurepath`  
+
 ```bash
 pipx install git+https://github.com/oleks-dev/prich
 ```
-
 > This installs prich in an isolated environment, ideal for CLI tools.  
-> Make sure pipx is installed (`pip install pipx && pipx ensurepath`).
 
 **Alternative: Use `uv`**
 ```bash
@@ -44,7 +47,7 @@ pipx install git+https://github.com/oleks-dev/prich --force
 ### **Initialize prich**
 **prich** uses nodejs-like home/local folder configurations for flexible usage of the configs and templates per project.  
 
-   - Local folder based
+   - Local (current) folder based
        ```bash
        prich init
        ```

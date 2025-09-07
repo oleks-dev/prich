@@ -9,20 +9,24 @@ Templates are stored in this [github prich-templates repository](https://www.git
 - **List Available Remote Templates for Installation**
 
     ```bash
+    # list all remote templates
     prich list --remote
     ```
 
     ```bash
+    # filter remote templates using tags
     prich list --remote --tag code --tag review
     ```
 
 - **Install Template from *prich-templates* Repository**
 
     ```bash
+    # install in current prich folder
     prich install <template_id> --remote
     ```
 
     ```bash
+    # install in home prich folder
     prich install <template_id> --remote --global
     ```
 
@@ -47,7 +51,10 @@ This copies files, sets up venvs, and installs dependencies - if python is used 
 To reinstall template use `--force` flag together with the selected install template, this will reinstall the template and it's isolated venv (if any).
 
 ```bash
+# from remote repo
 prich install code-review --remote --force
+# from local folder
 prich install ./code-review --force
+# from archive file
 prich install code-review.zip --force
 ```

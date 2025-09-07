@@ -77,7 +77,7 @@ steps:
 ##### Extract variables  
 ```yaml
     # create variables with extracted text from output
-    extract_vars:                      # optional [list[dict]]
+    extract_variables:                 # optional [list[dict]]
 
       # extract value using regex 
       # (same regex rules as in `output_regex`)
@@ -90,7 +90,7 @@ steps:
         multiple: false                # optional [bool]
 ```
 
-> **Note:** When extracting variables with `extract_vars` the full initial output text is used (before transformations)  
+> **Note:** When extracting variables with `extract_variables` the full initial output text is used (before transformations)  
 
 
 ##### Validate output  
