@@ -21,22 +21,27 @@ steps:
 
 ##### Output text transformations  
 ```yaml
-    # strip spaces from beginning and end of the output
-    strip_output: true                 # optional [bool]
+    filter:
+      # strip spaces from beginning and end of the output
+      strip: true                 # optional [bool]
 
-    # strip prefix characters from the output
-    strip_output_prefix: "> "          # optional [str]
+      # strip prefix characters from the output
+      strip_prefix: "> "          # optional [str]
 
-    # slice output from N character
-    slice_output_start: 3              # optional [int]
+      # slice output from N character
+      slice_start: 3              # optional [int]
 
-    # slice output till N character 
-    # (use negative number for backwards count)
-    slice_output_end: -1               # optional [int]
+      # slice output till N character 
+      # (use negative number for backwards count)
+      slice_end: -1               # optional [int]
 
-    # filter output using regex 
-    # (take 1st group if groups are used otherwise take matching regex)
-    output_regex: ".*"                 # optional [str]
+      # filter output using regex 
+      # (take 1st group if groups are used otherwise take matching regex)
+      regex_extract: ".*"                 # optional [str]
+
+      # replace output text using regex patterns
+      regex_replace:          # optional [list(tuple(str,str))] - regex pattern, replace
+        - ["(?i)(\"password\"\s*:\s*\")[^\"]+(\")", "\\1*****\\2"]  # (ex. for json passwords sanitization)
 ```
 
 > **Note:** Output text transformation params applied one by one in order as they mentioned in the example, each next one uses result of the previous.  
@@ -48,10 +53,12 @@ steps:
     output_variable: "out_var"         # optional [str]
 
     # save output to file
-    output_file: "out.txt"             # optional [str]
-
-    # file mode overwrite or append
-    output_file_mode: "write"          # optional ["write"|"append"]
+    output_file: "out.txt"             # optional [str|dict] - write mode by default
+    # OR
+    output_file:
+      name: "out.txt"
+      # file mode write or append
+      mode: "write"          # optional ["write"|"append"]
 
     # print output to console during normal execution
     # (mostly for user reference when such information is needed)

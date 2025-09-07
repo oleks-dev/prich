@@ -95,22 +95,26 @@ def run_template(template_id, **kwargs):
                 raise click.ClickException(f"Step {step.type} type is not supported.")
 
             if is_verbose():
-                if step.extract_vars or step.output_regex or step.strip_output_prefix or step.slice_output_start or step.slice_output_end:
-                    console_print(f"[dim]Output: '{step_output}'[/dim]")
-            step.postprocess_extract_vars(output=step_output, variables=variables)
-            step_output = step.postprocess_output(output=step_output)
+                if step.extract_variables or step.filter:
+                    console_print(f"[dim]Output:\n{step_output}[/dim]")
+            step.postprocess_extract_vars(out=step_output, variables=variables)
+            step_output = step.postprocess_filter(out=step_output)
             if is_verbose():
-                if step.extract_vars:
-                    for spec in step.extract_vars:
-                        console_print(f"[dim]Inject \"{spec.regex}\" {f'({len(variables.get(spec.variable))} matches) ' if spec.multiple else ''}→ {spec.variable}: {f'{variables.get(spec.variable)}' if type(variables.get(spec.variable) == str) else variables.get(spec.variable)}[/dim]")
-                if step.strip_output is not None:
-                    console_print(f"[dim]Strip output spaces: {step.strip_output}[/dim]")
-                if step.strip_output_prefix:
-                    console_print(f"[dim]Strip output prefix: \"{step.strip_output_prefix}\"[/dim]")
-                if step.slice_output_start or step.slice_output_end:
-                    console_print(f"[dim]Slice output text{f' from {step.slice_output_start}' if step.slice_output_start else ''}{f' to {step.slice_output_end}' if step.slice_output_end else ''}[/dim]")
-                if step.output_regex:
-                    console_print(f"[dim]Apply regex: \"{step.output_regex}\"[/dim]")
+                if step.extract_variables:
+                    for spec in step.extract_variables:
+                        console_print(f"""[dim]Inject \"{spec.regex}\" {f'({len(variables.get(spec.variable))} matches) ' if spec.multiple else ''}→ {spec.variable}: {f'"{variables.get(spec.variable)}"' if type(variables.get(spec.variable)) == str else variables.get(spec.variable)}[/dim]""")
+                if step.filter:
+                    if step.filter.strip is not None:
+                        console_print(f"[dim]Strip output spaces: {step.filter.strip}[/dim]")
+                    if step.filter.strip_prefix:
+                        console_print(f"[dim]Strip output prefix: \"{step.filter.strip_prefix}\"[/dim]")
+                    if step.filter.slice_start or step.filter.slice_end:
+                        console_print(f"[dim]Slice output text{f' from {step.filter.slice_start}' if step.filter.slice_start else ''}{f' to {step.filter.slice_end}' if step.filter.slice_end else ''}[/dim]")
+                    if step.filter.regex_extract:
+                        console_print(f"[dim]Apply regex: \"{step.filter.regex_extract}\"[/dim]")
+                    if step.filter.regex_replace:
+                        replace_details = '\n                     '.join([f"\"{x}\" → \"{y}\"" for x,y in step.filter.regex_replace])
+                        console_print(f"[dim]Apply regex replace: {replace_details}[/dim]")
 
             # Store last output
             last_output = step_output
@@ -118,14 +122,9 @@ def run_template(template_id, **kwargs):
             if output_var:
                 variables[output_var] = step_output
             if step.output_file:
-                if step.output_file.startswith('.'):
-                    save_to_file = step.output_file.replace('.', str(get_cwd_dir()), 1)
-                elif step.output_file.startswith('~'):
-                    save_to_file = step.output_file.replace('~', str(get_home_dir()), 1)
-                else:
-                    save_to_file = step.output_file
+                save_to_file = step.output_file.name
                 try:
-                    write_mode = step.output_file_mode[:1] if step.output_file_mode else 'w'
+                    write_mode = step.output_file.mode[:1] if step.output_file.mode else 'w'
                     with open(save_to_file, write_mode) as step_output_file:
                         if is_verbose():
                             console_print(f"[dim]{'Save' if write_mode == 'w' else 'Append'} output to file: {save_to_file}[/dim]")

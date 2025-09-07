@@ -67,11 +67,11 @@ Send prompts to a command via STDIN and read STDOUT (e.g., q chat, mlx_lm.genera
 qchat:
   provider_type: "stdin_consumer"
   mode: "flat"
-  call: "q"                      # executable file
+  call: "q"                           # executable file
   args: ["chat", "--no-interactive"]  # optional arguments
-  strip_output_prefix: "> "      # optional [str] - strip prefix text from step output
-  slice_output_start: 0          # optional [int] - slice step output text starting from N
-  slice_output_end: -1           # optional [int] - slice step output text ending at N (negative counts from the back)
+  filter:
+    strip: true             # strip leading and ending spaces
+    strip_prefix: "> "      # remove q char initial character and space
 ```
 
 #### MLX LM Generate  
@@ -85,5 +85,6 @@ qchat:
       - "/Users/guest/.cache/huggingface/hub/models--mlx-community--Mistral-7B-Instruct-v0.3-4bit/snapshots/a4b8f870474b0eb527f466a03fbc187830d271f5"
       - "--prompt"
       - "-"
-    output_regex: "^==========\\n((?:.|\\n)+)\\n\\=\\=\\=\\=\\=\\=\\=\\=\\=\\=(?:.|\\n)+$"
+    filter:
+      regex_extract: "^==========\\n((?:.|\\n)+)\\n\\=\\=\\=\\=\\=\\=\\=\\=\\=\\=(?:.|\\n)+$"
 ```

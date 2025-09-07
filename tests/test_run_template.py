@@ -1,6 +1,4 @@
-import os
 import re
-import sys
 import venv
 import click
 import pytest
@@ -15,10 +13,11 @@ from prich.core.engine import run_template
 from prich.core.state import _loaded_templates
 from prich.models.template import TemplateModel, VariableDefinition, PythonStep, CommandStep, LLMStep, \
     RenderStep, ValidateStepOutput, ExtractVarModel
+from prich.models.text_filter_model import TextFilterModel
 from tests.fixtures.config import basic_config
 from tests.fixtures.paths import mock_paths
 from tests.fixtures.templates import template
-
+from tests.utils.utils import capture_stdout
 
 get_run_template_CASES = [
     {"id": "valid_one_llm_step", "template":
@@ -432,6 +431,9 @@ get_run_template_CASES = [
             "folder": "."
         # ),
         },
+         "expected_output": [
+             "Preprocess python\ntest\n\nWarning: Validation failed for step output!\n"
+         ]
      },
     {"id": "run_cmd_and_validate_skip", "template":
         # TemplateModel(
@@ -454,6 +456,9 @@ get_run_template_CASES = [
             "folder": "."
         # ),
         },
+         "expected_output": [
+             "Validation failed for step output – skipping next steps.\n"
+         ]
      },
     {"id": "run_cmd_and_validate_continue", "template":
         # TemplateModel(
@@ -476,6 +481,9 @@ get_run_template_CASES = [
             "folder": "."
         # ),
         },
+         "expected_output": [
+             "Preprocess python\ntest\n\nValidation failed for step output \u2013 continue.\n"
+         ]
      },
     {"id": "run_cmd_and_validate_passed", "template":
         # TemplateModel(
@@ -498,6 +506,9 @@ get_run_template_CASES = [
             "folder": "."
         # ),
         },
+         "expected_output": [
+             "Preprocess python\ntest\n"
+         ]
      },
     {"id": "run_cmd_and_strip_prefix", "template":
         # TemplateModel(
@@ -510,7 +521,7 @@ get_run_template_CASES = [
                     type="python",
                     call="echo.py",
                     args=["test"],
-                    strip_output_prefix="te",
+                    filter=TextFilterModel(strip_prefix="te"),
                     validate=ValidateStepOutput(
                         match="^st",
                         not_match="echo",
@@ -521,6 +532,9 @@ get_run_template_CASES = [
             "folder": "."
         # ),
         },
+         "expected_output": [
+             "Preprocess python\nst\n"
+         ]
      },
     {"id": "run_cmd_and_strip_output", "template":
         # TemplateModel(
@@ -533,7 +547,7 @@ get_run_template_CASES = [
                     type="python",
                     call="echo.py",
                     args=[" test "],
-                    strip_output=True,
+                    filter=TextFilterModel(strip=True),
                     validate=ValidateStepOutput(
                         match="^test",
                         not_match="echo",
@@ -544,6 +558,9 @@ get_run_template_CASES = [
             "folder": "."
         # ),
         },
+     "expected_output": [
+         "Preprocess python\ntest\n"
+     ]
      },
     {"id": "run_cmd_and_output_regex_group1", "template":
         # TemplateModel(
@@ -556,7 +573,7 @@ get_run_template_CASES = [
                     type="python",
                     call="echo.py",
                     args=[" test "],
-                    output_regex="(es)",
+                    filter=TextFilterModel(regex_extract="(es)"),
                     validate=ValidateStepOutput(
                         match="^es",
                         not_match="echo",
@@ -567,6 +584,9 @@ get_run_template_CASES = [
             "folder": "."
         # ),
         },
+     "expected_output": [
+         "Preprocess python\nes\n"
+     ]
      },
     {"id": "run_cmd_and_output_regex_group0", "template":
         # TemplateModel(
@@ -579,7 +599,7 @@ get_run_template_CASES = [
                     type="python",
                     call="echo.py",
                     args=[" test "],
-                    output_regex="es",
+                    filter=TextFilterModel(regex_extract="es"),
                     validate=ValidateStepOutput(
                         match="^es",
                         not_match="echo",
@@ -590,6 +610,9 @@ get_run_template_CASES = [
             "folder": "."
         # ),
         },
+        "expected_output": [
+            "Preprocess python\nes\n"
+         ]
      },
     {"id": "run_cmd_and_output_extract_vars", "template":
         # TemplateModel(
@@ -602,7 +625,7 @@ get_run_template_CASES = [
                     type="python",
                     call="echo.py",
                     args=["test test test"],
-                    extract_vars=[ExtractVarModel(
+                    extract_variables=[ExtractVarModel(
                         regex="(test) ",
                         variable="test"
                     ), ExtractVarModel(
@@ -627,6 +650,16 @@ get_run_template_CASES = [
             "folder": "."
         # ),
         },
+         "is_verbose": True,
+         "expected_output": [
+             "• Step #1: Preprocess python\n",
+             "Output:\ntest test test\n",
+             "Inject \"(test) \" → test: \"test\"\n",
+             "Inject \"notfound\" → not_found_test: \"\"\n",
+             "Inject \"(test)\" (3 matches) → test_list: [\'test\', \'test\', \'test\']\n",
+             "Inject \"notfound\" (0 matches) → notfound_list: []\n",
+             "test test test\n\nValidation completed.\n"
+         ]
      },
     {"id": "run_cmd_and_slice", "template":
         # TemplateModel(
@@ -639,8 +672,10 @@ get_run_template_CASES = [
                     type="python",
                     call="echo.py",
                     args=["test"],
-                    slice_output_start=1,
-                    slice_output_end=-1,
+                    filter=TextFilterModel(
+                        slice_start=1,
+                        slice_end=-1
+                    ),
                     validate=ValidateStepOutput(
                         match="^es$",
                         not_match="echo",
@@ -651,6 +686,9 @@ get_run_template_CASES = [
             "folder": "."
         # ),
         },
+         "expected_output": [
+             "• Preprocess python\nes\n"
+         ]
      },
     {"id": "run_cmd_and_slice_start", "template":
         # TemplateModel(
@@ -663,7 +701,9 @@ get_run_template_CASES = [
                     type="python",
                     call="echo.py",
                     args=["test"],
-                    slice_output_start=1,
+                    filter=TextFilterModel(
+                        slice_start=1
+                    ),
                     validate=ValidateStepOutput(
                         match="^est$",
                         not_match="echo",
@@ -674,6 +714,9 @@ get_run_template_CASES = [
             "folder": "."
         # ),
         },
+         "expected_output": [
+             "• Preprocess python\nest\n"
+         ]
      },
     {"id": "run_cmd_and_slice_end", "template":
         # TemplateModel(
@@ -686,7 +729,9 @@ get_run_template_CASES = [
                     type="python",
                     call="echo.py",
                     args=["test"],
-                    slice_output_end=-1,
+                    filter=TextFilterModel(
+                        slice_end=-1
+                    ),
                     validate=ValidateStepOutput(
                         match="^tes$",
                         not_match="echo",
@@ -697,6 +742,9 @@ get_run_template_CASES = [
             "folder": "."
         # ),
         },
+        "expected_output": [
+            "• Preprocess python\ntes\n"
+        ]
      },
     {"id": "run_cmd_and_slice_end_verbose", "template":
         # TemplateModel(
@@ -709,7 +757,9 @@ get_run_template_CASES = [
                     type="python",
                     call="echo.py",
                     args=["test"],
-                    slice_output_end=-1,
+                    filter=TextFilterModel(
+                        slice_end=-1
+                    ),
                     validate=ValidateStepOutput(
                         match="^tes$",
                         not_match="echo",
@@ -720,7 +770,63 @@ get_run_template_CASES = [
             "folder": "."
         # ),
         },
-     "args": ["-v"]
+        "is_verbose": True,
+        "expected_output": [
+            "• Step #1: Preprocess python\n",
+            "Output:\ntest\n",
+            "Strip output spaces: True\n",
+            "Slice output text to -1\n",
+            "tes\n",
+            "Validation completed.\n"
+        ]
+     },
+    {"id": "run_cmd_and_sanitize_output", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["{\"password\": \"secret\"}"],
+                    filter=TextFilterModel(
+                        regex_replace=[("(?i)(\"password\"\\s*:\\s*\")[^\"]+(\")", r"\1*****\2")]
+                    ),
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+        "expected_output": ["• Preprocess python", "{\"password\": \"*****\"}"]
+     },
+    {"id": "run_cmd_and_sanitize_output_verbose", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["{\"password\": \"secret\"}"],
+                    filter=TextFilterModel(
+                        regex_replace=[("(?i)(\"password\"\\s*:\\s*\")[^\"]+(\")", r"\1*****\2")]
+                    ),
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+        "is_verbose": True,
+        "expected_output": [
+            "• Step #1: Preprocess python",
+            "Output:\n{\"password\": \"secret\"}\n",
+            "Apply regex replace: \"(?i)(\"password\"\\s*:\\s*\")[^\"]+(\")\" → \"\\1*****\\2\"\n"
+            "{\"password\": \"*****\"}"],
+        "args": ["--verbose"]
      },
     {"id": "run_cmd_and_save_output", "template":
         # TemplateModel(
@@ -773,8 +879,7 @@ def test_run_template(case, monkeypatch, basic_config):
 
     monkeypatch.setattr("prich.core.loaders.get_loaded_config", lambda: (basic_config, _loaded_config_paths))
     monkeypatch.setattr("prich.core.loaders.load_merged_config", lambda: (basic_config, _loaded_config_paths))
-
-    sys.argv.extend(case.get("args") or [])
+    monkeypatch.setattr("prich.core.engine.is_verbose", lambda: case.get("is_verbose", False))
 
     if case.get("expected_exception") is not None:
         with pytest.raises(click.ClickException) as e:
@@ -782,7 +887,12 @@ def test_run_template(case, monkeypatch, basic_config):
         if case.get("expected_exception_message") is not None:
             assert case.get("expected_exception_message") in str(e.value)
     else:
-        run_template(test_template.id)
+        result, out = capture_stdout(run_template, test_template.id)
+        if case.get("expected_output"):
+            if type(case.get("expected_output")) == str:
+                case["expected_output"] = [case.get("expected_output")]
+            for expected in case["expected_output"]:
+                assert expected in out
 
 
 get_run_template_cli_CASES = [
