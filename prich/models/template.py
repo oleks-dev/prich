@@ -1,11 +1,10 @@
-from pathlib import Path
-
+import re
 import click
-from pydantic import BaseModel, Field, model_validator, ConfigDict
+from pydantic import BaseModel, Field, model_validator, ConfigDict, field_validator
 from typing import List, Optional, Literal, Annotated, Union
-from prich.models.output_shaping import BaseOutputShapingModel
-from prich.constants import RESERVED_RUN_TEMPLATE_CLI_OPTIONS
+from prich.models.text_filter_model import TextFilterModel
 from prich.models.file_scope import FileScope
+from prich.constants import RESERVED_RUN_TEMPLATE_CLI_OPTIONS
 from prich.core.utils import is_valid_variable_name, is_cli_option_name, get_prich_dir
 from prich.version import TEMPLATE_SCHEMA_VERSION
 
@@ -45,46 +44,70 @@ class ExtractVarModel(BaseModel):
     variable: str
     multiple: Optional[bool] = False  # default: single match
 
+    def extract(self, text: str) -> str | list:
+        pattern = re.compile(self.regex)
+        if self.multiple:
+            matches = pattern.findall(text)
+            if matches:
+                # if regex has groups, findall returns tuples
+                values = [m if isinstance(m, str) else m[0] for m in matches]
+                return values
+            return []
+        else:
+            m = pattern.search(text)
+            if m:
+                return m.group(1) if m.groups() else m.group(0)
+            return ""
 
-class BaseStepModel(BaseOutputShapingModel):
+
+class OutputFileModel(BaseModel):
+    name: Optional[str | None] = None
+    mode: Optional[Literal["write", "append"] | None] = None
+
+
+class BaseStepModel(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
     name: str
 
     # regex transforms
-    extract_vars: Optional[list[ExtractVarModel]] = None  # enrichment
+    extract_variables: Optional[list[ExtractVarModel]] = None  # enrichment
+
+    # output transforms
+    filter: Optional[TextFilterModel] = None
 
     # persistence
     output_variable: Optional[str | None] = None
-    output_file: Optional[str | None] = None
-    output_file_mode: Optional[Literal["write", "append"]] = None
+    output_file: Optional[str | OutputFileModel | None] = None
     output_console: Optional[bool | None] = None
 
     # execution control
     when: Optional[str | None] = None
     validate_: Optional[ValidateStepOutput | list[ValidateStepOutput]] = Field(alias="validate", default=None)
 
-    def postprocess_extract_vars(self, output: str, variables: dict):
-        import re
+    # normalize output_file
+    @field_validator("output_file")
+    def normalize_output_file(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, OutputFileModel):
+            return v
+        if isinstance(v, str):
+            return OutputFileModel(name=v)
+        if isinstance(v, dict):
+            return OutputFileModel(name=v.get("name"), mode=v.get("mode", None))
+        raise ValueError("Invalid format for variable field in TransformStep")
 
+    def postprocess_extract_vars(self, out: str, variables: dict):
         # extract side variables
-        if self.extract_vars:
-            for spec in self.extract_vars:
-                pattern = re.compile(spec.regex)
-                if spec.multiple:
-                    matches = pattern.findall(output)
-                    if matches:
-                        # if regex has groups, findall returns tuples
-                        values = [m if isinstance(m, str) else m[0] for m in matches]
-                        variables[spec.variable] = values
-                    else:
-                        variables[spec.variable] = []
-                else:
-                    m = pattern.search(output)
-                    if m:
-                        variables[spec.variable] = m.group(1) if m.groups() else m.group(0)
-                    else:
-                        variables[spec.variable] = ""
+        if self.extract_variables:
+            for spec in self.extract_variables:
+                variables[spec.variable] = spec.extract(out)
+
+    def postprocess_filter(self, out):
+        if self.filter:
+            out = self.filter.apply(out)
+        return out
 
 
 class LLMStep(BaseStepModel):

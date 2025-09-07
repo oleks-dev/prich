@@ -27,11 +27,14 @@ Each step defines an action for the template pipeline workflow executed in order
 **Step can have next key parameters**:
 * `name`: name of the step (should be unique for each step in the template)
 * `output_variable`: save output of the execution into a variable for the following usage
-* `output_file`: save output of the execution into a file
-* `output_file_mode`: `write`/`append`
-* `strip_output_prefix`: strip prefix string from the step output
-* `slice_output_start`: slice step output from character number
-* `slice_output_end`: slice step output to character number
+* `output_file`: save output of the execution into a file (default would be `write` mode)
+* `output_file`: 
+    `name`: save output of the execution into a file
+    `mode`: `write` or `append`
+* `filter`:
+    `strip_prefix`: strip prefix string from the step output
+    `slice_start`: slice step output from character number
+    `slice_end`: slice step output to character number
 * `when`: execute step only when true - simple jinja evaluation like `working_vs_last_commit or (not working_vs_last_commit and not working_vs_remote and not committed_vs_remote and not remote_vs_local)` or `not remote_vs_local`, etc.
 * `validate`: validate step execution (see `step validate`)
 * plus additional keys based on the step type

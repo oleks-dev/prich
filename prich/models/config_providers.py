@@ -1,13 +1,21 @@
-from pydantic import Field, ConfigDict
+from pydantic import Field, ConfigDict, BaseModel
 from typing import Literal, Optional, List, Tuple
-from prich.models.output_shaping import BaseOutputShapingModel
+from prich.models.text_filter_model import TextFilterModel
 
 
-class BaseProviderModel(BaseOutputShapingModel):
+class BaseProviderModel(BaseModel):
     model_config = ConfigDict(extra='forbid')
     name: str | None = Field(default=None, exclude=True)  # will be injected
 
     mode: Optional[str] = None
+
+    # transforms
+    filter: Optional[TextFilterModel] = None
+
+    def postprocess_filter(self, out):
+        if self.filter:
+            out = self.filter.apply(out)
+        return out
 
     def model_post_init(self, __context):
         if self.name is None and __context and "__name" in __context:

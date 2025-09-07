@@ -75,7 +75,7 @@ def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: C
                 instructions=step.rendered_instructions,
                 input_=step.rendered_input
             )
-        step_output = selected_provider.postprocess_output(response)
+        step_output = selected_provider.postprocess_filter(response)
         if (is_verbose() or step.output_console) and not llm_provider.show_response and not is_quiet():
             console_print(step_output, markup=False)
     except Exception as e:
