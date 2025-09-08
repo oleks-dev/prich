@@ -50,10 +50,10 @@ get_validate_template_CASES = [
          }
      ],
      "expected_output": [
-         "template-global.yaml: is valid",
+         "template-global.yaml: is not valid",
          "Failed to find call command file ~/.prich/templates/template-global/scripts/echo1",
          "Failed to find call command file ~/.prich/templates/template-global/scripts/echo2",
-         "template-local.yaml: is valid",
+         "template-local.yaml: is not valid",
          "Failed to find call command file ./.prich/templates/template-local/scripts/echo1",
          "Failed to find call command file ./.prich/templates/template-local/scripts/echo2",
      ]},
@@ -72,11 +72,11 @@ get_validate_template_CASES = [
          }
      ],
      "expected_output": [
-         "template-global.yaml: is valid",
+         "template-global.yaml: is not valid",
          "Failed to find isolated venv at ~/.prich/templates/template-global/scripts",
          "Failed to find call python file ~/.prich/templates/template-global/scripts/echo1.py",
          "Failed to find call python file ~/.prich/templates/template-global/scripts/echo2.py",
-         "template-local.yaml: is valid",
+         "template-local.yaml: is not valid",
          "Failed to find isolated venv at ./.prich/templates/template-local/scripts",
          "Failed to find call python file ./.prich/templates/template-local/scripts/echo1.py",
          "Failed to find call python file ./.prich/templates/template-local/scripts/echo2.py",

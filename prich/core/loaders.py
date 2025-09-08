@@ -72,25 +72,22 @@ def load_merged_config() -> Tuple[ConfigModel, List[Path]]:
         raise click.ClickException(f"No providers config found. Check config files: {[shorten_path(str(path_item)) for path_item in result[1]]}")
     raise click.ClickException(f"No config found. Run 'prich init' first.")
 
+
+def _load_template_model(yaml_file: Path, template_dict: dict) -> TemplateModel:
+    if template_dict:
+        if template_dict.get("schema_version") != TEMPLATE_SCHEMA_VERSION:
+            raise click.ClickException(
+                f"Unsupported template schema version {template_dict.get('schema_version') if template_dict.get('schema_version') else 'NOT SET'}, this prich version supports only {TEMPLATE_SCHEMA_VERSION}: {shorten_path(str(yaml_file))}")
+        template_dict["source"] = classify_path(file=yaml_file)
+        template_dict["folder"] = str(yaml_file.parent)
+        template_dict["file"] = str(yaml_file)
+        return TemplateModel(**template_dict)
+    raise click.ClickException(f"Failed to load {shorten_path(str(yaml_file))}, check if file or contents are correct.")
+
 def load_template_model(yaml_file: Path) -> TemplateModel | None:
-    template_yaml = None
-    try:
-        if yaml_file.is_file():
-            template_yaml = _load_yaml(yaml_file)
-            if template_yaml:
-                if template_yaml.get("schema_version") != TEMPLATE_SCHEMA_VERSION:
-                    raise click.ClickException(
-                        f"Unsupported template schema version {template_yaml.get('schema_version') if template_yaml.get('schema_version') else 'NOT SET'}, this prich version supports only {TEMPLATE_SCHEMA_VERSION}: {shorten_path(str(yaml_file))}")
-                template_yaml["source"] = classify_path(file=yaml_file)
-                template_yaml["folder"] = str(yaml_file.parent)
-                template_yaml["file"] = str(yaml_file)
-                return TemplateModel(**template_yaml)
-        raise click.ClickException(f"Failed to load {shorten_path(str(yaml_file))}, check if file or contents are correct.")
-    except Exception as e:
-        if 'errors' in e.__dir__():
-            raise click.ClickException(f"""Failed to load template {template_yaml.get('name') if template_yaml else '?'} from {yaml_file}: {', '.join([f'{x.get("msg")}: {x.get("loc")}' for x in e.errors()])}""")
-        else:
-            raise click.ClickException(f"Failed to load template {template_yaml.get('name') if template_yaml else '?'} from {yaml_file}: {e}")
+    template_yaml = _load_yaml(yaml_file)
+    return _load_template_model(yaml_file, template_yaml)
+
 
 def find_template_files(base_dir: Path) -> List[Path]:
     """Find template YAML files"""
@@ -112,7 +109,7 @@ def _load_template_models(base_dir: Path) -> List[TemplateModel]:
         try:
             template = load_template_model(template_file)
             templates.append(template)
-        except click.ClickException:
+        except:
             pass  # ignore load templates that are failed to load
     return templates
 
