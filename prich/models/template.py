@@ -40,6 +40,8 @@ class ValidateStepOutput(BaseModel):
 
 
 class ExtractVarModel(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
     regex: str
     variable: str
     multiple: Optional[bool] = False  # default: single match
@@ -61,6 +63,8 @@ class ExtractVarModel(BaseModel):
 
 
 class OutputFileModel(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
     name: Optional[str | None] = None
     mode: Optional[Literal["write", "append"] | None] = None
 
