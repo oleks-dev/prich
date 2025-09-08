@@ -194,5 +194,10 @@ def validate_templates(template_id: str, validate_file: Path, global_only: bool,
             template_source = classify_path(template_file)
             error_lines = '  ' + '\n  '.join([x for x in e.message.split('\n')]) + '\n'
             console_print(f"""- {f"{template_id} " if template_id else ''}[dim]({template_source.value}) {shorten_path(str(template_file))}[/dim]: [red]is not valid[/red] {f'({model_failures_count} issues)' if model_failures_count > 0 else '(1 issue)'}\n  [red]Failed to load template{f" {template_id}" if template_id else ""}{f" ({template_name})" if template_name else ""}[/red]:\n{error_lines}""")
+        except Exception as e:
+            failures_found = True
+            template_source = classify_path(template_file)
+            console_print(f"""- {f"{template_id} " if template_id else ''}[dim]({template_source.value}) {shorten_path(str(template_file))}[/dim]: [red]is not valid[/red] (1 issue)\n  [red]Failed to load template{f" {template_id}" if template_id else ""}{f" ({template_name})" if template_name else ""}[/red]:\n{str(e)}""")
+
     if failures_found:
         sys.exit(1)
