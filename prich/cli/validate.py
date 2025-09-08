@@ -36,13 +36,17 @@ def template_model_doctor(template_yaml: dict, model_load_error: PydanticValidat
                                                sort_keys=False)
             # highlight not permitted field
             if 'Extra inputs are not permitted' in err.get("msg"):
+                err["msg"] = err["msg"].replace("Extra inputs are not permitted", "Unrecognized field")
                 template_overview = re.sub(f"([\n]*\\s|^)({err.get('loc')[-1]})(:)", "\\1[red]\\2[/red]\\3",
                                            template_overview, count=1)
             # highlight block with required field
             elif 'Field required' in err.get("msg"):
+                err["msg"] = err['msg'].replace("Field required", "Missing required field")
                 template_overview = re.sub("(\.\.\.)", f"[yellow]+{err.get('loc')[-1]}: ...[/yellow]\n\\1",
                                            template_overview, count=1)
             else:
+                if 'Input should be' in err.get('msg'):
+                    err["msg"] = err['msg'].replace("Input should be", "Field value should be")
                 highligh_block = err.get('loc')[-1] if isinstance(err.get('loc')[-1], str) else err.get('loc')[-2]
                 template_overview = re.sub(f"([\n]*(?:\s+)|^)({highligh_block})(:)", "\\1[red]\\2[/red]\\3",
                                            template_overview, count=1)
@@ -197,7 +201,7 @@ def validate_templates(template_id: str, validate_file: Path, global_only: bool,
         except Exception as e:
             failures_found = True
             template_source = classify_path(template_file)
-            console_print(f"""- {f"{template_id} " if template_id else ''}[dim]({template_source.value}) {shorten_path(str(template_file))}[/dim]: [red]is not valid[/red] (1 issue)\n  [red]Failed to load template{f" {template_id}" if template_id else ""}{f" ({template_name})" if template_name else ""}[/red]:\n{str(e)}""")
+            console_print(f"""- {f"{template_id} " if template_id else ''}[dim]({template_source.value}) {shorten_path(str(template_file))}[/dim]: [red]is not valid[/red] (1 issue)\n  [red]Failed to load template{f" {template_id}" if template_id else ""}{f" ({template_name})" if template_name else ""}[/red]:\n  {str(e)}""")
 
     if failures_found:
         sys.exit(1)
