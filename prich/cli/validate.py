@@ -90,7 +90,7 @@ def template_model_doctor(template_yaml: dict, model_load_error: PydanticValidat
             else:
                 doc = "See Template Content Documentation https://oleks-dev.github.io/prich/reference/template/content/"
             err_loc_string = re.sub(f"({err.get('loc')[-1]})$", f"[red]\\1[/red]", err_loc_string)
-            found_issues_list.append(f"""{len(found_issues_list)+1}. [red]{err.get('msg')}[/red] '{err_loc_string}':\n{template_overview}{doc}""")
+            found_issues_list.append(f"""{len(found_issues_list)+1}. [red]{err.get('msg')}[/red] '[white]{err_loc_string}[/white]':\n[white]{template_overview}[/white]{doc}""")
     return found_issues_list
 
 
