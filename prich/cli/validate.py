@@ -140,11 +140,11 @@ def validate_templates(template_id: str, validate_file: Path, global_only: bool,
         template_name = None
         failures_list = []
         model_failures_count = 0
-        if template_file.is_file():
-            template_yaml = _load_yaml(template_file)
-            template_id = template_yaml.get("id") if template_yaml else None
-            template_name = template_yaml.get("name") if template_yaml else None
         try:
+            if template_file.is_file():
+                template_yaml = _load_yaml(template_file)
+                template_id = template_yaml.get("id") if template_yaml else None
+                template_name = template_yaml.get("name") if template_yaml else None
             try:
                 template = load_template_model(template_file)
             except PydanticValidationError as e:
