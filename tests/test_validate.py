@@ -5,9 +5,9 @@ from prich.models.template import CommandStep, PythonStep
 from prich.models.file_scope import FileScope
 
 from prich.cli.validate import validate_templates
-from tests.fixtures.templates import template
-from tests.fixtures.config import basic_config
-from tests.fixtures.paths import mock_paths
+from tests.fixtures.templates import template  # noqa: F811
+from tests.fixtures.config import basic_config  # noqa: F811
+from tests.fixtures.paths import mock_paths  # noqa: F811
 
 get_validate_template_CASES = [
     {"id": "local_and_global_params", "args": ["-g", "-l"],
@@ -127,7 +127,7 @@ def test_validate_template(mock_paths, monkeypatch, case, template, basic_config
     with runner.isolated_filesystem(temp_dir=mock_paths.home_dir):
         result = runner.invoke(validate_templates, case.get("args"))
         if case.get("expected_output") is not None:
-            if type(case.get("expected_output")) == str:
+            if isinstance(case.get("expected_output"), str):
                 case["expected_output"] = [case.get("expected_output")]
             for expected_output in case.get("expected_output"):
                 assert expected_output in result.output.replace("\n", "")

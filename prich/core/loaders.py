@@ -2,7 +2,7 @@ import os
 
 import click
 from pathlib import Path
-from typing import Dict, Optional, Tuple, List, Iterable
+from typing import Dict, Optional, Tuple, List
 from prich.constants import PRICH_DIR_NAME
 from prich.core.file_scope import classify_path
 from prich.core.state import _loaded_templates, _loaded_config, _loaded_config_paths
@@ -70,7 +70,7 @@ def load_merged_config() -> Tuple[ConfigModel, List[Path]]:
         return result
     elif result and result[0] and not result[0].providers and result[1]:
         raise click.ClickException(f"No providers config found. Check config files: {[shorten_path(str(path_item)) for path_item in result[1]]}")
-    raise click.ClickException(f"No config found. Run 'prich init' first.")
+    raise click.ClickException("No config found. Run 'prich init' first.")
 
 
 def _load_template_model(yaml_file: Path, template_dict: dict) -> TemplateModel:
@@ -166,7 +166,7 @@ def get_env_vars() -> dict[str, str]:
     env_files = config.settings.env_file if config.settings else None
     allowed_environment_variables = config.security.allowed_environment_variables if config.security else None
 
-    if type(env_files) == str:
+    if isinstance(env_files, str):
         env_files = [env_files]
 
     # Merge env files in order, last one wins

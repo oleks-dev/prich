@@ -1,8 +1,8 @@
 import pytest
 from click.testing import CliRunner
 from prich.cli.templates import template_install
-from tests.fixtures.paths import mock_paths
-from tests.fixtures.templates import temp_template_dir
+from tests.fixtures.paths import mock_paths  # noqa: F811
+from tests.fixtures.templates import temp_template_dir  # noqa: F811
 
 get_template_install_CASES = [
     {"id": "template_install_local",

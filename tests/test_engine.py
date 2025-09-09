@@ -11,9 +11,9 @@ from prich.models.config import SecurityConfig
 from prich.models.template import ValidateStepOutput, PythonStep, CommandStep, VariableDefinition, LLMStep
 from prich.core.loaders import load_config_model, get_env_vars
 from prich.core.template_utils import render_prompt, render_template_text
-from tests.fixtures.config import basic_config, basic_config_with_prompts, CONFIG_YAML
-from tests.fixtures.templates import template
-from tests.fixtures.paths import mock_paths
+from tests.fixtures.config import basic_config, basic_config_with_prompts, CONFIG_YAML  # noqa: F811
+from tests.fixtures.templates import template  # noqa: F811
+from tests.fixtures.paths import mock_paths  # noqa: F811
 from tests.generate.templates import generate_template
 
 variables = {
@@ -504,10 +504,10 @@ def test_render_prompt_fields():
 
 def test_get_variable_type():
     from prich.cli.dynamic_command_group import get_click_variable_type
-    assert get_click_variable_type("str") == click.STRING
-    assert get_click_variable_type("int") == click.INT
-    assert get_click_variable_type("bool") == click.BOOL
-    assert type(get_click_variable_type("path")) == click.Path
+    assert get_click_variable_type("str") is click.STRING
+    assert get_click_variable_type("int") is click.INT
+    assert get_click_variable_type("bool") is click.BOOL
+    assert type(get_click_variable_type("path")) is click.Path
 
 
 def test_create_dynamic_command(basic_config, template):

@@ -1,5 +1,4 @@
 import os
-import sys
 import re
 import click
 from pathlib import Path
@@ -59,7 +58,9 @@ def is_only_final_output() -> bool:
 
 def is_piped() -> bool:
     """ Check if prich executed with a piped command (should work only when not executed from pytest) """
-    return not console.is_terminal and not os.getenv("PYTEST_CURRENT_TEST")
+    # TODO: revisit, we need to allow executions from templates for example
+    # return not console.is_terminal and not os.getenv("PYTEST_CURRENT_TEST")
+    return False
 
 def console_print(message: str = "", end: str = "\n", markup = None, flush: bool = None):
     """ Print to console wrapper """
@@ -114,7 +115,7 @@ def shorten_path(path: str | Path) -> str:
     """ Return short path using ~/... or ./... instead of a full absolute path """
     home = str(Path.home())
     cwd = str(get_cwd_dir())
-    if type(path) == Path:
+    if isinstance(path, Path):
         path = str(path)
     if path.startswith(home):
         return path.replace(home, "~", 1)

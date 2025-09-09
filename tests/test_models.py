@@ -6,8 +6,8 @@ import pytest
 from prich.models.file_scope import FileScope
 from prich.models.template import TemplateModel, PythonStep
 from prich.models.template_repo_manifest import TemplatesRepoManifest
-from tests.fixtures.config import basic_config
-from tests.fixtures.paths import mock_paths
+from tests.fixtures.config import basic_config  # noqa: F811
+from tests.fixtures.paths import mock_paths  # noqa: F811
 
 def test_model_template_repo_manifest():
     test_repo = {

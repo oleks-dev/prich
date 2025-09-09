@@ -205,16 +205,15 @@ class TemplateModel(BaseModel):
             if variable.cli_option in reserved_names:
                 raise click.ClickException(f"Not allowed cli_option name '{variable.cli_option}' (template {self.id}) in variable '{variable.name}', please do not use the following reserved option names: {reserved_names}")
             if variable.default is not None:
-                type_variable_default = type(variable.default)
-                if ((variable.type == "str" and type_variable_default != str) or
-                        (variable.type == "bool" and type_variable_default != bool) or
-                        (variable.type == "int" and type_variable_default != int) or
-                        (variable.type == "path" and type_variable_default != str)
+                if ((variable.type == "str" and not isinstance(variable.default, str)) or
+                        (variable.type == "bool" and not isinstance(variable.default, bool)) or
+                        (variable.type == "int" and not isinstance(variable.default, int)) or
+                        (variable.type == "path" and not isinstance(variable.default, str))
                 ):
                     variable_default_value_type_error = True
 
                 elif variable.type.startswith("list"):
-                    if type_variable_default != list:
+                    if not isinstance(variable.default, list):
                         variable_default_value_type_error = True
                     else:
                         list_type = variable.type.split('[')[1][:-1]
@@ -240,7 +239,8 @@ class TemplateModel(BaseModel):
         return yaml.safe_dump(self.model_dump())
 
     def save(self, location: Literal[FileScope.LOCAL, FileScope.GLOBAL] | None = None):
-        import os, yaml
+        import os
+        import yaml
 
         def str_presenter(dumper, data):
             if "\n" in data:  # multiline string

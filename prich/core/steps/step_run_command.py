@@ -19,7 +19,7 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
     except Exception as e:
         raise click.ClickException(f"Template folder was not detected properly: {e}")
 
-    if type(step) == PythonStep and step.type == "python":
+    if isinstance(step, PythonStep) and step.type == "python":
         method_path = template_dir / "scripts" / method
         if not method_path.exists():
             raise click.ClickException(f"Python script not found: {method_path}")
@@ -39,7 +39,7 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
             cmd = ["python", str(method_path)]
         else:
             raise click.ClickException(f"Python script venv {template.venv} is not supported.")
-    elif type(step) == CommandStep and step.type == "command":
+    elif isinstance(step, CommandStep) and step.type == "command":
         if is_just_filename(method) and (template_dir / "scripts" / method).exists():
             cmd = [str(template_dir / "scripts" / method)]
         else:

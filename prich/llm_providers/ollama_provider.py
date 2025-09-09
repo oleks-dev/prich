@@ -50,7 +50,7 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
         text = []
         try:
             if prompt:
-                if type(prompt) != str:
+                if not isinstance(prompt, str):
                     prompt = json.dumps(prompt)
             else:
                 prompt = input_
