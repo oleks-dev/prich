@@ -33,7 +33,7 @@ openai-gpt4o:
 Local server (using http://localhost:11434 by default)
 
 ```yaml
-qwen3-8b:
+llama31-8b:
   provider_type: "ollama"
   model: "llama3.1:8b"
   stream: true
