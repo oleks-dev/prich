@@ -8,6 +8,8 @@
   ██║     ██║  ██║██║╚██████╗██║  ██║
   ╚═╝     ╚═╝  ╚═╝╚═╝ ╚═════╝╚═╝  ╚═╝
 ```
+![Tests](https://oleks-dev.github.io/prich/badges/tests.svg)
+![Coverage](https://oleks-dev.github.io/prich/badges/coverage.svg)
 
 **prich** is a lightweight CLI tool for creating, managing, executing, and sharing reusable LLM prompt pipelines for *any* use case-development, data analysis, content generation, and more. With Jinja2 templating, flexible scripting (in any language), and shareable template packages, **prich** shines for teams collaborating on standardized LLM workflows. Share templates via files, git, or cloud storage, and streamline tasks like code review, git diff analysis, or CSV data insights.
 
@@ -36,12 +38,14 @@
 > **Supported LLMs**: Ollama API, OpenAI API, MLX LM, STDIN (different cli tools like q chat, mlx_lm.generate, etc.)
 
 ## Quick Start
+> prich requires **python 3.10+**
+
 1. Install `prich` tool `pipx install git+https://github.com/oleks-dev/prich` (see `Installation`)
 2. Initialize config (use global for the start): `prich init --global`
 3. Create simple example template (`prich create <template_id> --global`): `prich create my-template -g`
 4. Run template (`prich run <template_id>`): `prich run my-template`
 > Note: By default prich will set up and use echo provider which just outputs the rendered template  
-> To use it with LLM see `Configure .prich/config.yaml` and follow it to add your LLM provider  
+> To use it with LLM see `Configure .prich/config.yaml` and follow it to add your LLM provider
 
 Optionally you can also run for the start:  
 * Run template with help flag (`prich run <template_id> --help`): `prich run my-template --help`

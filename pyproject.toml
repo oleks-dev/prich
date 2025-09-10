@@ -8,16 +8,16 @@ version = "0.1.0"
 description = "A CLI tool for creating and executing reusable LLM prompts with preprocessing and team sharing"
 readme = "README.md"
 authors = [{name = "Oleksandr Mikriukov", email = "oleks@oleksm.dev"}]
-license = {text = "MIT"}
-requires-python = ">=3.8"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
 dependencies = [
-    "click>=8.2.1",
-    "jinja2>=3.1.6",
-    "pyyaml>=6.0.2",
-    "rich>=13.7.0",
-    "pydantic>=2.11.5",
-    "requests>=2.32.3",
-    "python_dotenv>=1.1.1",
+    "click>=8.1,<9.0",
+    "jinja2>=3.1,<4.0",
+    "pyyaml>=6.0,<7.0",
+    "rich>=13.7,<14.0",
+    "pydantic>=2.11,<3.0",
+    "requests>=2.32,<3.0",
+    "python-dotenv>=1.1,<2.0",
 ]
 keywords = ["llm", "prompt-engineering", "pipeline", "cli", "team-collaboration"]
 classifiers = [
@@ -26,9 +26,9 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 [project.optional-dependencies]
-openai = ["openai>=1.0.0"]
-mlx = ["mlx_lm>=0.24.1"]
-dev = ["pytest", "coverage", "pytest-cov", "twine", "build", "faker"]
+openai = ["openai>=1.0.0,<2.0.0"]
+mlx = ["mlx_lm>=0.24.1,<1.0.0"]
+dev = ["openai", "mlx_lm", "pytest", "coverage", "pytest-cov", "twine", "build", "faker"]
 
 [project.urls]
 Homepage = "https://github.com/oleks-dev/prich"
@@ -36,9 +36,6 @@ Repository = "https://github.com/oleks-dev/prich"
 Documentation = "https://github.com/oleks-dev/prich#readme"
 
 [project.scripts]
-prich = "prich.cli.main:cli"
-
-[project.entry-points."console_scripts"]
 prich = "prich.cli.main:cli"
 
 [tool.setuptools]
@@ -58,5 +55,5 @@ show_missing = true
 skip_covered = true
 
 [tool.pytest.ini_options]
-#addopts = "-ra --cov=prich --cov-report=term-missing"
+addopts = "-ra --cov=prich --cov-report=term-missing"
 testpaths = ["tests"]

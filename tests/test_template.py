@@ -61,7 +61,7 @@ get_venv_install_CASES = [
            },
          { "args": ["template-local"],
            "expected_exit_code": 0,
-           "expected_exception_message": "Venv folder found. No dependencies to install. Done!",
+           "expected_exception_message": "Venv folder found.No dependencies to install.Done!",
            },
          { "args": ["template-local", "--force"],
            "expected_exit_code": 0,
@@ -78,7 +78,7 @@ get_venv_install_CASES = [
            },
          { "args": ["template-global"],
            "expected_exit_code": 0,
-           "expected_exception_message": "Venv folder found. No dependencies to install. Done!",
+           "expected_exception_message": "Venv folder found.No dependencies to install.Done!",
            },
          { "args": ["template-global", "--force"],
            "expected_exit_code": 0,
@@ -91,11 +91,11 @@ get_venv_install_CASES = [
      "multiple": [
          {"args": ["template-local"],
           "expected_exit_code": 0,
-          "expected_exception_message": "Installing shared venv... done! No dependencies to install. Done!",
+          "expected_exception_message": "Installing shared venv... done!No dependencies to install.Done!",
           },
          {"args": ["template-local"],
           "expected_exit_code": 0,
-          "expected_exception_message": "Venv folder found. No dependencies to install. Done!",
+          "expected_exception_message": "Venv folder found.No dependencies to install.Done!",
           },
          {"args": ["template-local", "--force"],
           "expected_exit_code": 1,
@@ -108,11 +108,11 @@ get_venv_install_CASES = [
      "multiple": [
          {"args": ["template-global"],
           "expected_exit_code": 0,
-          "expected_exception_message": "Installing shared venv... done! No dependencies to install. Done!",
+          "expected_exception_message": "Installing shared venv... done!No dependencies to install.Done!",
           },
          {"args": ["template-global"],
           "expected_exit_code": 0,
-          "expected_exception_message": "Venv folder found. No dependencies to install. Done!",
+          "expected_exception_message": "Venv folder found.No dependencies to install.Done!",
           },
          {"args": ["template-global", "--force"],
           "expected_exit_code": 1,
@@ -166,7 +166,7 @@ def test_venv_install(mock_paths, template, case):
         for case_input in inputs:
             result = runner.invoke(venv_install, case_input.get("args"))
             if case_input.get("expected_exception_message") is not None:
-                assert case_input.get("expected_exception_message") in result.output.replace("\n", " "), f"Iteration {iteration_idx}"
+                assert case_input.get("expected_exception_message") in result.output.replace("\n", ""), f"Iteration {iteration_idx}"
             if case_input.get("expected_exit_code") is not None:
                 assert result.exit_code == case_input.get("expected_exit_code"), f"Iteration {iteration_idx}"
 
@@ -179,7 +179,7 @@ get_show_template_CASES = [
     {"id": "show_template_id",
      "args": ["template-local"],
      "expected_exit_code": 0,
-     "expected_exception_message": "Template: id: template-local",
+     "expected_exception_message": "Template:id: template-local",
      },
     {"id": "show_template_id_local_with_g",
      "args": ["template-local", "--global"],
@@ -189,7 +189,7 @@ get_show_template_CASES = [
     {"id": "show_template_id_global",
      "args": ["template-global"],
      "expected_exit_code": 0,
-     "expected_exception_message": "Template: id: template-global",
+     "expected_exception_message": "Template:id: template-global",
      },
 
 ]
@@ -214,7 +214,7 @@ def test_show_template(mock_paths, template, case):
     with runner.isolated_filesystem():
         result = runner.invoke(show_template, case.get("args"))
         if case.get("expected_exception_message") is not None:
-            assert case.get("expected_exception_message") in result.output.replace("\n", " ")
+            assert case.get("expected_exception_message") in result.output.replace("\n", "")
         if case.get("expected_exit_code") is not None:
             assert result.exit_code == case.get("expected_exit_code")
 
@@ -261,7 +261,7 @@ def test_create_template(mock_paths, case):
             result = runner.invoke(create_template, iteration.get("args"))
             if iteration.get("expected_exception_messages") is not None:
                 for message in iteration.get("expected_exception_messages"):
-                    assert message in result.output.replace("\n", " ")
+                    assert message in result.output.replace("\n", "")
             if iteration.get("expected_exit_code") is not None:
                 assert result.exit_code == iteration.get("expected_exit_code")
 

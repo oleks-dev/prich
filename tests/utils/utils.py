@@ -9,7 +9,7 @@ def capture_stdout(func, *args, **kwargs):
     sys.stdout = buffer
 
     try:
-        result = func(*args, **kwargs)  # Call your method
+        result = func(*args, **kwargs)  # Call method
         output = buffer.getvalue()
     finally:
         # Always restore stdout

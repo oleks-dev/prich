@@ -59,8 +59,8 @@ def is_only_final_output() -> bool:
 def is_piped() -> bool:
     """ Check if prich executed with a piped command (should work only when not executed from pytest) """
     # TODO: revisit, we need to allow executions from templates for example
-    # return not console.is_terminal and not os.getenv("PYTEST_CURRENT_TEST")
-    return False
+    return not console.is_terminal and not os.getenv("PYTEST_CURRENT_TEST")
+    # return False
 
 def console_print(message: str = "", end: str = "\n", markup = None, flush: bool = None):
     """ Print to console wrapper """

@@ -36,8 +36,10 @@ def test_init_cmd(mock_paths, monkeypatch, case):
     else:
         assert False, "Wrong init_folder param specified"
 
-    if str(prich_dir).startswith("/private/var/folders/") and prich_dir.exists():
+    if "/pytest-" in str(prich_dir) and prich_dir.exists():
         shutil.rmtree(prich_dir)
+    else:
+        raise RuntimeError(f"Failed to check folder before removing! {prich_dir}")
 
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=mock_paths.home_dir):

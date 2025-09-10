@@ -1,7 +1,7 @@
 from typing import Dict
 
 import click
-
+from zoneinfo import ZoneInfo
 from prich.models.template import LLMStep
 from prich.models.config import ConfigModel
 from prich.core.state import _jinja_env
@@ -62,7 +62,6 @@ def get_jinja_env(name: str, conditional_expression_only: bool = False):
 
 def render_template_text(template_text: str, variables: dict, jinja_env_name: str = "default"):
     import datetime
-    import os
     import getpass
     import platform
 
@@ -71,7 +70,7 @@ def render_template_text(template_text: str, variables: dict, jinja_env_name: st
 
     builtin = {
         "now": datetime.datetime.now(),
-        "now_utc": datetime.datetime.now(datetime.UTC),
+        "now_utc": datetime.datetime.now(ZoneInfo("UTC")),
         "today": datetime.datetime.today().date(),
         "home": get_home_dir(),
         "cwd": get_cwd_dir(),
