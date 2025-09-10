@@ -14,9 +14,9 @@ from prich.core.state import _loaded_templates
 from prich.models.template import TemplateModel, VariableDefinition, PythonStep, CommandStep, LLMStep, \
     RenderStep, ValidateStepOutput, ExtractVarModel
 from prich.models.text_filter_model import TextFilterModel
-from tests.fixtures.config import basic_config
-from tests.fixtures.paths import mock_paths
-from tests.fixtures.templates import template
+from tests.fixtures.config import basic_config  # noqa: F811
+from tests.fixtures.paths import mock_paths  # noqa: F811
+from tests.fixtures.templates import template  # noqa: F811
 from tests.utils.utils import capture_stdout
 
 get_run_template_CASES = [
@@ -654,10 +654,10 @@ get_run_template_CASES = [
          "expected_output": [
              "• Step #1: Preprocess python\n",
              "Output:\ntest test test\n",
-             "Inject \"(test) \" → test: \"test\"\n",
-             "Inject \"notfound\" → not_found_test: \"\"\n",
-             "Inject \"(test)\" (3 matches) → test_list: [\'test\', \'test\', \'test\']\n",
-             "Inject \"notfound\" (0 matches) → notfound_list: []\n",
+             "Inject '(test) ' → test: 'test'\n",
+             "Inject 'notfound' → not_found_test: ''\n",
+             "Inject '(test)' (3 matches) → test_list: [\'test\', \'test\', \'test\']\n",
+             "Inject 'notfound' (0 matches) → notfound_list: []\n",
              "test test test\n\nValidation completed.\n"
          ]
      },
@@ -824,7 +824,7 @@ get_run_template_CASES = [
         "expected_output": [
             "• Step #1: Preprocess python",
             "Output:\n{\"password\": \"secret\"}\n",
-            "Apply regex replace: \"(?i)(\"password\"\\s*:\\s*\")[^\"]+(\")\" → \"\\1*****\\2\"\n"
+            "Apply regex replace: '(?i)(\"password\"\\s*:\\s*\")[^\"]+(\")' → '\\1*****\\2'\n"
             "{\"password\": \"*****\"}"],
         "args": ["--verbose"]
      },
@@ -889,7 +889,7 @@ def test_run_template(case, monkeypatch, basic_config):
     else:
         result, out = capture_stdout(run_template, test_template.id)
         if case.get("expected_output"):
-            if type(case.get("expected_output")) == str:
+            if isinstance(case.get("expected_output"), str):
                 case["expected_output"] = [case.get("expected_output")]
             for expected in case["expected_output"]:
                 assert expected in out
@@ -916,8 +916,8 @@ def test_run_template_cli(mock_paths, monkeypatch, case, template, basic_config)
     monkeypatch.setattr(Path, "home", lambda: global_dir)
     monkeypatch.setattr(Path, "cwd", lambda: local_dir)
 
-    monkeypatch.setattr("prich.core.engine.get_cwd_dir", lambda: local_dir)
-    monkeypatch.setattr("prich.core.engine.get_home_dir", lambda: global_dir)
+    monkeypatch.setattr("prich.core.loaders.get_cwd_dir", lambda: local_dir)
+    monkeypatch.setattr("prich.core.loaders.get_home_dir", lambda: global_dir)
 
     local_config = basic_config.model_copy(deep=True)
     global_config = basic_config.model_copy(deep=True)
@@ -952,7 +952,7 @@ def test_run_template_cli(mock_paths, monkeypatch, case, template, basic_config)
     with runner.isolated_filesystem(temp_dir=mock_paths.home_dir):
         result = runner.invoke(run_group, case.get("args"))
         if case.get("expected_output") is not None:
-            if type(case.get("expected_output")) == str:
+            if isinstance(case.get("expected_output"), str):
                 case["expected_output"] = [case.get("expected_output")]
             for expected_output in case.get("expected_output"):
                 assert expected_output in result.output.replace("\n", "")
