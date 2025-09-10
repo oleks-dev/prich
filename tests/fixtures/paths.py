@@ -22,7 +22,9 @@ def mock_paths(tmp_path, monkeypatch):
     _loaded_config_paths = []
     config = ConfigModel(**yaml.load(CONFIG_YAML, SafeLoader))
     home_dir = tmp_path / "home"
+    print(f"Setup home: {home_dir}")
     cwd_dir = tmp_path / "local"
+    print(f"Setup cwd: {cwd_dir}")
     global_prich_dir = home_dir / ".prich"
     local_prich_dir = cwd_dir / ".prich"
     global_prich_templates_dir = global_prich_dir / "templates"
@@ -35,10 +37,12 @@ def mock_paths(tmp_path, monkeypatch):
     local_prich_templates_dir.mkdir(exist_ok=True)
     monkeypatch.setattr(Path, "home", lambda: home_dir)
     monkeypatch.setattr(Path, "cwd", lambda: cwd_dir)
+    os.environ['HOME'] = str(home_dir)
+    print(f"Setup env home: {os.environ['HOME']}")
+    os.environ['PWD'] = str(cwd_dir)
+    print(f"Setup env pwd: {os.environ['PWD']}")
     config.save(FileScope.GLOBAL)
     config.save(FileScope.LOCAL)
-    os.environ['HOME'] = str(home_dir)
-    os.environ['PWD'] = str(cwd_dir)
 
     @dataclass
     class PrichFolder:
