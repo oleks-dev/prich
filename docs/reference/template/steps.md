@@ -4,16 +4,19 @@ Each template can have multiple steps for pre/postprocessing and llm requests.
 
 ```yaml
 steps:
-#  ...
+  - ...
+  - ...
 ```
 
 ### Generic base fields for each step  
 ```yaml
+steps:                            # [list]
     # name of the step (should be unique)
-  - name: "Step do work"
+  - name: "Step do work"          # [str]
+    # type of the step, could be llm, command, python, render (see step types)
 
-    # type of the step (see available steps)
-    type: "llm"
+    type: "llm"                   # [str]
+    # ...  other fields related to a specific step type
 ```
 
 > **Note:** Step name should be unique in each step.  
@@ -21,7 +24,12 @@ steps:
 
 ##### Output text transformations  
 ```yaml
-    filter:
+steps:
+  - name: "Do some work"
+    # ...  other step fields are not shown in this example
+
+    # filter block describes output text transformations
+    filter:                       # optional [dict]
       # strip spaces from beginning and end of the output
       strip: true                 # optional [bool]
 
@@ -49,12 +57,16 @@ steps:
 
 ##### Store and show output  
 ```yaml
+steps:
+  - name: "Do work"
+    # ...  other step fields are not shown in this example
+
     # save output to a variable
     output_variable: "out_var"         # optional [str]
 
     # save output to file
     output_file: "out.txt"             # optional [str|dict] - write mode by default
-    # OR
+    # OR (use only one option)
     output_file:
       name: "out.txt"
       # file mode write or append
@@ -68,7 +80,11 @@ steps:
 
 ##### When to execute - conditional statement  
 ```yaml
-    # when step should be executed 
+steps:
+  - name: "Do work"
+    # ...  other step fields are not shown in this example
+
+    # when this step should be executed
     # (jinja2 template conditional template)
     when: "{{ in_var == 'hello' }}"    # optional [str]
 ```
@@ -76,6 +92,10 @@ steps:
 
 ##### Extract variables  
 ```yaml
+steps:
+  - name: "Do work"
+    # ...  other step fields are not shown in this example
+
     # create variables with extracted text from output
     extract_variables:                 # optional [list[dict]]
 
@@ -95,6 +115,10 @@ steps:
 
 ##### Validate output  
 ```yaml
+steps:
+  - name: "Do work"
+    # ...  other step fields are not shown in this example
+
     # validate step output
     validate:                          # optional [dict|list[dict]]
 
@@ -115,11 +139,15 @@ steps:
 
 #### Python step  
 ```yaml
+steps:
+  - name: "Run python script"
+    # ...  other step fields are not shown in this example
+
     type: "python"                     # execute python script
     call: "file.py"                    # python file to execute
     args: ["arg1", "arg2"]             # optional [list[str]] - arguments for python file
     validate:
-#      ...
+#      ...  could include standard validations plus following specific to the python and command types
        match_exit_code: 0              # optional [int|str] - check execution result exit code
        not_match_exit_code: 1          # optional [int|str] - check execution result exit code
 ```
@@ -129,11 +157,15 @@ steps:
 
 #### Command step  
 ```yaml
+steps:
+  - name: "Run command shell execution"
+    # ...  other step fields are not shown in this example
+
     type: "command"                    # execute shell command
     call: "echo"                       # file to execute
     args: ["hello"]                    # optional [list[str]] - arguments for file execution
     validate:
-#      ...
+#      ...  could include standard validations plus following specific to the python and command types
        match_exit_code: 0              # optional [int|str] - check execution result exit code
        not_match_exit_code: 1          # optional [int|str] - check execution result exit code
 ```
@@ -141,6 +173,10 @@ steps:
 
 #### LLM step  
 ```yaml
+steps:
+  - name: "Ask LLM with prompt"
+    # ...  other step fields are not shown in this example
+
     type: "llm"                                    # send llm prompt
     instructions: "You are {{ assistant_type }}."  # optional [str] - system instructions (jinja2 template string)
     input: "Summarize the following:\n{{ text }}"  # [str] - user prompt input (jinja2 template string)
@@ -149,6 +185,10 @@ steps:
 
 #### Render step  
 ```yaml
+steps:
+  - name: "Render jinja template text"
+    # ...  other step fields are not shown in this example
+
     type: "render"                    # execute jinja2 render
     template: "Hello {{ user_var }}"  # jinja2 template string
 ```
