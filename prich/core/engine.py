@@ -9,7 +9,7 @@ from prich.core.steps.step_sent_to_llm import send_to_llm
 from prich.models.template import LLMStep, PythonStep, RenderStep, \
     CommandStep, ValidateStepOutput
 from prich.core.utils import console_print, is_quiet, is_only_final_output, \
-    is_verbose, get_cwd_dir, get_home_dir
+    is_verbose
 from prich.core.loaders import get_env_vars
 from prich.core.variable_utils import replace_env_vars, expand_vars
 
@@ -62,6 +62,7 @@ def run_template(template_id, **kwargs):
         step_return_exit_code = None  # Used only for subprocess execute commands
         step_idx = 0
         last_output = ""
+        skip_following_steps = True  # used with validate
         for step in template.steps:
             step_idx += 1
 
@@ -85,11 +86,11 @@ def run_template(template_id, **kwargs):
                 variables[step.output_variable] = None
 
             output_var = step.output_variable
-            if type(step) in [PythonStep, CommandStep]:
+            if isinstance(step, (PythonStep, CommandStep)):
                 step_output, step_return_exit_code = run_command_step(template, step, variables)
-            elif type(step) == RenderStep:
+            elif isinstance(step, RenderStep):
                 step_output = render_template(step, variables)
-            elif type(step) == LLMStep:
+            elif isinstance(step, LLMStep):
                 step_output = send_to_llm(template, step, provider, config, variables)
             else:
                 raise click.ClickException(f"Step {step.type} type is not supported.")
@@ -102,7 +103,7 @@ def run_template(template_id, **kwargs):
             if is_verbose():
                 if step.extract_variables:
                     for spec in step.extract_variables:
-                        console_print(f"""[dim]Inject \"{spec.regex}\" {f'({len(variables.get(spec.variable))} matches) ' if spec.multiple else ''}→ {spec.variable}: {f'"{variables.get(spec.variable)}"' if type(variables.get(spec.variable)) == str else variables.get(spec.variable)}[/dim]""")
+                        console_print(f"""[dim]Inject {repr(spec.regex)} {f'({len(variables.get(spec.variable))} matches) ' if spec.multiple else ''}→ {spec.variable}: {f'{repr(variables.get(spec.variable))}' if isinstance(variables.get(spec.variable), str) else variables.get(spec.variable)}[/dim]""")
                 if step.filter:
                     if step.filter.strip is not None:
                         console_print(f"[dim]Strip output spaces: {step.filter.strip}[/dim]")
@@ -111,9 +112,9 @@ def run_template(template_id, **kwargs):
                     if step.filter.slice_start or step.filter.slice_end:
                         console_print(f"[dim]Slice output text{f' from {step.filter.slice_start}' if step.filter.slice_start else ''}{f' to {step.filter.slice_end}' if step.filter.slice_end else ''}[/dim]")
                     if step.filter.regex_extract:
-                        console_print(f"[dim]Apply regex: \"{step.filter.regex_extract}\"[/dim]")
+                        console_print(f"[dim]Apply regex: '{step.filter.regex_extract}'[/dim]")
                     if step.filter.regex_replace:
-                        replace_details = '\n                     '.join([f"\"{x}\" → \"{y}\"" for x,y in step.filter.regex_replace])
+                        replace_details = '\n                     '.join([f"'{x}' → '{y}'" for x,y in step.filter.regex_replace])
                         console_print(f"[dim]Apply regex replace: {replace_details}[/dim]")
 
             # Store last output
@@ -132,16 +133,16 @@ def run_template(template_id, **kwargs):
                 except Exception as e:
                     raise click.ClickException(f"Failed to save output to file {save_to_file}: {e}")
             # Print step output to console
-            if ((step.output_console or is_verbose()) and (type(step) != LLMStep)) and not is_only_final_output() and not is_quiet():
+            if ((step.output_console or is_verbose()) and not (isinstance(step, LLMStep))) and not is_only_final_output() and not is_quiet():
                 console_print(step_output, markup=False)
             # Validate
             if step.validate_:
-                if type(step.validate_) == ValidateStepOutput:
+                if isinstance(step.validate_, ValidateStepOutput):
                     step.validate_ = [step.validate_]
                 idx = 0
                 for validate in step.validate_:
                     idx += 1
-                    if type(step) in [PythonStep, CommandStep] and (validate.match_exit_code is not None or validate.not_match_exit_code is not None):
+                    if isinstance(step, (PythonStep, CommandStep)) and (validate.match_exit_code is not None or validate.not_match_exit_code is not None):
                         validated = validate_step_exit_code(validate, step_return_exit_code, variables)
                         if validated:
                             validated = validate_step_output(validate, step_output, variables)
@@ -158,6 +159,7 @@ def run_template(template_id, **kwargs):
                             raise click.ClickException(failure_msg)
                         elif action == "skip":
                             console_print(f"[yellow]{failure_msg} – skipping next steps.[/yellow]")
+                            skip_following_steps = True
                             break
                         elif action == "continue":
                             console_print(f"[yellow]{failure_msg} – continue.[/yellow]")
@@ -169,6 +171,8 @@ def run_template(template_id, **kwargs):
                             console_print(f"[dim]Validation #{idx} [green]passed[/green].[/dim]")
                 if is_verbose():
                     console_print(f"[dim][green]Validation{'s' if len(step.validate_) > 1 else ''} completed.[/green][/dim]")
+                if skip_following_steps:  # used with validate when skip matched
+                    break
         # Save last step output if output file option added
         if output_file:
             with open(output_file, 'w') as final_output_file:

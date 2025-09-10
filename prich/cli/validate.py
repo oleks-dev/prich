@@ -42,13 +42,13 @@ def template_model_doctor(template_yaml: dict, model_load_error: PydanticValidat
             # highlight block with required field
             elif 'Field required' in err.get("msg"):
                 err["msg"] = err['msg'].replace("Field required", "Missing required field")
-                template_overview = re.sub("(\.\.\.)", f"[yellow]+{err.get('loc')[-1]}: ...[/yellow]\n\\1",
+                template_overview = re.sub("(\\.\\.\\.)", f"[yellow]+{err.get('loc')[-1]}: ...[/yellow]\n\\1",
                                            template_overview, count=1)
             else:
                 if 'Input should be' in err.get('msg'):
                     err["msg"] = err['msg'].replace("Input should be", "Field value should be")
                 highligh_block = err.get('loc')[-1] if isinstance(err.get('loc')[-1], str) else err.get('loc')[-2]
-                template_overview = re.sub(f"([\n]*(?:\s+)|^)({highligh_block})(:)", "\\1[red]\\2[/red]\\3",
+                template_overview = re.sub(f"([\n]*(?:\\s+)|^)({highligh_block})(:)", "\\1[red]\\2[/red]\\3",
                                            template_overview, count=1)
             err_loc_list = []
             for err_loc_item in err.get('loc'):
@@ -80,6 +80,8 @@ def template_model_doctor(template_yaml: dict, model_load_error: PydanticValidat
                         "output_"):
                     doc_items.append(
                         "Store And Show Output: https://oleks-dev.github.io/prich/reference/template/steps/#store-and-show-output")
+                    doc_items.append(
+                        "Output Text Transformations: https://oleks-dev.github.io/prich/reference/template/steps/#output-text-transformations")
                 if details and details in ["llm", "pyhon", "command", "render"]:
                     doc_items.append(
                         f"{details} step: https://oleks-dev.github.io/prich/reference/template/steps/#{details}-step")
@@ -89,7 +91,7 @@ def template_model_doctor(template_yaml: dict, model_load_error: PydanticValidat
                 doc = "See Variables documentation https://oleks-dev.github.io/prich/reference/template/variables/"
             else:
                 doc = "See Template Content Documentation https://oleks-dev.github.io/prich/reference/template/content/"
-            err_loc_string = re.sub(f"({err.get('loc')[-1]})$", f"[red]\\1[/red]", err_loc_string)
+            err_loc_string = re.sub(f"({err.get('loc')[-1]})$", "[red]\\1[/red]", err_loc_string)
             found_issues_list.append(f"""{len(found_issues_list)+1}. [red]{err.get('msg')}[/red] '[white]{err_loc_string}[/white]':\n[white]{template_overview}[/white]{doc}""")
     return found_issues_list
 
@@ -99,7 +101,8 @@ def template_model_doctor(template_yaml: dict, model_load_error: PydanticValidat
 @click.option("--file", "validate_file", type=Path, help="Template YAML file to validate")
 @click.option("-g", "--global", "global_only", is_flag=True, help="Validate only global templates")
 @click.option("-l", "--local", "local_only", is_flag=True, help="Validate only local templates")
-def validate_templates(template_id: str, validate_file: Path, global_only: bool, local_only: bool):
+@click.option("--invalid", "invalid_only", is_flag=True, help="Show only invalid templates")
+def validate_templates(template_id: str, validate_file: Path, global_only: bool, local_only: bool, invalid_only: bool):
     """Validate Templates by checking yaml template schema"""
     import sys
     if global_only and local_only:
@@ -133,17 +136,23 @@ def validate_templates(template_id: str, validate_file: Path, global_only: bool,
 
     if not template_files:
         console_print("[yellow]No Templates found.[/yellow]")
-        return
+        sys.exit(1)
 
     template_files.sort()
 
-    failures_found = False
+    return_failure_exitcode = False
+    count_summary = {
+        "valid": 0,
+        "invalid": 0
+    }
     for template_file in template_files:
+        failures_found = False
         template_yaml = None
         template_id = None
         template_name = None
         failures_list = []
         model_failures_count = 0
+        output = []
         try:
             if template_file.is_file():
                 template_yaml = _load_yaml(template_file)
@@ -165,9 +174,9 @@ def validate_templates(template_id: str, validate_file: Path, global_only: bool,
             idx = 0
             for step in template.steps:
                 idx += 1
-                if type(step) in [CommandStep, PythonStep]:
+                if isinstance(step, (CommandStep, PythonStep)):
                     call_file = Path(step.call)
-                    if not call_file.exists() and not (Path(template.folder) / "scripts" / call_file).exists() and type(step) == CommandStep:
+                    if not call_file.exists() and not (Path(template.folder) / "scripts" / call_file).exists() and isinstance(step, CommandStep):
                         env_vars = get_env_vars()
                         if env_vars.get("PATH"):
                             paths = env_vars.get("PATH").split(":")
@@ -176,7 +185,7 @@ def validate_templates(template_id: str, validate_file: Path, global_only: bool,
                                     if (path / Path(step.call)).exists():
                                         call_file = path / Path(step.call)
                                         break
-                    if call_file.exists() and not os.access(call_file, os.X_OK) and type(step) == CommandStep:
+                    if call_file.exists() and not os.access(call_file, os.X_OK) and isinstance(step, CommandStep):
                         failures_list.append(f"{len(failures_list)+1}. [red]The call command {shorten_path(str(call_file))} file is not executable in step[/red] [white]#{idx} {step.name}[/white]")
                     elif not call_file.exists() and not (Path(template.folder) / "scripts" / call_file).exists():
                         if is_just_filename(call_file):
@@ -184,24 +193,33 @@ def validate_templates(template_id: str, validate_file: Path, global_only: bool,
                         else:
                             full_path = str(call_file)
                         failures_list.append(f"{len(failures_list)+1}. [red]Failed to find call {step.type} file {shorten_path(full_path)}[/red] for step #{idx} {step.name}")
-            console_print(f"- {template.id} [dim]({template.source.value}) {shorten_path(str(template_file))}[/dim]: ", end='')
+            output.append(f"- {template.id} [dim]({template.source.value}) {shorten_path(str(template_file))}[/dim]: ")
             if len(failures_list) > 0:
                 failures_found = True
-                console_print(f"[red]is not valid[/red] ({len(failures_list)} issues)")
-                failures = '  ' + f'\n  '.join(failures_list)
-                console_print(failures)
-                console_print()
+                output[-1] += f"[red]is not valid[/red] ({len(failures_list)} issues)"
+                failures = '  ' + '\n  '.join(failures_list)
+                output.append(failures)
+                output.append("")
             else:
-                console_print("[green]is valid[/green]")
+                output[-1] += "[green]is valid[/green]"
         except click.ClickException as e:
             failures_found = True
             template_source = classify_path(template_file)
             error_lines = '  ' + '\n  '.join([x for x in e.message.split('\n')]) + '\n'
-            console_print(f"""- {f"{template_id} " if template_id else ''}[dim]({template_source.value}) {shorten_path(str(template_file))}[/dim]: [red]is not valid[/red] {f'({model_failures_count} issues)' if model_failures_count > 0 else '(1 issue)'}\n  [red]Failed to load template{f" {template_id}" if template_id else ""}{f" ({template_name})" if template_name else ""}[/red]:\n{error_lines}""")
+            output.append(f"""- {f"{template_id} " if template_id else ''}[dim]({template_source.value}) {shorten_path(str(template_file))}[/dim]: [red]is not valid[/red] {f'({model_failures_count} issues)' if model_failures_count > 0 else '(1 issue)'}\n  [red]Failed to load template{f" {template_id}" if template_id else ""}{f" ({template_name})" if template_name else ""}[/red]:\n{error_lines}""")
         except Exception as e:
             failures_found = True
             template_source = classify_path(template_file)
-            console_print(f"""- {f"{template_id} " if template_id else ''}[dim]({template_source.value}) {shorten_path(str(template_file))}[/dim]: [red]is not valid[/red] (1 issue)\n  [red]Failed to load template{f" {template_id}" if template_id else ""}{f" ({template_name})" if template_name else ""}[/red]:\n  {str(e)}""")
-
-    if failures_found:
-        sys.exit(1)
+            output.append(f"""- {f"{template_id} " if template_id else ''}[dim]({template_source.value}) {shorten_path(str(template_file))}[/dim]: [red]is not valid[/red] (1 issue)\n  [red]Failed to load template{f" {template_id}" if template_id else ""}{f" ({template_name})" if template_name else ""}[/red]:\n  {str(e)}""")
+        if (invalid_only and failures_found) or not invalid_only:
+            console_print('\n'.join(output))
+        if failures_found:
+            count_summary['invalid'] += 1
+            if not return_failure_exitcode:
+                return_failure_exitcode = True
+        else:
+            count_summary['valid'] += 1
+    console_print()
+    console_print(f"Analyzed {count_summary['valid'] + count_summary['invalid']} templates, {count_summary['invalid']} invalid.")
+    if return_failure_exitcode:
+        sys.exit(2)
