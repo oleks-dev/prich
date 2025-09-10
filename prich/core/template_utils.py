@@ -5,7 +5,7 @@ import click
 from prich.models.template import LLMStep
 from prich.models.config import ConfigModel
 from prich.core.state import _jinja_env
-from prich.core.utils import get_cwd_dir
+from prich.core.utils import get_cwd_dir, get_home_dir
 
 
 def get_jinja_env(name: str, conditional_expression_only: bool = False):
@@ -16,7 +16,7 @@ def get_jinja_env(name: str, conditional_expression_only: bool = False):
             cwd = get_cwd_dir()
             file_path = (cwd / filename).resolve()
             if cwd not in file_path.parents and cwd != file_path:
-                raise click.ClickException(f"File is outside the current working directory")
+                raise click.ClickException("File is outside the current working directory")
             with file_path.open("r", encoding="utf-8") as f:
                 return f.read()
         except FileNotFoundError:
@@ -73,7 +73,8 @@ def render_template_text(template_text: str, variables: dict, jinja_env_name: st
         "now": datetime.datetime.now(),
         "now_utc": datetime.datetime.now(datetime.UTC),
         "today": datetime.datetime.today().date(),
-        "cwd": os.getcwd(),
+        "home": get_home_dir(),
+        "cwd": get_cwd_dir(),
         "user": getpass.getuser(),
         "hostname": platform.node(),
     }

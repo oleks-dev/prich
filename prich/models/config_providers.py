@@ -1,5 +1,5 @@
 from pydantic import Field, ConfigDict, BaseModel
-from typing import Literal, Optional, List, Tuple
+from typing import Literal, Optional, List
 from prich.models.text_filter_model import TextFilterModel
 
 

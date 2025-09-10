@@ -22,7 +22,7 @@ def _download_zip(url: str) -> Path:
 
 def _download_file(url: str, dest_file: str | Path) -> Path:
     import requests
-    if type(dest_file) == str:
+    if isinstance(dest_file, str):
         dest_file = Path(dest_file)
     dest_file.parent.mkdir(parents=True, exist_ok=True)
     response = requests.get(url, stream=True)
@@ -79,7 +79,7 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
         if path.startswith("http://") or path.startswith("https://"):
             # Install from remote archive file
             if not path.endswith(".zip"):
-                raise click.ClickException(f"Remote URL should point to a zip file.")
+                raise click.ClickException("Remote URL should point to a zip file.")
             from_url = path
 
             try:
@@ -88,7 +88,7 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
                     tmp_zip_file = _download_zip(
                         url=from_url
                     )
-            except Exception as e:
+            except Exception:
                 if tmp_zip_file and tmp_zip_file.exists():
                     safe_remove(tmp_zip_file)
                 raise click.ClickException(
@@ -106,7 +106,7 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
                     templates_manifest = get_remote_prich_templates_manifest()
             except Exception as e:
                 raise click.ClickException(f"Failed to fetch remote templates repository manifest: {str(e)}")
-            if not path in [x.id for x in templates_manifest.templates]:
+            if path not in [x.id for x in templates_manifest.templates]:
                 raise click.ClickException(f"Remote Template ID {path} not found in the repository {templates_manifest.repository}.")
             template_to_install = [x for x in templates_manifest.templates if x.id == path][0]
             tmp_path = Path(tempfile.mkdtemp())
@@ -120,7 +120,7 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
                 raise click.ClickException(f"Failed to download remote template files: {str(e)}")
             downloaded_template_hash, files = directory_hash(tmp_path)
             if downloaded_template_hash != template_to_install.folder_checksum:
-                console_print(f"[yellow]Downloaded template folder checksum is not matching with mentioned in the manifest![/yellow]")
+                console_print("[yellow]Downloaded template folder checksum is not matching with mentioned in the manifest![/yellow]")
                 console_print(f"[yellow]From the manifest: {template_to_install.folder_checksum}[/yellow]")
                 console_print(f"[yellow]Downloaded files : {downloaded_template_hash}[/yellow]")
             path = str(tmp_path)
@@ -130,9 +130,9 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
     if path.endswith(".zip"):
         # Install from archive
         try:
-            with console.status(f"Extracting..."):
+            with console.status("Extracting..."):
                 src_dir = _extract_zip(Path(path))
-        except Exception as e:
+        except Exception:
             safe_remove(src_dir)
             raise click.ClickException(f"Failed to extract template {path}")
         remove_source = True
@@ -141,7 +141,7 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
         # Install from folder
         try:
             src_dir = Path(path).resolve()
-        except Exception as e:
+        except Exception:
             src_dir = None
         if (src_dir and not src_dir.is_dir()) or not src_dir:
             raise click.ClickException(f"Path is not a directory: {path}")
@@ -191,12 +191,12 @@ def template_install(path: str, force: bool, no_venv: bool, global_install: bool
         for sh_file in sh_files:
             response = input(f"Set {str(sh_file).replace(str(template_folder), '')} as 755 executable [y/n]? ")
             if response.lower() in ['y', 'yes']:
-                console_print(f"Running chmod 755...", end='')
+                console_print("Running chmod 755...", end='')
                 sh_file.chmod(0o755)
                 if sh_file.lchmod(0o755):
-                    console_print(f" done.")
+                    console_print(" done.")
                 else:
-                    console_print(f" failed.")
+                    console_print(" failed.")
             else:
                 console_print("Skipped chmod 755.")
 
@@ -253,7 +253,7 @@ def show_template(template_id, global_only):
     """Show available options for a template."""
     import yaml
     template = get_loaded_template(template_id)
-    console_print(f"Template:")
+    console_print("Template:")
     tpl = yaml.dump(template.model_dump(exclude_none=True), sort_keys=False, indent=2)
     console_print(tpl)
 
@@ -309,12 +309,12 @@ def create_template(template_id: str, global_only: bool, edit: bool):
     template_dir.mkdir(parents=True, exist_ok=False)
     editor_cmd = config.settings.editor
     if not editor_cmd:
-        raise click.ClickException(f"Default editor is not set, add settings.editor into config.")
+        raise click.ClickException("Default editor is not set, add settings.editor into config.")
     template_file = template_dir / f"{template_id}.yaml"
     template_file.write_text(yaml.safe_dump(example_template.model_dump(exclude_none=True), indent=2, sort_keys=False))
     console_print(f"Template {template_id} created in {template_file}")
     console_print()
-    console_print(f"You can try to run it or modify as you need:")
+    console_print("You can try to run it or modify as you need:")
     console_print(f"* Execute with default values: [green]prich run {template_id}[/green]")
     console_print(f"* Execute with custom values: [green]prich run {template_id} --role journalist --topic \"Large Language Models in the modern data science\"[/green]")
     console_print(f"* Execute with custom value: [green]prich run {template_id} --topic \"Large Language Models usage in CLI tools\"[/green]")

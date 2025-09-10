@@ -6,7 +6,6 @@ from prich.cli.listing import list_tags, list_templates
 from prich.cli.config import config_group
 from prich.cli.validate import validate_templates
 from prich.cli.init_cmd import init, completion
-from prich.core.utils import console_print
 from prich.version import VERSION
 
 @click.group()

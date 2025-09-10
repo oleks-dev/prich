@@ -21,7 +21,7 @@ def list_providers(global_only: bool, local_only: bool, details: bool):
     """Show available LLM providers."""
     config, paths = get_loaded_config()
     console_print(f"[bold]Configs[/bold]: {', '.join(_readable_paths(paths))}")
-    console_print(f"[bold]Providers{f' ([green]global[/green])' if global_only else f' ([green]local[/green])' if local_only else ''}[/bold]:")
+    console_print(f"[bold]Providers{' ([green]global[/green])' if global_only else ' ([green]local[/green])' if local_only else ''}[/bold]:")
     for provider, provider_config in config.providers.items():
         provider_model = ""
         if provider_config.provider_type == 'mlx_local':

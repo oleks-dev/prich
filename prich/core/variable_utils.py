@@ -20,7 +20,7 @@ def replace_env_vars(text: str, env_vars: dict[str, str]) -> str:
         var_name = match.group(1) if match.group(1) else match.group(2)
         return env_vars.get(var_name, "")
 
-    if text is None or type(text) != str:
+    if text is None or not isinstance(text, str):
         return text
 
     # Pattern for environment variables: $VAR or ${VAR}
@@ -46,7 +46,7 @@ def expand_vars(args: List[str], variables: Dict[str, any] = None, env_vars: Dic
 
     expanded_args = []
     for arg in args:
-        if type(arg) == str:
+        if isinstance(arg, str):
             # First expand internal variables
             arg = render_template_text(arg, variables=variables)
             # Then expand environment variables ($VAR or ${VAR})

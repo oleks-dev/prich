@@ -4,7 +4,7 @@ from subprocess import CompletedProcess
 
 import pytest
 from click.testing import CliRunner
-from tests.fixtures.paths import mock_paths
+from tests.fixtures.paths import mock_paths  # noqa: F811
 
 get_init_cmd_CASES = [
     {"id": "init_global", "args_1": ["-g"], "init_folder": "global",

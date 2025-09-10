@@ -33,11 +33,11 @@ def install_python_venv(venv_folder: Path, force: bool = False, venv_type: str =
 def install_template_python_dependencies(venv_folder: Path, template_folder: Path):
     src_requirements = template_folder / "scripts" / "requirements.txt"
     if src_requirements and src_requirements.exists():
-        console_print(f"Installing dependencies:")
+        console_print("Installing dependencies:")
         pip_cmd = venv_folder / "bin/pip"
         if not pip_cmd.exists():
             raise click.ClickException(f"No pip {shorten_path(str(pip_cmd))} found in venv.")
         run_cmd = [pip_cmd, "install", "-r", str(src_requirements)]
         subprocess.run(run_cmd, check=True)
     else:
-        console_print(f"No dependencies to install.")
+        console_print("No dependencies to install.")

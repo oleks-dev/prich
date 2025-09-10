@@ -21,7 +21,7 @@ def list_tags(global_only: bool, local_only: bool):
         console_print("[yellow]No templates installed. Use 'prich template install' to add templates.[/yellow]")
         return
 
-    console_print(f"Available tags{f' ([green]global[/green])' if global_only else f' ([green]local[/green])' if local_only else ''}:")
+    console_print(f"Available tags{' ([green]global[/green])' if global_only else ' ([green]local[/green])' if local_only else ''}:")
     tags = []
     for t in templates:
         tags.extend(t.tags)

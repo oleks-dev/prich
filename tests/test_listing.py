@@ -2,7 +2,7 @@ import pytest
 from click.testing import CliRunner
 
 from tests.generate.templates import templates, templates_list_to_dict
-from tests.fixtures.paths import mock_paths
+from tests.fixtures.paths import mock_paths  # noqa: F811
 
 get_list_tags_CASES = [
     {"id": "local", "count": 4, "args": ["-l"],

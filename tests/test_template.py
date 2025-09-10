@@ -5,8 +5,8 @@ from prich.models.file_scope import FileScope
 from prich.cli.templates import venv_install, show_template
 from prich.core.state import _loaded_templates
 
-from tests.fixtures.paths import mock_paths
-from tests.fixtures.templates import template
+from tests.fixtures.paths import mock_paths  # noqa: F811
+from tests.fixtures.templates import template  # noqa: F811
 
 get_venv_install_CASES = [
     {"id": "install_local_venv_no_params",
