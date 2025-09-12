@@ -122,7 +122,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download artifacts
+      - name: Download coverage reports
         uses: actions/download-artifact@v4
         with:
           name: coverage-reports
@@ -138,20 +138,16 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
-          cache-dependency-path: |
-            pyproject.toml
-            setup.cfg
-            requirements*.txt
+          cache: pip
 
       # Badge generation from test/coverage results
       - name: Install badge tools
         run: |
           python -m pip install --upgrade pip
-          pip install coverage-badge anybadge junitparser
+          pip install genbadge[coverage] anybadge junitparser
 
       - name: Generate coverage badge
-        run: coverage-badge -i coverage.xml -o coverage.svg -f
+        run: genbadge coverage -i coverage.xml -o coverage.svg
 
       - name: Generate tests badge
         run: |
