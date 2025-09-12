@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prich"
+version = "0.1.0"
+description = "A CLI tool for creating and executing reusable LLM prompts with preprocessing and team sharing"
+readme = "README.md"
+authors = [{name = "Oleksandr Mikriukov", email = "oleks@oleksm.dev"}]
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.1,<9.0",
+    "jinja2>=3.1,<4.0",
+    "pyyaml>=6.0,<7.0",
+    "rich>=13.7,<14.0",
+    "pydantic>=2.11,<3.0",
+    "requests>=2.32,<3.0",
+    "python-dotenv>=1.1,<2.0",
+]
+keywords = ["llm", "prompt-engineering", "pipeline", "cli", "team-collaboration"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+[project.optional-dependencies]
+openai = ["openai>=1.0.0,<2.0.0"]
+mlx = ["mlx_lm>=0.24.1,<1.0.0"]
+dev = ["openai", "mlx_lm", "pytest", "coverage", "pytest-cov", "twine", "build", "faker"]
+
+[project.urls]
+Homepage = "https://github.com/oleks-dev/prich"
+Repository = "https://github.com/oleks-dev/prich"
+Documentation = "https://github.com/oleks-dev/prich#readme"
+
+[project.scripts]
+prich = "prich.cli.main:cli"
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["prich*"]
+exclude = ["tests*"]
+
+[tool.coverage.run]
+branch = true
+source = ["prich"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.pytest.ini_options]
+addopts = "-ra --cov=prich --cov-report=term-missing"
+testpaths = ["tests"]

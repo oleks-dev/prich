@@ -1,0 +1,75 @@
+site_name: prich
+repo_url: https://github.com/oleks-dev/prich
+repo_name: oleks-dev/prich
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.sections
+    - navigation.tracking
+    - content.code.copy
+  palette:
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: light mode
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: system preference
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - tables
+  - toc
+  - mkdocs-click          # auto CLI docs
+plugins:
+  - search
+  - mkdocstrings:         # optional: API docs
+      handlers:
+        python:
+          options:
+            show_source: false
+#            extensions:
+#              - griffe_pydantic:
+#                  schema: false    # also expose JSON Schema info for templates
+nav:
+  - Home: index.md
+  - Tutorials:
+      - Quickstart: tutorials/quickstart.md
+#      - First template: tutorials/first-template.md
+#      - Multi-step pipeline: tutorials/multi-step.md
+  - How-to:
+      - Install & update: how-to/install.md
+      - Install templates: how-to/install-templates.md
+#      - Providers: how-to/providers.md
+#      - Shell completion: how-to/shell-completion.md
+#      - CI usage: how-to/ci.md
+  - Reference:
+      - CLI (auto): reference/cli.md
+#      - Template schema: reference/template-schema.md
+      - Config:
+          - Providers: reference/config/providers.md
+          - Provider modes: reference/config/provider-modes.md
+          - Settings: reference/config/settings.md
+          - Security: reference/config/security.md
+      - Template:
+          - Content: reference/template/content.md
+          - Steps: reference/template/steps.md
+          - Variables: reference/template/variables.md
+#  - Explanations:
+#      - Concepts: explanations/concepts.md
+#      - Security: explanations/security.md

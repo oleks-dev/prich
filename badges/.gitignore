@@ -1,0 +1,89 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+env.bak/
+.venv.bak/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Pydantic v2 generated schemas (if using Pydantic serialization)
+__pydantic__/
+
+# pyenv
+.python-version
+
+# pipenv / poetry
+Pipfile.lock
+poetry.lock
+
+# PEP 582; used by some tools
+__pypackages__/
+
+# JetBrains IDEs (PyCharm, etc.)
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Mac
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Test result logs
+test-results/
+*.log
+
+# pytest
+.cache/
+.pytest_cache/
+
+# coverage
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# dotenv
+*.env
+.env.*
+
+# etc.
+.prich/
+old/
+*.zip
