@@ -1,0 +1,181 @@
+name: CI - Pytest & Coverage
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # read repo and publish checks
+    permissions:
+      contents: read
+      checks: write
+
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          cache-dependency-path: |
+            pyproject.toml
+            setup.cfg
+            requirements*.txt
+
+      - name: Install project with dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[dev]
+
+      - name: Run tests with coverage + JUnit report
+        run: |
+          pytest \
+            --junitxml=pytest-results.xml \
+            --cov-report=xml \
+            --cov-report=html
+
+      # Upload artifacts only for Python 3.11 to avoid duplicates
+      - name: Upload coverage reports (only on 3.11)
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            coverage.xml
+            htmlcov/
+
+      - name: Upload pytest results (only on 3.11)
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: pytest-results.xml
+
+      - name: Publish test results (only on 3.11)
+        if: matrix.python-version == '3.11' && github.event_name == 'pull_request'
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: pytest-results.xml
+          pull_request_build: commit
+          comment_mode: off
+          check_run: true
+          job_summary: true
+
+  install-test:
+      needs: test
+      runs-on: ubuntu-latest
+
+      strategy:
+        matrix:
+          python-version: ["3.10", "3.11"]
+
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+
+        - name: Set up Python ${{ matrix.python-version }}
+          uses: actions/setup-python@v5
+          with:
+            python-version: ${{ matrix.python-version }}
+            cache: pip
+
+        - name: Build wheel & sdist
+          run: |
+            python -m pip install --upgrade pip build
+            python -m build
+            ls -l dist
+
+        - name: Install from wheel
+          run: |
+            python -m venv venv
+            source venv/bin/activate
+            pip install dist/*.whl
+
+        - name: Run CLI smoke tests
+          run: |
+            source venv/bin/activate
+            prich --help
+            prich init -g
+            prich init
+
+  publish-badges:
+    needs: [test, install-test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    # for gh-pages publishing
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-reports
+          path: .
+
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          name: pytest-results
+          path: .
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: |
+            pyproject.toml
+            setup.cfg
+            requirements*.txt
+
+      # Badge generation from test/coverage results
+      - name: Install badge tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install coverage-badge anybadge junitparser
+
+      - name: Generate coverage badge
+        run: coverage-badge -o coverage.svg -f
+
+      - name: Generate tests badge
+        run: |
+          python - <<'EOF'
+          from junitparser import JUnitXml
+          import anybadge
+
+          xml = JUnitXml.fromfile("pytest-results.xml")
+          failures = xml.failures + xml.errors
+          tests = xml.tests
+
+          if failures == 0:
+              anybadge.Badge("tests", f"{tests} passed", default_color="green").write_badge("tests.svg", overwrite=True)
+          else:
+              anybadge.Badge("tests", f"{failures} failed", default_color="red").write_badge("tests.svg", overwrite=True)
+          EOF
+
+      - name: Publish badges to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: .
+          destination_dir: badges
+          keep_files: true
+          commit_message: "Update badges [skip ci]"
+          enable_jekyll: false

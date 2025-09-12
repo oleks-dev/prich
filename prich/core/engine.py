@@ -142,13 +142,12 @@ def run_template(template_id, **kwargs):
                 idx = 0
                 for validate in step.validate_:
                     idx += 1
+                    validated = True
                     if isinstance(step, (PythonStep, CommandStep)) and (validate.match_exit_code is not None or validate.not_match_exit_code is not None):
                         validated = validate_step_exit_code(validate, step_return_exit_code, variables)
-                        if validated:
-                            validated = validate_step_output(validate, step_output, variables)
                     elif validate.match_exit_code is not None or validate.not_match_exit_code is not None:
                         raise click.ClickException("Step validation using 'match_exitcode' and/or 'not_match_exitcode' supported only in 'python' and 'command' step types.")
-                    else:
+                    if validated:
                         validated = validate_step_output(validate, step_output, variables)
                     if not validated:
                         action = validate.on_fail

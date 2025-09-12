@@ -293,11 +293,11 @@ get_run_template_CASES = [
                 CommandStep(
                     name="Preprocess python",
                     type="command",
-                    call="ls",
-                    args=["------ttgtgtg"],
+                    call="python",
+                    args=["notpresent"],
                     validate=ValidateStepOutput(
-                        not_match="test",
-                        match_exit_code=1,
+                        not_match="test12345",
+                        match_exit_code=2,
                         on_fail="error"
                     )
                 ),
@@ -315,10 +315,10 @@ get_run_template_CASES = [
                 CommandStep(
                     name="Preprocess python",
                     type="command",
-                    call="ls",
-                    args=["------ttgtgtg"],
+                    call="python",
+                    args=["notpresent"],
                     validate=ValidateStepOutput(
-                        not_match="test",
+                        not_match="test12345",
                         match_exit_code="{{test_error_code}}",
                         on_fail="error"
                     )
@@ -328,7 +328,7 @@ get_run_template_CASES = [
                 VariableDefinition(
                     name="test_error_code",
                     type="int",
-                    default=1
+                    default=2
                 )
             ],
             "folder": "."

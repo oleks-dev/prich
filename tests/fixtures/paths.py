@@ -1,18 +1,13 @@
 import os
 import shutil
-from dataclasses import dataclass
+import pytest
 from pathlib import Path
-
 from yaml import SafeLoader
-
 from prich.models.config import ConfigModel
-
 from prich.models.file_scope import FileScope
 from prich.core.state import _loaded_templates, _loaded_config, _loaded_config_paths
 from tests.fixtures.config import CONFIG_YAML
-
-import pytest
-
+from tests.utils.paths import MainFolder, PrichFolder
 
 @pytest.fixture
 def mock_paths(tmp_path, monkeypatch):
@@ -22,40 +17,20 @@ def mock_paths(tmp_path, monkeypatch):
     _loaded_config_paths = []
     config = ConfigModel(**yaml.load(CONFIG_YAML, SafeLoader))
     home_dir = tmp_path / "home"
-    print(f"Setup home: {home_dir}")
     cwd_dir = tmp_path / "local"
-    print(f"Setup cwd: {cwd_dir}")
     global_prich_dir = home_dir / ".prich"
     local_prich_dir = cwd_dir / ".prich"
     global_prich_templates_dir = global_prich_dir / "templates"
     local_prich_templates_dir = local_prich_dir / "templates"
     home_dir.mkdir(exist_ok=True)
     cwd_dir.mkdir(exist_ok=True)
-    global_prich_dir.mkdir(exist_ok=True)
-    local_prich_dir.mkdir(exist_ok=True)
-    global_prich_templates_dir.mkdir(exist_ok=True)
-    local_prich_templates_dir.mkdir(exist_ok=True)
+
     monkeypatch.setattr(Path, "home", lambda: home_dir)
     monkeypatch.setattr(Path, "cwd", lambda: cwd_dir)
     os.environ['HOME'] = str(home_dir)
-    print(f"Setup env home: {os.environ['HOME']}")
     os.environ['PWD'] = str(cwd_dir)
-    print(f"Setup env pwd: {os.environ['PWD']}")
     config.save(FileScope.GLOBAL)
     config.save(FileScope.LOCAL)
-
-    @dataclass
-    class PrichFolder:
-        global_dir: Path
-        local_dir: Path
-        global_templates: Path
-        local_templates: Path
-
-    @dataclass
-    class MainFolder:
-        home_dir: Path
-        cwd_dir: Path
-        prich: PrichFolder
 
     yield MainFolder(
         home_dir=home_dir,
@@ -67,5 +42,8 @@ def mock_paths(tmp_path, monkeypatch):
             local_templates=local_prich_templates_dir,  #cwd_dir / ".prich" / "templates"
         )
     )
-    if str(tmp_path).startswith("/private/var/folders/"):
+    if "/pytest-" in str(tmp_path):
         shutil.rmtree(tmp_path)
+    else:
+        raise RuntimeError(f"Failed to check folder before removing! {tmp_path}")
+

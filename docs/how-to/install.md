@@ -1,6 +1,7 @@
 # Install & Update
 ### **Install prich**
-    
+> Note: prich requires **python 3.10+**
+
 Until prich is published on PyPI, you can install it directly from GitHub.
  
 **Recommended: Use `pipx`**  
