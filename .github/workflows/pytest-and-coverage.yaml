@@ -151,7 +151,7 @@ jobs:
           pip install coverage-badge anybadge junitparser
 
       - name: Generate coverage badge
-        run: coverage-badge -o coverage.svg -f
+        run: coverage-badge -i coverage.xml -o coverage.svg -f
 
       - name: Generate tests badge
         run: |
