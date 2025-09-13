@@ -173,12 +173,17 @@ jobs:
               anybadge.Badge("tests", f"{failures} failed", default_color="red").write_badge("tests.svg", overwrite=True)
           EOF
 
+      - name: Prepare badges
+        run: |
+          mkdir -p gh-badges
+          cp coverage.svg tests.svg gh-badges/
+
       - name: Publish badges to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: .
+          publish_dir: ./gh-badges
           destination_dir: badges
           keep_files: true
           commit_message: "Update badges [skip ci]"
