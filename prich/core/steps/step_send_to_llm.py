@@ -6,7 +6,7 @@ from prich.models.config import ConfigModel
 from prich.models.template import TemplateModel, LLMStep
 
 
-def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: ConfigModel, variables: dict) -> str:
+def send_to_llm(template: TemplateModel, step: LLMStep, provider: str|None, config: ConfigModel, variables: dict) -> str:
     from prich.llm_providers.get_llm_provider import get_llm_provider
 
     if not step.input:
@@ -18,14 +18,14 @@ def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: C
     elif step.provider:
         selected_provider_name = step.provider
     # Use Provider to template assignment from config settings
-    elif config.settings.provider_assignments and template.id in config.settings.provider_assignments.keys():
+    elif (config.settings and config.settings.provider_assignments) and template.id in config.settings.provider_assignments.keys():
         selected_provider_name = config.settings.provider_assignments[template.id]
     # Use default provider from config
     else:
-        selected_provider_name = config.settings.default_provider
-    selected_provider = config.providers.get(selected_provider_name)
+        selected_provider_name = config.settings.default_provider if config.settings else None
+    selected_provider = config.providers.get(selected_provider_name) if selected_provider_name else None
     if not selected_provider:
-        raise click.ClickException(f"Provider {selected_provider_name} configuration not found. Check your config.yaml file.")
+        raise click.ClickException(f"Provider {f'{selected_provider_name} ' if selected_provider_name else ''}configuration not found. Check your config.yaml file.")
     if is_verbose():
         console_print(f"Selected LLM provider: {selected_provider_name}")
 
@@ -50,8 +50,6 @@ def send_to_llm(template: TemplateModel, step: LLMStep, provider: str, config: C
             prompt_lines.append(step.rendered_instructions)
         if step.rendered_input:
             prompt_lines.append(step.rendered_input)
-        if step.rendered_prompt:
-            prompt_lines.append(step.rendered_prompt)
     prompt_full = '\n'.join(prompt_lines)
 
     if is_verbose():

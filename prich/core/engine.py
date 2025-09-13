@@ -4,7 +4,7 @@ from typing import Dict
 from prich.core.template_utils import should_run_step
 from prich.core.steps.step_render_template import render_template
 from prich.core.steps.step_run_command import run_command_step
-from prich.core.steps.step_sent_to_llm import send_to_llm
+from prich.core.steps.step_send_to_llm import send_to_llm
 
 from prich.models.template import LLMStep, PythonStep, RenderStep, \
     CommandStep, ValidateStepOutput

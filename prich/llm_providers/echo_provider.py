@@ -11,4 +11,4 @@ class EchoProvider(LLMProvider):
         if prompt:
             return prompt
         else:
-            return f"{instructions}\n{input_}"
+            return (f"{instructions}\n" if instructions else "") + input_
