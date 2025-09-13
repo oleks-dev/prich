@@ -2,8 +2,16 @@ name: CI - Pytest & Coverage
 
 on:
   push:
+    paths:
+      - "pyproject.toml"
+      - "tests/**"
+      - "prich/**"
     branches: [ main ]
   pull_request:
+    paths:
+      - "pyproject.toml"
+      - "tests/**"
+      - "prich/**"
     branches: [ main ]
 
 jobs:

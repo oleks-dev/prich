@@ -10,6 +10,9 @@
 ```
 ![Tests](https://oleks-dev.github.io/prich/badges/tests.svg)
 ![Coverage](https://oleks-dev.github.io/prich/badges/coverage.svg)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Documentation: prich](https://img.shields.io/badge/documentation-prich-blue?logo=materialformkdocs)](https://oleks-dev.github.io/prich)
+[![Templates: prich](https://img.shields.io/badge/templates-prich-blue?logo=github)](https://github.com/oleks-dev/prich-templates)
 
 **prich** is a lightweight CLI tool for creating, managing, executing, and sharing reusable LLM prompt pipelines for *any* use case-development, data analysis, content generation, and more. With Jinja2 templating, flexible scripting (in any language), and shareable template packages, **prich** shines for teams collaborating on standardized LLM workflows. Share templates via files, git, or cloud storage, and streamline tasks like code review, git diff analysis, or CSV data insights.
 
