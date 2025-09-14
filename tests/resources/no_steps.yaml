@@ -1,0 +1,6 @@
+id: test-template
+name: test template
+version: '1.0'
+description: Example template
+steps:
+schema_version: '1.0'

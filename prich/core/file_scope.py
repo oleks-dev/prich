@@ -6,7 +6,7 @@ from prich.constants import PRICH_DIR_NAME
 from prich.models.file_scope import FileScope
 
 
-def _normalize(p: Path, *, cwd: Path) -> Path:
+def normalize_path(p: Path, *, cwd: Path) -> Path:
     """
     Expand ~, make absolute relative to cwd, and resolve as much as possible.
     Works for non-existent paths too (resolves the existing parent).
@@ -66,9 +66,9 @@ def classify_path(
     global_root = home / PRICH_DIR_NAME
 
     if follow_symlinks:
-        p = _normalize(file, cwd=cwd)
-        lr = _normalize(local_root, cwd=cwd)
-        gr = _normalize(global_root, cwd=cwd)
+        p = normalize_path(file, cwd=cwd)
+        lr = normalize_path(local_root, cwd=cwd)
+        gr = normalize_path(global_root, cwd=cwd)
     else:
         # Don't resolve symlinks; still expand and absolutize
         p = (cwd / Path(file).expanduser()) if not Path(file).expanduser().is_absolute() else Path(file).expanduser()

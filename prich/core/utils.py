@@ -113,7 +113,7 @@ def get_prich_templates_dir(global_only: bool = None) -> Path:
 
 def shorten_path(path: str | Path) -> str:
     """ Return short path using ~/... or ./... instead of a full absolute path """
-    home = str(Path.home())
+    home = str(get_home_dir())
     cwd = str(get_cwd_dir())
     if isinstance(path, Path):
         path = str(path)

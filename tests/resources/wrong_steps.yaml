@@ -1,0 +1,15 @@
+id: test-template
+name: test template
+version: '1.0'
+description: Example template
+steps:
+- name: Ask to generate 1st text
+  type: provider
+  input: Generate short phrase
+- step_name: Ask to generate 2nd text
+  type: llm
+  input: Generate short phrase
+- name: Ask to generate 3nd text
+  type: llm
+  input: Generate short phrase
+schema_version: '1.0'

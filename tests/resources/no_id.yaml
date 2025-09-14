@@ -1,0 +1,11 @@
+name: Test Template
+version: '1.0'
+description: Example template
+tags:
+- example
+- writer
+steps:
+- name: Ask to generate text
+  type: llm
+  input: Generate short phrase
+schema_version: '1.0'
