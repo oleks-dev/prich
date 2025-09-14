@@ -1,0 +1,11 @@
+id: test-template
+name: Test Template
+version: '1.0'
+description: Example template - Generate text about specified topic
+venv: "shared"
+steps:
+- name: Ask to generate text
+  type: llm
+  instructions: You are {{ role }}
+  input: Generate text about {{ topic }}
+schema_version: '1.0'

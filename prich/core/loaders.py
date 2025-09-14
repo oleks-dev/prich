@@ -15,7 +15,7 @@ from prich.version import TEMPLATE_SCHEMA_VERSION, CONFIG_SCHEMA_VERSION
 
 def _load_yaml(path: Path) -> Dict:
     import yaml
-    if not path.exists():
+    if not path.exists() or not path.is_file():
         return {}
     with path.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f) or {}

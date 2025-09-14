@@ -6,7 +6,7 @@ import yaml
 from pydantic import ValidationError as PydanticValidationError
 from prich.constants import PRICH_DIR_NAME
 from prich.models.template import CommandStep, PythonStep
-from prich.core.file_scope import classify_path
+from prich.core.file_scope import classify_path, normalize_path
 from prich.core.loaders import find_template_files, load_template_model, get_env_vars, _load_yaml
 from prich.core.utils import console_print, shorten_path, get_prich_dir, is_just_filename, get_cwd_dir, get_home_dir
 
@@ -21,7 +21,7 @@ def template_model_doctor(template_yaml: dict, model_load_error: PydanticValidat
         if template_yaml and err.get("loc"):
             # hide extra layering
             if err.get("loc")[0] == "steps":
-                if err.get("loc")[2] in ['llm', 'command', 'python', 'render']:
+                if len(err.get("loc")) >= 3 and err.get("loc")[2] in ['llm', 'command', 'python', 'render']:
                     details = err.get("loc")[2]
                     err['loc'] = tuple(err.get("loc")[:2] + err.get("loc")[3:])
 
@@ -29,6 +29,8 @@ def template_model_doctor(template_yaml: dict, model_load_error: PydanticValidat
             loc_list = err.get("loc")[:-1] if len(err.get("loc")) > 1 else err.get("loc")
             for x in loc_list:
                 try:
+                    if trace_dir[x] is None:
+                        break
                     trace_dir = trace_dir[x]
                 except Exception:
                     break
@@ -45,8 +47,10 @@ def template_model_doctor(template_yaml: dict, model_load_error: PydanticValidat
                 template_overview = re.sub("(\\.\\.\\.)", f"[yellow]+{err.get('loc')[-1]}: ...[/yellow]\n\\1",
                                            template_overview, count=1)
             else:
+                if 'Input tag ' in err.get('msg'):
+                    err["msg"] = err['msg'].replace("Input tag ", "Field value ").replace(" any of the expected tags", " any of the expected values")
                 if 'Input should be' in err.get('msg'):
-                    err["msg"] = err['msg'].replace("Input should be", "Field value should be")
+                    err["msg"] = err['msg'].replace("Input should be ", "Field value should be ")
                 highligh_block = err.get('loc')[-1] if isinstance(err.get('loc')[-1], str) else err.get('loc')[-2]
                 template_overview = re.sub(f"([\n]*(?:\\s+)|^)({highligh_block})(:)", "\\1[red]\\2[/red]\\3",
                                            template_overview, count=1)
@@ -92,7 +96,7 @@ def template_model_doctor(template_yaml: dict, model_load_error: PydanticValidat
             else:
                 doc = "See Template Content Documentation https://oleks-dev.github.io/prich/reference/template/content/"
             err_loc_string = re.sub(f"({err.get('loc')[-1]})$", "[red]\\1[/red]", err_loc_string)
-            found_issues_list.append(f"""{len(found_issues_list)+1}. [red]{err.get('msg')}[/red] '[white]{err_loc_string}[/white]':\n[white]{template_overview}[/white]{doc}""")
+            found_issues_list.append(f"""{len(found_issues_list)+1}. [red]{err.get('msg')}[/red] at '[white]{err_loc_string}[/white]':\n[white]{template_overview}[/white]{doc}""")
     return found_issues_list
 
 
@@ -111,7 +115,10 @@ def validate_templates(template_id: str, validate_file: Path, global_only: bool,
     if validate_file and (global_only or local_only or template_id):
         raise click.ClickException(f"When YAML file is selected it doesn't combine with local, global, or id options, use: 'prich validate --file ./{PRICH_DIR_NAME}/templates/test-template/test-template.yaml'")
 
-    if validate_file and not validate_file.exists():
+    if validate_file:
+        validate_file = normalize_path(validate_file, cwd=get_cwd_dir())
+
+    if validate_file and (not validate_file.exists() or not validate_file.is_file()):
         raise click.ClickException(f"Failed to find {validate_file} template file.")
 
     # Load Template Files
@@ -154,10 +161,9 @@ def validate_templates(template_id: str, validate_file: Path, global_only: bool,
         model_failures_count = 0
         output = []
         try:
-            if template_file.is_file():
-                template_yaml = _load_yaml(template_file)
-                template_id = template_yaml.get("id") if template_yaml else None
-                template_name = template_yaml.get("name") if template_yaml else None
+            template_yaml = _load_yaml(template_file)
+            template_id = template_yaml.get("id") if template_yaml else None
+            template_name = template_yaml.get("name") if template_yaml else None
             try:
                 template = load_template_model(template_file)
             except PydanticValidationError as e:
@@ -169,8 +175,18 @@ def validate_templates(template_id: str, validate_file: Path, global_only: bool,
                 raise click.ClickException(f"1. [red]{str(e)}[/red]")
             if template.venv in ["isolated", "shared"]:
                 venv_folder = (Path(template.folder) / "scripts") if template.venv == "isolated" else get_prich_dir() / "venv"
+                python_steps = [step for step in template.steps if step.type == 'python']
+                if not python_steps:
+                    extra_note = ". There are no steps with type 'python' found, if python is not used you can remove the 'venv' parameter from the template"
+                else:
+                    extra_note = ""
+                if template.venv == 'isolated':
+                    installation_note = f" Install it by running 'prich venv-install {template.id}'."
+                else:
+                    # TODO: introduce help for shared venv installation
+                    installation_note = ""
                 if not venv_folder.exists():
-                    failures_list.append(f"{len(failures_list)+1}. [red]Failed to find {template.venv} venv at {shorten_path(str(venv_folder))}.[/red] Install it by running 'prich venv-install {template.id}'.")
+                    failures_list.append(f"{len(failures_list)+1}. [red]Failed to find {template.venv} venv at {shorten_path(str(venv_folder))}{extra_note}.[/red]{installation_note}")
             idx = 0
             for step in template.steps:
                 idx += 1
@@ -196,7 +212,7 @@ def validate_templates(template_id: str, validate_file: Path, global_only: bool,
             output.append(f"- {template.id} [dim]({template.source.value}) {shorten_path(str(template_file))}[/dim]: ")
             if len(failures_list) > 0:
                 failures_found = True
-                output[-1] += f"[red]is not valid[/red] ({len(failures_list)} issues)"
+                output[-1] += f"[red]is not valid[/red] ({len(failures_list)} issue{'s' if len(failures_list)>1 else ''})"
                 failures = '  ' + '\n  '.join(failures_list)
                 output.append(failures)
                 output.append("")
@@ -206,11 +222,11 @@ def validate_templates(template_id: str, validate_file: Path, global_only: bool,
             failures_found = True
             template_source = classify_path(template_file)
             error_lines = '  ' + '\n  '.join([x for x in e.message.split('\n')]) + '\n'
-            output.append(f"""- {f"{template_id} " if template_id else ''}[dim]({template_source.value}) {shorten_path(str(template_file))}[/dim]: [red]is not valid[/red] {f'({model_failures_count} issues)' if model_failures_count > 0 else '(1 issue)'}\n  [red]Failed to load template{f" {template_id}" if template_id else ""}{f" ({template_name})" if template_name else ""}[/red]:\n{error_lines}""")
+            output.append(f"""- {f"{template_id} " if template_id else ''}[dim]({template_source.value}) {shorten_path(str(template_file))}[/dim]: [red]is not valid[/red] {f'({model_failures_count} issue{"s" if model_failures_count > 1 else ""})' if model_failures_count > 0 else '(1 issue)'}\n  [red]Failed to load template{f" {template_id}" if template_id else ""}{f" ({template_name})" if template_name else ""}[/red]:\n{error_lines}""")
         except Exception as e:
             failures_found = True
             template_source = classify_path(template_file)
-            output.append(f"""- {f"{template_id} " if template_id else ''}[dim]({template_source.value}) {shorten_path(str(template_file))}[/dim]: [red]is not valid[/red] (1 issue)\n  [red]Failed to load template{f" {template_id}" if template_id else ""}{f" ({template_name})" if template_name else ""}[/red]:\n  {str(e)}""")
+            output.append(f"""- {f"{template_id} " if template_id else ''}[dim]({template_source.value}) {shorten_path(str(template_file))}[/dim]: [red]is not valid[/red] (1 issue)\n  [red]Failed to load template{f" {template_id}" if template_id else ""}{f" ({template_name})" if template_name else ""}[/red]:\n  1. {str(e)}""")
         if (invalid_only and failures_found) or not invalid_only:
             console_print('\n'.join(output))
         if failures_found:

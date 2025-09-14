@@ -5,7 +5,6 @@ from prich.models.config_providers import EchoProviderModel
 from prich.models.config import SettingsConfig, ProviderModeModel
 from prich.models.template import TemplateModel, LLMStep
 from prich.models.config import ConfigModel
-from tests.fixtures.paths import mock_paths
 from tests.utils.utils import capture_stdout
 
 sample_variables = {
@@ -321,7 +320,7 @@ get_step_send_to_llm_CASES = [
      },
 ]
 @pytest.mark.parametrize("case", get_step_send_to_llm_CASES, ids=[c["id"] for c in get_step_send_to_llm_CASES])
-def test_step_send_to_llm(tmp_path, mock_paths, case, monkeypatch):
+def test_step_send_to_llm(tmp_path, case, monkeypatch):
     from prich.core.steps.step_send_to_llm import send_to_llm
 
     if case.get("expected_exception"):

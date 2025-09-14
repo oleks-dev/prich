@@ -1,0 +1,8 @@
+id: test-template
+version: '1.0'
+description: Example template
+steps:
+- name: Ask to generate text
+  type: llm
+  input: Generate short phrase
+schema_version: '1.0'

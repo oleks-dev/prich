@@ -1,0 +1,28 @@
+id: test-template
+name: test template
+version: '1.0'
+description: Example template
+steps:
+- name: Ask to generate 3nd text
+  type: llm
+  input: You are an engineer
+variables:
+  - var_name: "test"
+  - name: "test-variable"
+  - name: "test_variable"
+    type: "integer"
+  - name: "test_variable"
+    required: "hello"
+  - name: "test_variable"
+    default: null
+  - name: "test_variable"
+    cli_option: "test-var"
+
+# - name: role
+    #  type: str
+    #  description: Role of the Assistant
+    #  default: article writer
+    #  required: false
+    #  cli_option: --role
+
+schema_version: '1.0'
