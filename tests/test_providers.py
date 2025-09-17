@@ -333,7 +333,7 @@ get_provider_CASES = [
          "prompt": "hello",
      },
      "ollama_models": [{"name": "model1"}],
-     "fake_provider_stream_response": ["{\"response\": \'test\'\}"],
+     "fake_provider_stream_response": ["{\"response\": 'test'}"],
      "provider": OllamaProviderModel(
          provider_type="ollama", name="test", model="model1", stream=True, options={}
      ),
