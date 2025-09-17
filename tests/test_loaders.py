@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 import pytest
+from prich.models.config import SettingsConfig, SecurityConfig
 
 from tests.fixtures.config import basic_config, CONFIG_YAML
 from tests.fixtures.templates import INVALID_TEMPLATE_YAML
@@ -236,3 +237,64 @@ def test_invalid_template_validation():
         with pytest.raises(Exception) as exc:
             load_template_model(file_path)
         assert "Field required" in str(exc.value)
+
+get_get_env_vars_CASES = [
+    {"id": "get_env_vars",
+     "set_env_vars": {"HOME1": "test"},
+     "expected_env_vars": {"HOME1": "test"},
+     },
+    {"id": "get_env_vars_env_file",
+     "config_settings": SettingsConfig(env_file=str(Path(__file__).parent / "resources" / "test_env_vars.txt")),
+     "set_env_vars": {"HOME1": "test", "TEST_ENV1": "Env1"},
+     "expected_env_vars": {"HOME1": "test", "TEST_ENV1": "Test Env1", "TEST_ENV2": "Test Env2"},
+     },
+    {"id": "get_env_vars_env_file_with_no_allowed",
+     "config_settings": SettingsConfig(env_file=str(Path(__file__).parent / "resources" / "test_env_vars.txt")),
+     "config_security": SecurityConfig(allowed_environment_variables=[]),
+     "expected_env_vars": {"HOME1": False, "TEST_ENV1": False, "TEST_ENV2": False, "HOME": False},
+     },
+    {"id": "get_env_vars_env_file_with_some_allowed",
+     "config_settings": SettingsConfig(env_file=str(Path(__file__).parent / "resources" / "test_env_vars.txt")),
+     "config_security": SecurityConfig(allowed_environment_variables=["TEST_ENV1", "HOME1"]),
+     "expected_env_vars": {"HOME1": "test", "TEST_ENV1": "Test Env1", "TEST_ENV2": False, "HOME": False},
+     },
+    {"id": "get_env_vars_when_loaded_env_vars",
+     "config_settings": SettingsConfig(env_file=str(Path(__file__).parent / "resources" / "test_env_vars.txt")),
+     "config_security": SecurityConfig(allowed_environment_variables=["TEST_ENV1", "HOME1"]),
+     "set_loaded_env_vars": {"TEST_ENV_LOADED": "Test"},
+     "expected_env_vars": {"TEST_ENV_LOADED": "Test", "HOME1": False, "TEST_ENV1": False, "TEST_ENV2": False, "HOME": False},
+     },
+    {"id": "get_not_existing_env_vars_env_file",
+     "config_settings": SettingsConfig(env_file=str(Path(__file__).parent / "resources" / "not_existing.txt")),
+     "expected_exception": click.ClickException,
+     "expected_exception_message": "Failed to load env file",
+     },
+]
+@pytest.mark.parametrize("case", get_get_env_vars_CASES, ids=[c["id"] for c in get_get_env_vars_CASES])
+def test_get_env_vars(case, monkeypatch, basic_config):
+    from prich.core.loaders import get_env_vars
+    local_config = basic_config.model_copy(deep=True)
+    local_config.settings = case.get("config_settings")
+    local_config.security = case.get("config_security")
+    monkeypatch.setattr("prich.core.loaders.get_loaded_config", lambda: (local_config, None))
+    if case.get("set_loaded_env_vars") is not None:
+        monkeypatch.setattr("prich.core.loaders._loaded_env_vars", case.get("set_loaded_env_vars"))
+        monkeypatch.setattr("prich.core.state._loaded_env_vars", case.get("set_loaded_env_vars"))
+
+    if case.get("set_env_vars"):
+        for env_var, value in case.get("set_env_vars").items():
+            os.environ[env_var] = value
+    if case.get("expected_exception") is not None:
+        with pytest.raises(case.get("expected_exception")) as e:
+            get_env_vars()
+        assert case.get("expected_exception_message") in str(e.value)
+    else:
+        res = get_env_vars()
+        for env_var, value in case.get("expected_env_vars").items():
+            if isinstance(value, bool) and value == True:
+                assert env_var in res.keys()
+            elif isinstance(value, bool) and value == False:
+                assert env_var not in res.keys()
+            else:
+                assert value == res.get(env_var), f"Env var {env_var} value is correct"
+    _loaded_env_vars = None

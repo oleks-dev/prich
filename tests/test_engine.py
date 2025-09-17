@@ -195,6 +195,10 @@ get_expand_vars_CASES = [
 def test_expand_vars(monkeypatch, basic_config, case):
     from prich.core.loaders import get_loaded_config
     from prich.core.engine import expand_vars
+    _loaded_env_vars = None
+
+    monkeypatch.setattr("prich.core.loaders._loaded_env_vars",  _loaded_env_vars)
+    monkeypatch.setattr("prich.core.state._loaded_env_vars",  _loaded_env_vars)
 
     if case.get("extra_env_vars"):
         os.environ.update(case.get("extra_env_vars"))

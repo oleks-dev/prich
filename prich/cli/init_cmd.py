@@ -17,6 +17,7 @@ def init(global_init: bool, force: bool):
     """Initialize prich configuration and default venv."""
     prich_dir = get_prich_dir(global_init)
 
+    # TODO: add shared venv installation if not present without the force tag or with a new option flag
     if prich_dir.exists() and not force:
         raise click.ClickException(f"{prich_dir} exists. Use --force to overwrite.")
 
