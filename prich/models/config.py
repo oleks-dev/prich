@@ -43,6 +43,7 @@ class ConfigModel(BaseModel):
     model_config = ConfigDict(extra='forbid')
     schema_version: Literal["1.0"] = CONFIG_SCHEMA_VERSION
     providers: Dict[str, ProviderConfig]
+    # TODO: make provider_modes optional? It's not used in some cases like with default Ollama non-raw provider
     provider_modes: List[ProviderModeModel]
     settings: Optional[SettingsConfig] = None
     security: Optional[SecurityConfig] = None

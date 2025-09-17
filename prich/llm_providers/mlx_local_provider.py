@@ -2,8 +2,7 @@ import os
 import click
 from pathlib import Path
 
-from prich.core.utils import is_quiet, is_only_final_output
-from prich.core.utils import console_print
+from prich.core.utils import console_print, is_print_enabled
 from prich.models.config_providers import MLXLocalProviderModel
 from prich.llm_providers.llm_provider_interface import LLMProvider
 from prich.llm_providers.base_optional_provider import LazyOptionalProvider
@@ -60,7 +59,7 @@ class MLXLocalProvider(LLMProvider, LazyOptionalProvider):
                 min_tokens_to_keep=self.provider.min_tokens_to_keep if self.provider.min_tokens_to_keep is not None else 1,
                 top_k=self.provider.top_k if self.provider.top_k is not None else 0
             )
-            status = console.status("Thinking...") if not is_quiet() and not is_only_final_output() else nullcontext()
+            status = console.status("Thinking...") if is_print_enabled() else nullcontext()
             with status:
                 for response in self.stream_generate(
                     model=self.model,
@@ -69,7 +68,7 @@ class MLXLocalProvider(LLMProvider, LazyOptionalProvider):
                     max_tokens=self.provider.max_tokens if self.provider.max_tokens is not None else 512,
                     sampler=sampler
                 ):
-                    if not is_quiet() and not is_only_final_output():
+                    if not isinstance(status, nullcontext) and status._live.is_started:
                         status.stop()
                     text.append(response.text)
                     if self.show_response:
