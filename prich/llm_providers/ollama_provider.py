@@ -1,6 +1,8 @@
+import contextlib
 import json
 import click
-from requests import JSONDecodeError
+from json import JSONDecodeError
+from requests import JSONDecodeError as RequestsJSONDecodeError
 from rich.console import Console
 from contextlib import nullcontext
 
@@ -25,17 +27,18 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
         self.health_url = f"{self.base_url}/api/tags"
         self.requests = None
 
-    def get_models(self):
+    def _get_models(self):
         resp = self.requests.get(self.health_url, timeout=2)
         resp.raise_for_status()
         return resp.json().get("models", [])
 
-    def get_stream_generate(self, payload):
-        resp = self.requests.post(self.client_url, json=payload, stream=True)
-        resp.raise_for_status()
-        yield resp.iter_lines(decode_unicode=True)
+    @contextlib.contextmanager
+    def _get_stream_generate(self, payload):
+        with self.requests.post(self.client_url, json=payload, stream=True) as resp:
+            resp.raise_for_status()
+            yield resp.iter_lines(decode_unicode=True)
 
-    def get_generate(self, payload):
+    def _get_generate(self, payload):
         resp = self.requests.post(self.client_url, json=payload)
         resp.raise_for_status()
         return resp.json().get("response", "")
@@ -45,7 +48,7 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
         self.requests = self._lazy_import("requests", pip_name="requests")
         # Check Ollama server
         try:
-            models = self.get_models()
+            models = self._get_models()
         except self.requests.RequestException:
             raise click.ClickException(
                 f"Cannot connect to Ollama at {self.base_url}. "
@@ -88,31 +91,28 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
             with status:
                 if payload.get("stream"):
                     # Streaming mode
-                    with self.get_stream_generate(payload=payload) as response_lines:
+                    with self._get_stream_generate(payload=payload) as response_lines:
                         for line in response_lines:
                             if not line:
                                 continue
-                            try:
-                                data = json.loads(line)
-                                if "response" in data:
-                                    chunk = data["response"]
-                                    text.append(chunk)
-                                    if self.show_response and is_print_enabled():
-                                        if self.provider.think and status._live.is_started and not chunk:
-                                            if status.status != f"{self.provider.model} Thinking...":
-                                                status.update(status=f"{self.provider.model} Thinking...")
-                                        if not isinstance(status, nullcontext) and status._live.is_started and chunk:
-                                            status.stop()
-                                        console_print(chunk, end='')
-                                if data.get("done", False):
-                                    break
-                            except json.JSONDecodeError:
-                                continue
+                            data = json.loads(line)
+                            if "response" in data:
+                                chunk = data["response"]
+                                text.append(chunk)
+                                if self.show_response and is_print_enabled():
+                                    if self.provider.think and status._live.is_started and not chunk:
+                                        if status.status != f"{self.provider.model} Thinking...":
+                                            status.update(status=f"{self.provider.model} Thinking...")
+                                    if not isinstance(status, nullcontext) and status._live.is_started and chunk:
+                                        status.stop()
+                                    console_print(chunk, end='')
+                            if data.get("done", False):
+                                break
 
                         if self.show_response and is_print_enabled():
                             console_print()
                 else:
-                    output = self.get_generate(payload=payload)
+                    output = self._get_generate(payload=payload)
                     text.append(output)
                     if self.show_response and is_print_enabled():
                         if not isinstance(status, nullcontext):
@@ -120,7 +120,7 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
                         console_print(output)
 
             return ''.join(text)
-        except JSONDecodeError as e:
+        except (JSONDecodeError or RequestsJSONDecodeError) as e:
             raise click.ClickException(f"Ollama provider JSON parsing error: {str(e)}")
         except self.requests.RequestException as e:
             raise click.ClickException(f"Ollama provider request error: {str(e)}")

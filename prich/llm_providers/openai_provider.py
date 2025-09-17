@@ -1,3 +1,4 @@
+import contextlib
 import json
 import os
 import click
@@ -36,8 +37,13 @@ class OpenAIProvider(LLMProvider, LazyOptionalProvider):
         response = self.client.chat.completions.create(**options)
         return response.choices[0].message.content
 
-    def _get_stream_completion_chunks(self, **options) -> list:
-        return self.client.chat.completions.create(**options)
+    @contextlib.contextmanager
+    def _get_stream_completion_chunks(self, **options):
+        stream = self.client.chat.completions.create(**options)
+        try:
+            yield stream
+        finally:
+            stream.close()
 
     def send_prompt(self, prompt: str = None, instructions: str = None, input_: str = None) -> str:
         self._ensure_client()

@@ -25,7 +25,7 @@ class OpenAIStream:
     choices: list[Choice] | None
 
 
-get_stdin_consumer_CASES = [
+get_provider_CASES = [
     {"id": "stdin_consumer",
      "name": "echo",
      "prompt": {
@@ -320,12 +320,25 @@ get_stdin_consumer_CASES = [
          "prompt": "hello",
      },
      "ollama_models": [{"name": "model1"}],
-     "fake_provider_stream_response": [json.dumps({"response": "test"}), json.dumps({"response": " llm"}), json.dumps({"response": " response"})],
+     "fake_provider_stream_response": [json.dumps({"response": "test"}), json.dumps({"response": " llm"}), json.dumps({"response": " response"}), json.dumps({"done": True})],
      "provider": OllamaProviderModel(
          provider_type="ollama", name="test", model="model1", stream=True, options={}
      ),
      "expected_return": "test llm response",
      "expected_output": "test llm response\n",
+     },
+    {"id": "ollama_prompt_stream_response_json_error",
+     "name": "ollama",
+     "prompt": {
+         "prompt": "hello",
+     },
+     "ollama_models": [{"name": "model1"}],
+     "fake_provider_stream_response": ["{\"response\": \'test\'\}"],
+     "provider": OllamaProviderModel(
+         provider_type="ollama", name="test", model="model1", stream=True, options={}
+     ),
+     "expected_exception": click.ClickException,
+     "expected_exception_messages": ["Ollama provider JSON parsing error"],
      },
     {"id": "ollama_prompt_stream_quiet",
      "name": "ollama",
@@ -384,8 +397,8 @@ get_stdin_consumer_CASES = [
      },
 
 ]
-@pytest.mark.parametrize("case", get_stdin_consumer_CASES, ids=[c["id"] for c in get_stdin_consumer_CASES])
-def test_stdin_consumer(case, monkeypatch):
+@pytest.mark.parametrize("case", get_provider_CASES, ids=[c["id"] for c in get_provider_CASES])
+def test_providers(case, monkeypatch):
     def fake_response_function(self, **kwargs):
         return case.get("fake_provider_response")
 
@@ -408,11 +421,11 @@ def test_stdin_consumer(case, monkeypatch):
     elif type(provider_data) is OllamaProviderModel:
         provider = OllamaProvider(name=case.get("name"), provider=provider_data)
         if case.get("ollama_models") is not None:
-            monkeypatch.setattr(OllamaProvider, "get_models", lambda x: case.get("ollama_models"))
+            monkeypatch.setattr(OllamaProvider, "_get_models", lambda x: case.get("ollama_models"))
         if case.get("fake_provider_response") is not None:
-            monkeypatch.setattr(OllamaProvider, "get_generate", fake_response_function)
+            monkeypatch.setattr(OllamaProvider, "_get_generate", fake_response_function)
         if case.get("fake_provider_stream_response") is not None:
-            monkeypatch.setattr(OllamaProvider, "get_stream_generate", fake_response_stream)
+            monkeypatch.setattr(OllamaProvider, "_get_stream_generate", fake_response_stream)
 
     else:
         raise RuntimeError("Not supported provider")
