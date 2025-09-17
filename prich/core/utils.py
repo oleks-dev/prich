@@ -56,6 +56,10 @@ def is_only_final_output() -> bool:
         pass
     return False
 
+def is_print_enabled() -> bool:
+    """ Is printing to the console is enabled """
+    return not is_quiet() and not is_only_final_output()
+
 def is_piped() -> bool:
     """ Check if prich executed with a piped command (should work only when not executed from pytest) """
     # TODO: revisit, we need to allow executions from templates for example
@@ -64,7 +68,7 @@ def is_piped() -> bool:
 
 def console_print(message: str = "", end: str = "\n", markup = None, flush: bool = None):
     """ Print to console wrapper """
-    if not is_quiet() and not is_only_final_output():
+    if is_print_enabled():
         console.print(message, end=end, markup=markup, crop=False)
 
 def is_valid_template_id(template_id) -> bool:

@@ -1,9 +1,10 @@
 import json
 import click
+from requests import JSONDecodeError
 from rich.console import Console
 from contextlib import nullcontext
 
-from prich.core.utils import is_quiet, is_only_final_output, console_print
+from prich.core.utils import console_print, is_print_enabled
 from prich.models.config_providers import OllamaProviderModel
 from prich.llm_providers.llm_provider_interface import LLMProvider
 from prich.llm_providers.base_optional_provider import LazyOptionalProvider
@@ -24,13 +25,27 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
         self.health_url = f"{self.base_url}/api/tags"
         self.requests = None
 
+    def get_models(self):
+        resp = self.requests.get(self.health_url, timeout=2)
+        resp.raise_for_status()
+        return resp.json().get("models", [])
+
+    def get_stream_generate(self, payload):
+        resp = self.requests.post(self.client_url, json=payload, stream=True)
+        resp.raise_for_status()
+        yield resp.iter_lines(decode_unicode=True)
+
+    def get_generate(self, payload):
+        resp = self.requests.post(self.client_url, json=payload)
+        resp.raise_for_status()
+        return resp.json().get("response", "")
+
     def _ensure_client(self):
         # Ensure 'requests' library is available
         self.requests = self._lazy_import("requests", pip_name="requests")
         # Check Ollama server
         try:
-            resp = self.requests.get(self.health_url, timeout=2)
-            resp.raise_for_status()
+            models = self.get_models()
         except self.requests.RequestException:
             raise click.ClickException(
                 f"Cannot connect to Ollama at {self.base_url}. "
@@ -38,11 +53,11 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
             )
 
         # Check if model is installed
-        models = [m.get("name") for m in resp.json().get("models", [])]
+        models = [m.get("name") for m in models]
         if self.provider.model not in models:
             raise click.ClickException(
                 f"Model '{self.provider.model}' is not installed on Ollama. "
-                f"Install it with: `ollama pull {self.provider.model}`"
+                f"Install it with: 'ollama pull {self.provider.model}'"
             )
 
     def send_prompt(self, prompt: str = None, instructions: str = None, input_: str = None) -> str:
@@ -61,22 +76,20 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
             }
             if instructions:
                 payload['system'] = instructions
-            if not is_only_final_output() and not is_quiet() and self.provider.stream is not None:
+            if is_print_enabled() and self.provider.stream is not None:
                 payload["stream"] = self.provider.stream
             else:
                 payload["stream"] = False
             if self.provider.think is not None:
                 payload["think"] = self.provider.think
 
-            headers = {"Content-Type": "application/json"}
-            status = console.status("Thinking...") if not is_quiet() and not is_only_final_output() else nullcontext()
+            status = console.status("Thinking...") if is_print_enabled() else nullcontext()
 
             with status:
-                if payload["stream"]:
+                if payload.get("stream"):
                     # Streaming mode
-                    with self.requests.post(self.client_url, json=payload, stream=True, headers=headers) as r:
-                        r.raise_for_status()
-                        for line in r.iter_lines(decode_unicode=True):
+                    with self.get_stream_generate(payload=payload) as response_lines:
+                        for line in response_lines:
                             if not line:
                                 continue
                             try:
@@ -84,11 +97,11 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
                                 if "response" in data:
                                     chunk = data["response"]
                                     text.append(chunk)
-                                    if self.show_response and not is_quiet() and not is_only_final_output():
+                                    if self.show_response and is_print_enabled():
                                         if self.provider.think and status._live.is_started and not chunk:
                                             if status.status != f"{self.provider.model} Thinking...":
                                                 status.update(status=f"{self.provider.model} Thinking...")
-                                        if status._live.is_started and chunk:
+                                        if not isinstance(status, nullcontext) and status._live.is_started and chunk:
                                             status.stop()
                                         console_print(chunk, end='')
                                 if data.get("done", False):
@@ -96,21 +109,20 @@ class OllamaProvider(LLMProvider, LazyOptionalProvider):
                             except json.JSONDecodeError:
                                 continue
 
-                        if self.show_response and not is_quiet() and not is_only_final_output():
+                        if self.show_response and is_print_enabled():
                             console_print()
                 else:
-                    # Non-streaming mode
-                    r = self.requests.post(self.client_url, json=payload, headers=headers)
-                    r.raise_for_status()
-                    resp_data = r.json()
-                    output = resp_data.get("response", "")
+                    output = self.get_generate(payload=payload)
                     text.append(output)
-                    if self.show_response and not is_quiet() and not is_only_final_output():
-                        if not is_quiet() and not is_only_final_output():
+                    if self.show_response and is_print_enabled():
+                        if not isinstance(status, nullcontext):
                             status.stop()
                         console_print(output)
 
-            return ''.join(text).strip()
-
+            return ''.join(text)
+        except JSONDecodeError as e:
+            raise click.ClickException(f"Ollama provider JSON parsing error: {str(e)}")
         except self.requests.RequestException as e:
+            raise click.ClickException(f"Ollama provider request error: {str(e)}")
+        except Exception as e:
             raise click.ClickException(f"Ollama provider error: {str(e)}")
