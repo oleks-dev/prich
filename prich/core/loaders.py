@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple, List
 from prich.constants import PRICH_DIR_NAME
 from prich.core.file_scope import classify_path
-from prich.core.state import _loaded_templates, _loaded_config, _loaded_config_paths
+from prich.core.state import _loaded_templates, _loaded_config, _loaded_config_paths, _loaded_env_vars
 from prich.core.utils import console_print, shorten_path, get_prich_dir, get_cwd_dir, get_home_dir
 from prich.models.utils import recursive_update
 from prich.models.config import ConfigModel
@@ -172,10 +172,14 @@ def get_env_vars() -> dict[str, str]:
     # Merge env files in order, last one wins
     if env_files is not None:
         for env_file in env_files:
-            path = Path(env_file)
-            if path.exists():
+            try:
+                path = Path(env_file)
+                if not path.exists() and not path.is_file():
+                    raise FileNotFoundError(f"File {str(path)} not found.")
                 file_vars = dotenv_values(path)
                 merged.update({k: v for k, v in file_vars.items() if v is not None})
+            except Exception as e:
+                raise click.ClickException(f"Failed to load env file {env_file}, check config settings.")
 
     # Apply filtering if needed
     if allowed_environment_variables is not None:
