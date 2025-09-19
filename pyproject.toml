@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "prich"
 version = "0.1.0"
-description = "A CLI tool for creating and executing reusable LLM prompts with preprocessing and team sharing"
+description = "A CLI tool for creating and executing reusable LLM prompt pipelines with pre/postprocessing and team sharing"
 readme = "README.md"
 authors = [{name = "Oleksandr Mikriukov", email = "oleks@oleksm.dev"}]
 license = { file = "LICENSE" }
@@ -19,7 +19,7 @@ dependencies = [
     "requests>=2.32,<3.0",
     "python-dotenv>=1.1,<2.0",
 ]
-keywords = ["llm", "prompt-engineering", "pipeline", "cli", "team-collaboration"]
+keywords = ["cli", "llm", "prompt-engineering", "template", "pipeline", "team-collaboration"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -28,12 +28,12 @@ classifiers = [
 [project.optional-dependencies]
 openai = ["openai>=1.0.0,<2.0.0"]
 mlx = ["mlx_lm>=0.24.1,<1.0.0"]
-dev = ["openai", "mlx_lm", "pytest", "coverage", "pytest-cov", "twine", "build", "faker"]
+dev = ["openai", "mlx_lm", "pytest", "coverage", "pytest-cov", "pytest-xdist", "twine", "build", "faker"]
 
 [project.urls]
 Homepage = "https://github.com/oleks-dev/prich"
 Repository = "https://github.com/oleks-dev/prich"
-Documentation = "https://github.com/oleks-dev/prich#readme"
+Documentation = "https://oleks-dev.github.io/prich/"
 
 [project.scripts]
 prich = "prich.cli.main:cli"
