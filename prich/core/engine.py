@@ -62,7 +62,7 @@ def run_template(template_id, **kwargs):
         step_return_exit_code = None  # Used only for subprocess execute commands
         step_idx = 0
         last_output = ""
-        skip_following_steps = True  # used with validate
+        skip_following_steps = False  # used with validate
         for step in template.steps:
             step_idx += 1
 
