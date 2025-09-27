@@ -59,6 +59,8 @@ nav:
 #      - Providers: how-to/providers.md
 #      - Shell completion: how-to/shell-completion.md
 #      - CI usage: how-to/ci.md
+  - Templates Gallery:
+    - prich Templates repository: templates-repository.md
   - Reference:
       - CLI (auto): reference/cli.md
 #      - Template schema: reference/template-schema.md
