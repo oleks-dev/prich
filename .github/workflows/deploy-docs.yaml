@@ -33,7 +33,10 @@ jobs:
           pip install mkdocs-material
           pip install mkdocs-click
           pip install mkdocstrings[python]
-          # add any other plugins/extensions you use
+
+      - name: Get Templates Gallery Repository md
+        run: |
+          curl https://raw.githubusercontent.com/oleks-dev/prich-templates/refs/heads/main/templates/README.md > docs/templates-repository.md
 
       - name: Build and deploy
         run: |
