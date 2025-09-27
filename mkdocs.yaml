@@ -55,6 +55,7 @@ nav:
   - How-to:
       - Install & update: how-to/install.md
       - Install templates: how-to/install-templates.md
+      - Validate templates: how-to/validate-templates.md
 #      - Providers: how-to/providers.md
 #      - Shell completion: how-to/shell-completion.md
 #      - CI usage: how-to/ci.md
