@@ -98,7 +98,7 @@ openai-gpt4o:
 ```yaml
 mlx-mistral-7b:
   provider_type: "mlx_local"
-  model_path: "/path/to/model"
+  model: "/path/to/model"
   mode: flat
   max_tokens: 3000
 ```

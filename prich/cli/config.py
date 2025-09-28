@@ -23,15 +23,11 @@ def list_providers(global_only: bool, local_only: bool, details: bool):
     console_print(f"[bold]Configs[/bold]: {', '.join(_readable_paths(paths))}")
     console_print(f"[bold]Providers{' ([green]global[/green])' if global_only else ' ([green]local[/green])' if local_only else ''}[/bold]:")
     for provider, provider_config in config.providers.items():
-        provider_model = ""
-        if provider_config.provider_type == 'mlx_local':
-            if 'model_path' in provider_config.model_dump().keys():
-                provider_model = provider_config.model_path
-        else:
-            if 'model' in provider_config.model_dump().keys():
-                provider_model = provider_config.model
-            elif provider_config.model_dump().get("options") and 'model' in provider_config.model_dump()["options"].keys():
-                provider_model = provider_config.options.get("model")
+        provider_model = None
+        if 'model' in provider_config.model_dump().keys():
+            provider_model = provider_config.model
+        elif provider_config.model_dump().get("options") and 'model' in provider_config.model_dump()["options"].keys():
+            provider_model = provider_config.options.get("model")
         console_print(f"- [green]{provider}[/green] [dim]([green]{provider_config.provider_type}[/green]{f', [green]{provider_model}[/green]' if provider_model else ''})[/dim]")
         if details:
             for k, v in provider_config.model_dump().items():
