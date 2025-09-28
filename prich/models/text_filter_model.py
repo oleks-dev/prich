@@ -8,7 +8,7 @@ class TextFilterModel(BaseModel):
     slice_start: Optional[int] = None
     slice_end: Optional[int] = None
     regex_extract: Optional[str] = None
-    regex_replace: Optional[List[Tuple[str, str]]] = None  # [(pattern, replacement), ...]
+    regex_replace: Optional[List[Tuple[str, str]] | Tuple[str, str]] = None  # (pattern, replacement) or [(pattern, replacement), ...]
 
     def apply(self, text: str) -> str:
         out = text
@@ -27,6 +27,8 @@ class TextFilterModel(BaseModel):
             out = m.group(1) if (m and m.groups()) else (m.group(0) if m else "")
 
         if self.regex_replace:
+            if isinstance(self.regex_replace, tuple):
+                self.regex_replace = [self.regex_replace]
             for pattern, repl in self.regex_replace:
                 out = re.sub(pattern, repl, out)
 
