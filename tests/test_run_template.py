@@ -801,6 +801,27 @@ get_run_template_CASES = [
         },
         "expected_output": ["• Preprocess python", "{\"password\": \"*****\"}"]
      },
+    {"id": "run_cmd_and_sanitize_output_single_regex_replace", "template":
+        # TemplateModel(
+        {
+            "id": "test-tpl",
+            "name": "Test TPL",
+            "steps": [
+                PythonStep(
+                    name="Preprocess python",
+                    type="python",
+                    call="echo.py",
+                    args=["{\"password\": \"secret\"}"],
+                    filter=TextFilterModel(
+                        regex_replace=("(?i)(\"password\"\\s*:\\s*\")[^\"]+(\")", r"\1*****\2")
+                    ),
+                ),
+            ],
+            "folder": "."
+        # ),
+        },
+        "expected_output": ["• Preprocess python", "{\"password\": \"*****\"}"]
+     },
     {"id": "run_cmd_and_sanitize_output_verbose", "template":
         # TemplateModel(
         {

@@ -48,7 +48,7 @@ steps:
       regex_extract: ".*"                 # optional [str]
 
       # replace output text using regex patterns
-      regex_replace:          # optional [list(tuple(str,str))] - regex pattern, replace
+      regex_replace:          # optional [tuple(str,str) | list(tuple(str,str))] - regex pattern, replace
         - ["(?i)(\"password\"\s*:\s*\")[^\"]+(\")", "\\1*****\\2"]  # (ex. for json passwords sanitization)
 ```
 
