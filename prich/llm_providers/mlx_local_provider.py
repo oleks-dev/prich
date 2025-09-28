@@ -38,11 +38,11 @@ class MLXLocalProvider(LLMProvider, LazyOptionalProvider):
         self.stream_generate = self._lazy_import_from("mlx_lm.generate", "stream_generate", pip_name="mlx")
 
         try:
-            model_identifier = Path(os.path.expanduser(self.provider.model_path))
+            model_identifier = Path(os.path.expanduser(self.provider.model))
             self.model, _ = self.load(str(model_identifier))
             self.tokenizer = self.load_tokenizer(model_identifier)
         except Exception as e:
-            raise click.ClickException(f"mlx_local provider failed to load model {self.provider.model_path}: {str(e)}")
+            raise click.ClickException(f"mlx_local provider failed to load model {self.provider.model}: {str(e)}")
 
         self.client = True
 

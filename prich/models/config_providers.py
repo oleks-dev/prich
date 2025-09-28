@@ -34,7 +34,7 @@ class OpenAIProviderModel(BaseProviderModel):
 
 class MLXLocalProviderModel(BaseProviderModel):
     provider_type: Literal["mlx_local"]
-    model_path: str
+    model: str
 
     # generate
     #
