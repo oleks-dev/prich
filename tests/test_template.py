@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from click.testing import CliRunner
 from prich.models.file_scope import FileScope
@@ -222,18 +224,18 @@ get_create_template_CASES = [
     {"id": "create_template_no_template_id",
      "iterations": [
          {"args": [],
-          "expected_exception_messages": ["Usage: create [OPTIONS] TEMPLATE_ID"],
+          "expected_exception_messages": [r"Usage: create \[OPTIONS\] TEMPLATE_ID"],
           "expected_exit_code": 2},
      ]
      },
     {"id": "create_template_local",
      "iterations": [
          {"args": ["test-tpl"],
-          "expected_exception_messages": ["Template test-tpl created in", "local/.prich/templates/test-tpl/test-tpl"],
+          "expected_exception_messages": [r"Template test-tpl created in", r"local[\/|\\]\.prich[\/|\\]templates[\/|\\]test-tpl[\/|\\]test-tpl"],
           "expected_exit_code": 0,
           "check_file": ""},
          {"args": ["test-tpl"],
-          "expected_exception_messages": ["Error: Template test-tpl already exists."],
+          "expected_exception_messages": [r"Error: Template test-tpl already exists\."],
           "expected_exit_code": 1,
           "check_file": ""},
      ]
@@ -241,11 +243,11 @@ get_create_template_CASES = [
     {"id": "create_template_global",
      "iterations": [
          {"args": ["test-tpl", "-g"],
-          "expected_exception_message": ["Template test-tpl created in", "global/.prich/templates/test-tpl/test-tpl"],
+          "expected_exception_message": [r"Template test-tpl created in", r"global[\/|\\]\.prich[\/|\\]templates[\/|\\]test-tpl[\/|\\]test-tpl"],
           "expected_exit_code": 0,
           "check_file": ""},
          {"args": ["test-tpl", "-g"],
-          "expected_exception_message": ["Error: Template test-tpl already exists."],
+          "expected_exception_message": [r"Error: Template test-tpl already exists\."],
           "expected_exit_code": 1,
           "check_file": ""},
      ]
@@ -261,7 +263,7 @@ def test_create_template(mock_paths, case):
             result = runner.invoke(create_template, iteration.get("args"))
             if iteration.get("expected_exception_messages") is not None:
                 for message in iteration.get("expected_exception_messages"):
-                    assert message in result.output.replace("\n", "")
+                    assert re.search(message, result.output.replace("\n", "")), f"'{message}' not found in " + result.output.replace("\n", "")
             if iteration.get("expected_exit_code") is not None:
                 assert result.exit_code == iteration.get("expected_exit_code")
 

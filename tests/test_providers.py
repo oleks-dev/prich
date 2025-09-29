@@ -1,4 +1,6 @@
 import json
+import re
+
 import click
 import pytest
 from dataclasses import dataclass
@@ -60,7 +62,7 @@ get_provider_CASES = [
          provider_type="stdin_consumer", name="echo", call="catt", args=[], mode="flat"
      ),
      "expected_exception": click.ClickException,
-     "expected_exception_messages": ["STDIN consumer provider error: [Errno 2] No such file or director"],
+     "expected_exception_messages_regex": [r"STDIN consumer provider error: [\[Errno 2\] No such file or directory|\[WinErrno 2\] The system cannot find the file specified]"],
      },
 
     # OpenAI
@@ -450,6 +452,9 @@ def test_providers(case, monkeypatch):
         if case.get("expected_exception_messages") is not None:
             for message in case.get("expected_exception_messages"):
                 assert message in str(e.value)
+        if case.get("expected_exception_messages_regex") is not None:
+            for message in case.get("expected_exception_messages_regex"):
+                assert re.search(message, str(e.value))
     else:
         result, output = capture_stdout(provider.send_prompt, prompt=prompt, instructions=instructions, input_=input_)
         result_repeat, output_repeat = capture_stdout(provider.send_prompt, prompt=prompt, instructions=instructions, input_=input_)

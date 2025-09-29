@@ -1,4 +1,5 @@
 import os
+import re
 import tempfile
 from subprocess import CompletedProcess
 
@@ -414,14 +415,14 @@ get_run_command_step_CASES = [
      "step": PythonStep(name="test", type="python", call="test.py"),
      "mock_output": CompletedProcess(args=["python", "test.py"], returncode=0, stdout="hello"),
      "expected_exception": click.ClickException,
-     "expected_exception_message": "Python script not found: test/templates/test-template/scripts/test.py"
+     "expected_exception_message": r"Python script not found: test[\/|\\]templates[\/|\\]test-template[\/|\\]scripts[\/|\\]test.py"
      },
     {"id": "python_step_file_not_found_isolated_venv",
      "template": generate_template(template_id="test-template", isolated_venv=True),
      "step": PythonStep(name="test", type="python", call="test.py"),
      "mock_output": CompletedProcess(args=["python", "test.py"], returncode=0, stdout="hello"),
      "expected_exception": click.ClickException,
-     "expected_exception_message": "Python script not found: test/templates/test-template/scripts/test.py"
+     "expected_exception_message": r"Python script not found: test[\/|\\]templates[\/|\\]test-template[\/|\\]scripts[\/|\\]test.py"
      },
     {"id": "command_step",
      "template": generate_template(template_id="test-template"),
@@ -441,7 +442,7 @@ get_run_command_step_CASES = [
      "template": generate_template(template_id="test-template"),
      "step": CommandStep(name="test", type="command", call="notexistingcommand", args=["hello"]),
      "expected_exception": click.ClickException,
-     "expected_exception_message": "Unexpected error in notexistingcommand: [Errno 2] No such file or directory: 'notexistingcommand'"
+     "expected_exception_message": r"Unexpected error in notexistingcommand: [\[Errno 2\] No such file or directory: 'notexistingcommand'|\[WinErrno 2\] The system cannot find the file specified]"
      },
 ]
 @pytest.mark.parametrize("case", get_run_command_step_CASES, ids=[c["id"] for c in get_run_command_step_CASES])
@@ -455,7 +456,7 @@ def test_run_command_step(case, monkeypatch):
         with pytest.raises(case.get("expected_exception")) as e:
             run_command_step(case.get("template"), case.get("step"), case.get("variables", {}))
         if case.get("expected_exception_message"):
-            assert str(e.value) in case.get("expected_exception_message")
+            assert re.search(case.get("expected_exception_message"), str(e.value))
     else:
         actual, actual_exitcode = run_command_step(case.get("template"), case.get("step"), case.get("variables", {}))
         if case.get("expected_result") is not None:
