@@ -24,8 +24,30 @@
 - **Simple and Hackable**: Intuitive CLI and YAML configs make it easy to craft dynamic prompts, with support for Python, shell, or any scripting language.
 - **Portable**: Isolated virtual environments (default and custom venvs) ensure dependency safety and portability; or use standard commands like git, cat, etc.
 
+> **Supported LLMs**: Ollama API, OpenAI API, MLX LM, STDIN (different LLM cli tools like AWS Q Chat, Google Gemini CLI, mlx_lm.generate, Ollama run, OpenAI Codex, etc.)
+
 ## Quick Demo
 ![Demo](demo.gif)
+
+## Directory Structure Overview
+You just need to create a simple structure in your directory or different directories.  
+**prich** will check the *global* (home directory) and *local* (current working directory) locations for `.prich` folder presence, 
+it loads configs and templates from both locations (if present), and merges them taking *local* as the final so it overloads matching *global* configs and templates by default.
+```text
+.prich/                      - [optional for CWD] main prich folder for configs and templates
+|- templates/                - [optional for CWD] templates folder
+|  |- my-template/           - template folder
+|  |  |- scripts/            - [optional] for python scripts or utils
+|  |  |  |- venv/            - [optional] for isolated python virtual env
+|  |  |  '- ...
+|  |  '- my-template.yaml    - template file
+|  |- my-template2/
+|  |  '- ...
+|  '- ...
+|- venv/                     - [optional] for shared python virtual env
+'- config.yaml               - [optional for CWD] prich configuration file
+```
+You can easily create such a structure in your git repository and work together with your team on the templates.
 
 #### [Documentation Site](https://oleks-dev.github.io/prich)  
 
@@ -37,8 +59,6 @@
 - **Team-Friendly Sharing**: Package templates with dependencies for easy sharing via files, git, or cloud storage.
 - **Secure venv Management**: Default (`.prich/venv/`) and custom Python venvs (e.g., `.prich/templates/code_review/scripts/venv`) isolate dependencies.
 - **Simple CLI**: Commands like `prich run` and `prich install` streamline workflows.
-
-> **Supported LLMs**: Ollama API, OpenAI API, MLX LM, STDIN (different cli tools like q chat, mlx_lm.generate, etc.)
 
 ## Quick Start
 > prich requires **python 3.10+**

@@ -4,13 +4,13 @@ When template yaml file has syntax issues it would be ignored in the `list` and 
 
 For such cases `prich` tool has a built-in validation doctor feature that helps to detect and highlight template issues in the corresponding YAML partial snippet.  
 
-It could help to detect issues like:
-* not correct fields
-* missing fields
-* not correct value types
-* syntax errors
-* missing venvs
-* missing scripts or command files
+It could help to detect issues like:  
+* not correct fields  
+* missing fields  
+* not correct value types  
+* syntax errors  
+* missing venvs  
+* missing scripts or command files  
 
 ## Usage
 
