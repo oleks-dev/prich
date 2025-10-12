@@ -271,6 +271,20 @@ class TemplateModel(BaseModel):
         with open(template_file, "w") as f:
             f.write(yaml.safe_dump(model_dict, sort_keys=False, width=float("inf")))
 
+    def prepare_variables(self, cli_options, env_vars) -> dict:
+        from prich.core.variable_utils import replace_env_vars
+        variables = {}
+        for var in self.variables:
+            cli_option = var.cli_option
+            if cli_option:
+                option_name = cli_option.lstrip("-").replace("-", "_")
+                variables[var.name] = replace_env_vars(cli_options.get(option_name, var.default), env_vars)
+            else:
+                variables[var.name] = replace_env_vars(cli_options.get(var.name, var.default), env_vars)
+            if var.required and variables.get(var.name) is None:
+                raise click.ClickException(f"Missing required variable {var.name}")
+        return variables
+
     def describe(self):
         return f"""
         Template: {self.id}

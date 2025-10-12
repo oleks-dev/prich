@@ -445,7 +445,7 @@ get_run_command_step_CASES = [
      },
 ]
 @pytest.mark.parametrize("case", get_run_command_step_CASES, ids=[c["id"] for c in get_run_command_step_CASES])
-def test_run_command_step(case, monkeypatch):
+def test_run_command_step(case, mock_paths, monkeypatch):
     from prich.core.steps.step_run_command import run_command_step
 
     if case.get("mock_output"):
