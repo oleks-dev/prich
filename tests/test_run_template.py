@@ -928,9 +928,40 @@ get_run_template_cli_CASES = [
      "expected_regex_output": ["^### System(?:.|\\n)+### Assistant:\\n$"]},
     {"id": "run_local_template_id_quiet", "add_template": True, "args": ["template-local", "--quiet"],
      "expected_regex_output": ["^$"]},
+    {"id": "run_local_template_id_debug_continue", "add_template": True, "args": ["template-local", "--debug"],
+     "expected_regex_output": [
+         "\\[debug\\] Initial variables:",
+         "name = Assistant",
+         "test_output = This is my text",
+         "Stash variables before step 1",
+         "--- Step llm llm step #1",
+         "\\[debug\\] \\(c\\)ontinue, \\(r\\)epeat step",
+     ], "key_press": ["c"]},
+    {"id": "run_local_template_id_debug_repeat_continue", "add_template": True, "args": ["template-local", "--debug"],
+     "expected_regex_output": [
+         ": r\n\\[debug\\] Template change detected - reloading",
+         "stas\\(h\\): c"
+     ], "key_press": ["r", "c"]},
+    {"id": "run_local_template_id_debug_list_vars", "add_template": True, "args": ["template-local", "--debug"],
+     "expected_regex_output": [
+         "stas\\(h\\): l\n\\[debug\\] Variables:\n\\[debug\\]"
+     ], "key_press": ["l"]},
+    {"id": "run_local_template_id_debug_list_var_hashes", "add_template": True, "args": ["template-local", "--debug"],
+     "expected_regex_output": [
+         "stas\\(h\\): h\n\\[debug\\] Stashed variables\n\\[debug\\]"
+     ], "key_press": ["h"]},
+    {"id": "run_local_template_id_debug_show_step", "add_template": True, "args": ["template-local", "--debug"],
+     "expected_regex_output": [
+         "stas\\(h\\): s\n\\[debug\\] Step #1:\nname: llm step\n"
+     ], "key_press": ["s"]},
 ]
 @pytest.mark.parametrize("case", get_run_template_cli_CASES, ids=[c["id"] for c in get_run_template_cli_CASES])
 def test_run_template_cli(mock_paths, monkeypatch, case, template, basic_config):
+    def get_key_press(count):
+        res = case.get("key_press")[count["count"]]
+        count["count"] += 1
+        return res
+
     global_dir = mock_paths.home_dir
     local_dir = mock_paths.cwd_dir
 
@@ -939,6 +970,9 @@ def test_run_template_cli(mock_paths, monkeypatch, case, template, basic_config)
 
     monkeypatch.setattr("prich.core.loaders.get_cwd_dir", lambda: local_dir)
     monkeypatch.setattr("prich.core.loaders.get_home_dir", lambda: global_dir)
+    if case.get("key_press"):
+        count = {"count": 0}
+        monkeypatch.setattr("click.getchar", lambda: get_key_press(count))
 
     local_config = basic_config.model_copy(deep=True)
     global_config = basic_config.model_copy(deep=True)

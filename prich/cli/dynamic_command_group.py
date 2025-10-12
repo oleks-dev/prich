@@ -78,6 +78,7 @@ def create_dynamic_command(config, template: TemplateModel) -> click.Command:
         click.Option(["-p", "--provider"], type=click.Choice(config.providers.keys()), show_default=True,
                      help="Override LLM provider"),
         click.Option(["-v", "--verbose"], is_flag=True, default=False, help="Verbose mode"),
+        click.Option(["-d", "--debug"], is_flag=True, default=False, help="Debug mode"),
         click.Option(["-q", "--quiet"], is_flag=True, default=False, help="Suppress all output"),
         click.Option(["-f", "--only-final-output"], is_flag=True, default=False,
                      help="Suppress output and show only the last step output")

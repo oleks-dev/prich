@@ -63,13 +63,17 @@ def is_print_enabled() -> bool:
 def is_piped() -> bool:
     """ Check if prich executed with a piped command (should work only when not executed from pytest) """
     # TODO: revisit, we need to allow executions from templates for example
-    return not console.is_terminal and not os.getenv("PYTEST_CURRENT_TEST")
-    # return False
+    # return not console.is_terminal and not os.getenv("PYTEST_CURRENT_TEST")
+    return False
 
-def console_print(message: str = "", end: str = "\n", markup = None, flush: bool = None):
+def console_print(message: str = "", end: str = "\n", markup = None):
     """ Print to console wrapper """
     if is_print_enabled():
         console.print(message, end=end, markup=markup, crop=False)
+
+def console_print_debug(message: str = "", end: str = "\n", markup = None):
+    """ Print to console wrapper with debug prefix """
+    console_print(f"[[yellow]debug[/yellow]] {message}", end=end, markup=markup)
 
 def is_valid_template_id(template_id) -> bool:
     """ Validate Name Pattern: lowercase letters, numbers, hyphen, optional underscores, and no other characters"""
@@ -133,3 +137,20 @@ def is_just_filename(filename: Path | str):
     if s in ("", ".", "..") or ("/" in s) or ("\\" in s):
         return False
     return True
+
+def models_equal(a, b, *,
+                 exclude_unset=False,
+                 exclude_none=False,
+                 by_alias=False,
+                 strict_type=True):
+    if strict_type and type(a) is not type(b):
+        return False
+    return (
+        a.model_dump(exclude_unset=exclude_unset,
+                     exclude_none=exclude_none,
+                     by_alias=by_alias)
+        ==
+        b.model_dump(exclude_unset=exclude_unset,
+                     exclude_none=exclude_none,
+                     by_alias=by_alias)
+    )
