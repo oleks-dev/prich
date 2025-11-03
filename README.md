@@ -16,7 +16,7 @@
 
 **prich** is a lightweight CLI tool for creating, managing, executing, and sharing reusable LLM prompt pipelines for *any* use case-development, data analysis, content generation, and more. With Jinja2 templating, flexible scripting (in any language), and shareable template packages, **prich** shines for teams collaborating on standardized LLM workflows. Share templates via files, git, or cloud storage, and streamline tasks like code review, git diff analysis, or CSV data insights.
 
-### **NOTE**: Tool is still under development so there could be potential issues.
+### **NOTE**: Tool is still under development so there could be potential issues, feedback is welcome!
 
 ## Why prich?
 - **Any Prompt, Any Domain**: Build prompts for coding (e.g., code review), data analysis (e.g., CSV summaries), content creation, or customer support, with commands to prepare data (e.g., parse CSVs, clean text).
@@ -59,6 +59,7 @@ You can easily create such a structure in your git repository and work together 
 - **Team-Friendly Sharing**: Package templates with dependencies for easy sharing via files, git, or cloud storage.
 - **Secure venv Management**: Default (`.prich/venv/`) and custom Python venvs (e.g., `.prich/templates/code_review/scripts/venv`) isolate dependencies.
 - **Simple CLI**: Commands like `prich run` and `prich install` streamline workflows.
+- **Debug Mode**: Debug your template pipeline using step-by-step execution with template changes reloading
 
 ## Quick Start
 > prich requires **python 3.10+**
@@ -252,8 +253,13 @@ See [Config - Settings](https://oleks-dev.github.io/prich/reference/config/setti
 See [Config - Providers](https://oleks-dev.github.io/prich/reference/config/providers/)
 
 
+## Security
+⚠️ Be aware that prich templates include **execution of commands** and **submitting LLM queries**, please review not-known templates and use them at your **own risk**! ⚠️
+
+For privacy content - there is a possibility to filter privacy related content (like passwords, auth tokens) via regex filters before using/submitting to LLM or using with other commands.
+
 ## Contributing  
-Want to create templates for data analysis, content generation, or other domains? Fork the repo, add a template package, or submit a PR! See CONTRIBUTING.md for guidelines.
+Contributions and ideas are welcome! Fork the repo, file an issue, submit a PR!
 
 
 ## License  
