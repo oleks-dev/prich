@@ -28,7 +28,7 @@ classifiers = [
 [project.optional-dependencies]
 openai = ["openai>=1.0.0,<2.0.0"]
 mlx = ["mlx_lm>=0.24.1,<1.0.0"]
-dev = ["openai", "mlx_lm", "pytest", "coverage", "pytest-cov", "pytest-xdist", "twine", "build", "faker"]
+dev = ["openai", "pytest", "coverage", "pytest-cov", "pytest-xdist", "twine", "build", "faker"]
 
 [project.urls]
 Homepage = "https://github.com/oleks-dev/prich"

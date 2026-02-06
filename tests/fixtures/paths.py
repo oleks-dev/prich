@@ -42,7 +42,7 @@ def mock_paths(tmp_path, monkeypatch):
             local_templates=local_prich_templates_dir,  #cwd_dir / ".prich" / "templates"
         )
     )
-    if "/pytest-" in str(tmp_path):
+    if "pytest-" in str(tmp_path):
         shutil.rmtree(tmp_path)
     else:
         raise RuntimeError(f"Failed to check folder before removing! {tmp_path}")

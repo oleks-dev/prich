@@ -347,7 +347,7 @@ get_run_template_CASES = [
                     call="echo1",
                     args=["test"],
                     validate=ValidateStepOutput(
-                        match="No such file or directory: 'echo1'",
+                        match="No such file or directory: 'echo1'|The system cannot find the file specified",
                         not_match="test",
                         match_exit_code=1,
                         on_fail="error"
@@ -358,7 +358,7 @@ get_run_template_CASES = [
         # ),
         },
      "expected_exception": click.ClickException,
-     "expected_exception_message": "No such file or directory: 'echo1'",
+     "expected_exception_message_regex": "No such file or directory: 'echo1'|The system cannot find the file specified",
      },
     {"id": "run_cmd_and_validate_fail_exitcode_format", "template":
         # TemplateModel(
@@ -372,7 +372,7 @@ get_run_template_CASES = [
                     call="echo",
                     args=["test"],
                     validate=ValidateStepOutput(
-                        match="No such file or directory: 'echo1'",
+                        match="No such file or directory: 'echo1'|The system cannot find the file specified",
                         not_match="test",
                         match_exit_code="hello",
                         on_fail="error"
@@ -907,6 +907,8 @@ def test_run_template(case, monkeypatch, basic_config):
             run_template(test_template.id)
         if case.get("expected_exception_message") is not None:
             assert case.get("expected_exception_message") in str(e.value)
+        if case.get("expected_exception_message_regex") is not None:
+            assert re.search(case.get("expected_exception_message_regex"), str(e.value))
     else:
         result, out = capture_stdout(run_template, test_template.id)
         if case.get("expected_output"):

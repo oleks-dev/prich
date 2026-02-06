@@ -22,9 +22,9 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
     if isinstance(step, PythonStep) and step.type == "python":
         method_path = template_dir / "scripts" / method
         if not method_path.exists():
-            raise click.ClickException(f"Python script not found: {method_path}")
+            raise click.ClickException(f"Python script not found: {str(method_path)}")
         if not method.endswith(".py"):
-            raise click.ClickException(f"Python script file should end with .py: {method_path}")
+            raise click.ClickException(f"Python script file should end with .py: {str(method_path)}")
 
         if template.venv in ["shared", "isolated"]:
             if template.venv == "shared":
@@ -33,7 +33,7 @@ def run_command_step(template: TemplateModel, step: PythonStep | CommandStep, va
                 venv_path = template_dir / "scripts" / "venv"
             python_path = venv_path / "bin" / "python"
             if not python_path.exists():
-                raise click.ClickException(f"{template.venv.capitalize()} venv python not found: {python_path}")
+                raise click.ClickException(f"{template.venv.capitalize()} venv python not found: {str(python_path)}")
             cmd = [str(python_path), str(method_path)]
         elif template.venv is None:
             cmd = ["python", str(method_path)]
